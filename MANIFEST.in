@@ -1,2 +1,4 @@
 include README.rst
 include LICENSE
+include xxhash/xxhash.h
+include xxhash/xxhash.c
