@@ -1,6 +1,9 @@
 python-xxhash
 =============
 
+.. image:: https://travis-ci.org/ifduyue/python-xxhash.svg?branch=master
+    :target: https://travis-ci.org/ifduyue/python-xxhash
+
 xxhash is a Python binding for the `xxHash library <http://code.google.com/p/xxhash/>`_ by Yann Collet.
 
 Installation
