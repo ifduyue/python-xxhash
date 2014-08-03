@@ -28,6 +28,8 @@ setup(
             "-DXXHASH_VERSION=\"%s\"" % XXHASH_VERSION,
         ])
     ],
+    setup_requires=["nose>=1.3.0"],
+    test_suite='nose.collector',
     classifiers=[
         'Development Status :: 4 - Beta',
         'License :: OSI Approved :: BSD License',
