@@ -1,16 +1,16 @@
 /*
  * Copyright (c) 2014, Yue Du
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
- * 
+ *
  *     * Redistributions of source code must retain the above copyright notice,
  *       this list of conditions and the following disclaimer.
  *     * Redistributions in binary form must reproduce the above copyright notice,
  *       this list of conditions and the following disclaimer in the documentation
  *       and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,7 +32,8 @@
 
 static char *keywords[] = {"input", "seed", NULL};
 
-static PyObject *xxh32(PyObject *self, PyObject *args, PyObject *kwargs) {
+static PyObject *xxh32(PyObject *self, PyObject *args, PyObject *kwargs)
+{
     unsigned int seed = 0, digest = 0;
     const char *s;
     unsigned int ns;
@@ -41,11 +42,12 @@ static PyObject *xxh32(PyObject *self, PyObject *args, PyObject *kwargs) {
         return NULL;
     }
 
-    digest = XXH32(s, ns, seed); 
+    digest = XXH32(s, ns, seed);
     return Py_BuildValue("I", digest);
 }
 
-static PyObject *xxh64(PyObject *self, PyObject *args, PyObject *kwargs) {
+static PyObject *xxh64(PyObject *self, PyObject *args, PyObject *kwargs)
+{
     unsigned long long seed = 0, digest = 0;
     const char *s;
     unsigned int ns;
@@ -54,7 +56,7 @@ static PyObject *xxh64(PyObject *self, PyObject *args, PyObject *kwargs) {
         return NULL;
     }
 
-    digest = XXH64(s, ns, seed); 
+    digest = XXH64(s, ns, seed);
     return Py_BuildValue("K", digest);
 }
 
@@ -64,7 +66,8 @@ static PyMethodDef methods[] = {
     {NULL, NULL, 0, NULL}
 };
 
-PyMODINIT_FUNC initxxhash(void) {
+PyMODINIT_FUNC initxxhash(void)
+{
     PyObject *module = Py_InitModule("xxhash", methods);
 
     PyModule_AddStringConstant(module, "VERSION", VERSION);
