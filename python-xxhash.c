@@ -60,16 +60,91 @@ static PyObject *xxh64(PyObject *self, PyObject *args, PyObject *kwargs)
     return Py_BuildValue("K", digest);
 }
 
+/*****************************************************************************
+ * Module Init ****************************************************************
+ ****************************************************************************/
+
+/* ref: https://docs.python.org/2/howto/cporting.html */
+
+struct module_state {
+    PyObject *error;
+};
+
+#if PY_MAJOR_VERSION >= 3
+#define GETSTATE(m) ((struct module_state*)PyModule_GetState(m))
+#else
+#define GETSTATE(m) (&_state)
+static struct module_state _state;
+#endif
+
 static PyMethodDef methods[] = {
     {"xxh32", (PyCFunction)xxh32, METH_VARARGS | METH_KEYWORDS, "XXH32"},
     {"xxh64", (PyCFunction)xxh64, METH_VARARGS | METH_KEYWORDS, "XXH64"},
     {NULL, NULL, 0, NULL}
 };
 
-PyMODINIT_FUNC initxxhash(void)
+#if PY_MAJOR_VERSION >= 3
+
+static int myextension_traverse(PyObject *m, visitproc visit, void *arg)
 {
+    Py_VISIT(GETSTATE(m)->error);
+    return 0;
+}
+
+static int myextension_clear(PyObject *m)
+{
+    Py_CLEAR(GETSTATE(m)->error);
+    return 0;
+}
+
+
+static struct PyModuleDef moduledef = {
+    PyModuleDef_HEAD_INIT,
+    "xxhash",
+    NULL,
+    sizeof(struct module_state),
+    methods,
+    NULL,
+    myextension_traverse,
+    myextension_clear,
+    NULL
+};
+
+#define INITERROR return NULL
+
+PyObject *
+PyInit_xxhash(void)
+
+#else
+#define INITERROR return
+
+void
+initxxhash(void)
+#endif
+{
+#if PY_MAJOR_VERSION >= 3
+    PyObject *module = PyModule_Create(&moduledef);
+#else
     PyObject *module = Py_InitModule("xxhash", methods);
+#endif
+
+    if (module == NULL) {
+        INITERROR;
+    }
+
+    struct module_state *st = GETSTATE(module);
+
+    st->error = PyErr_NewException("xxhash.Error", NULL, NULL);
+
+    if (st->error == NULL) {
+        Py_DECREF(module);
+        INITERROR;
+    }
 
     PyModule_AddStringConstant(module, "VERSION", VERSION);
     PyModule_AddStringConstant(module, "XXHASH_VERSION", XXHASH_VERSION);
+
+#if PY_MAJOR_VERSION >= 3
+    return module;
+#endif
 }
