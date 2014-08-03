@@ -3,7 +3,7 @@
 
 from setuptools import setup, find_packages, Extension
 
-VERSION = "0.0.1"
+VERSION = "0.0.2"
 XXHASH_VERSION = "r35"
 
 setup(
