@@ -24,6 +24,7 @@ setup(
             "-Wall",
             "-W",
             "-Wundef",
+            "-Wno-error=declaration-after-statement",  # ref: http://bugs.python.org/issue21121
             "-DVERSION=\"%s\"" % VERSION,
             "-DXXHASH_VERSION=\"%s\"" % XXHASH_VERSION,
         ])
