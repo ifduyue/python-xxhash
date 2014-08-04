@@ -3,6 +3,23 @@ python-xxhash
 
 .. image:: https://travis-ci.org/ifduyue/python-xxhash.svg?branch=master
     :target: https://travis-ci.org/ifduyue/python-xxhash
+    :alt: Build Status
+
+.. image:: https://pypip.in/version/xxhash/badge.svg
+    :target: https://warehouse.python.org/project/xxhash/
+    :alt: Latest Version
+
+.. image:: https://pypip.in/download/xxhash/badge.svg
+    :target: https://warehouse.python.org/project/xxhash/
+    :alt: Downloads
+
+.. image:: https://pypip.in/py_versions/xxhash/badge.svg
+    :target: https://warehouse.python.org/project/xxhash/
+    :alt: Supported Python versions
+
+.. image:: https://pypip.in/license/xxhash/badge.svg
+    :target: https://warehouse.python.org/project/xxhash/
+    :alt: License
 
 xxhash is a Python binding for the `xxHash library <http://code.google.com/p/xxhash/>`_ by Yann Collet.
 
