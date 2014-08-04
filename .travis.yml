@@ -5,4 +5,6 @@ python:
   - 3.2
   - 3.3
   - 3.4
+install:
+  - gcc --version
 script: python setup.py test
