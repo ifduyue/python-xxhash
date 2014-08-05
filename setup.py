@@ -9,7 +9,7 @@ XXHASH_VERSION = "r35"
 setup(
     name='xxhash',
     version=VERSION,
-    description="xxHash Bindings for Python",
+    description="Python binding for xxHash",
     long_description=open('README.rst', 'r').read(),
     author='Yue Du',
     author_email='ifduyue@gmail.com',

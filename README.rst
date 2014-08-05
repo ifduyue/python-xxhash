@@ -39,14 +39,35 @@ Synopsis
     '0.0.1'
     >>> xxhash.XXHASH_VERSION
     'r35'
+    >>>
     >>> xxhash.xxh32('a')
     1426945110
     >>> xxhash.xxh32('a') == xxhash.xxh32('a', 0) == xxhash.xxh32('a', seed=0)
     True
+    >>>
     >>> xxhash.xxh64('a')
     15154266338359012955L
     >>> xxhash.xxh64('a') == xxhash.xxh64('a', 0) == xxhash.xxh64('a', seed=0)
     True
+    >>>
+    >>>
+    >>> x = xxhash.XXH32(seed=20140805)
+    >>> x.update('a')
+    >>> x.digest()
+    3923507256
+    >>> x.update('b')
+    >>> x.update('c')
+    >>> x.digest()
+    4042190321
+    >>>
+    >>> x = xxhash.XXH64(seed=20140805)
+    >>> x.digest()
+    2833816799783501320L
+    >>> x.update('a')
+    >>> x.update('b')
+    >>> x.update('c')
+    >>> x.digest()
+    3288515524728323397L
 
 Copyright and License
 ---------------------
