@@ -29,6 +29,8 @@
 
 #include "xxhash/xxhash.h"
 
+#define TOSTRING(x) (#x)
+
 #ifndef Py_TYPE
 #define Py_TYPE(ob) (((PyObject*)(ob))->ob_type)
 #endif
@@ -141,7 +143,7 @@ static PyTypeObject PYXXH32Type = {
 #if PY_MAJOR_VERSION >= 3
     PyVarObject_HEAD_INIT(&PyType_Type, 0)
 #else
-    PyObject_HEAD_INIT(&PyType_Type)
+    PyObject_HEAD_INIT(NULL)
     0,                             /* ob_size */
 #endif
     "xxhash.XXH32",                /* tp_name */
@@ -252,7 +254,7 @@ static PyTypeObject PYXXH64Type = {
 #if PY_MAJOR_VERSION >= 3
     PyVarObject_HEAD_INIT(&PyType_Type, 0)
 #else
-    PyObject_HEAD_INIT(&PyType_Type)
+    PyObject_HEAD_INIT(NULL)
     0,                             /* ob_size */
 #endif
     "xxhash.XXH64",                /* tp_name */
@@ -393,9 +395,8 @@ void initxxhash(void)
     Py_INCREF(&PYXXH64Type);
     PyModule_AddObject(module, "XXH64", (PyObject *)&PYXXH64Type);
 
-
-    PyModule_AddStringConstant(module, "VERSION", VERSION);
-    PyModule_AddStringConstant(module, "XXHASH_VERSION", XXHASH_VERSION);
+    PyModule_AddStringConstant(module, "VERSION", TOSTRING(VERSION));
+    PyModule_AddStringConstant(module, "XXHASH_VERSION", TOSTRING(XXHASH_VERSION));
 
 #if PY_MAJOR_VERSION >= 3
     return module;
