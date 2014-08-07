@@ -1,10 +1,28 @@
 #!/usr/bin/env python
 
 
-from setuptools import setup, find_packages, Extension
+from setuptools import setup, Extension
+import os
 
 VERSION = "0.1.0"
 XXHASH_VERSION = "r35"
+
+if os.name == 'posix' :
+    extra_compile_args = [
+            "-std=c99",
+            "-O3",
+            "-Wall",
+            "-W",
+            "-Wundef",
+            "-Wno-error=declaration-after-statement"  # ref: http://bugs.python.org/issue21121
+        ]
+else:
+    extra_compile_args = None
+
+define_macros = [
+        ('VERSION', VERSION),
+        ('XXHASH_VERSION', XXHASH_VERSION)
+    ]
 
 setup(
     name='xxhash',
@@ -18,16 +36,9 @@ setup(
         Extension('xxhash', [
             'python-xxhash.c',
             'xxhash/xxhash.c',
-        ], extra_compile_args=[
-            "-std=c99",
-            "-O3",
-            "-Wall",
-            "-W",
-            "-Wundef",
-            "-Wno-error=declaration-after-statement",  # ref: http://bugs.python.org/issue21121
-            "-DVERSION=\"%s\"" % VERSION,
-            "-DXXHASH_VERSION=\"%s\"" % XXHASH_VERSION,
-        ])
+        ], 
+        extra_compile_args=extra_compile_args,
+        define_macros=define_macros)
     ],
     setup_requires=["nose>=1.3.0"],
     test_suite='nose.collector',

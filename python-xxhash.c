@@ -29,6 +29,9 @@
 
 #include "xxhash/xxhash.h"
 
+#define TOSTRING(x) #x
+#define VALUE_TO_STRING(x) TOSTRING(x)
+
 #ifndef Py_TYPE
 #define Py_TYPE(ob) (((PyObject*)(ob))->ob_type)
 #endif
@@ -92,9 +95,9 @@ static void PYXXH32_dealloc(PYXXH32Object *self)
 
 static PyObject *PYXXH32_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
-    (void)args;
-    (void)kwargs;
-    PYXXH32Object *self = (PYXXH32Object *)type->tp_alloc(type, 0);
+    PYXXH32Object *self;
+
+    self = (PYXXH32Object *)type->tp_alloc(type, 0);
     return (PyObject *)self;
 }
 
@@ -141,7 +144,7 @@ static PyTypeObject PYXXH32Type = {
 #if PY_MAJOR_VERSION >= 3
     PyVarObject_HEAD_INIT(&PyType_Type, 0)
 #else
-    PyObject_HEAD_INIT(&PyType_Type)
+    PyObject_HEAD_INIT(NULL)
     0,                             /* ob_size */
 #endif
     "xxhash.XXH32",                /* tp_name */
@@ -203,9 +206,9 @@ static void PYXXH64_dealloc(PYXXH64Object *self)
 
 static PyObject *PYXXH64_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
-    (void)args;
-    (void)kwargs;
-    PYXXH64Object *self = (PYXXH64Object *)type->tp_alloc(type, 0);
+    PYXXH64Object *self;
+
+    self = (PYXXH64Object *)type->tp_alloc(type, 0);
     return (PyObject *)self;
 }
 
@@ -252,7 +255,7 @@ static PyTypeObject PYXXH64Type = {
 #if PY_MAJOR_VERSION >= 3
     PyVarObject_HEAD_INIT(&PyType_Type, 0)
 #else
-    PyObject_HEAD_INIT(&PyType_Type)
+    PyObject_HEAD_INIT(NULL)
     0,                             /* ob_size */
 #endif
     "xxhash.XXH64",                /* tp_name */
@@ -355,17 +358,20 @@ PyObject *PyInit_xxhash(void)
 void initxxhash(void)
 #endif
 {
+    PyObject *module;
+    struct module_state *st;
+
 #if PY_MAJOR_VERSION >= 3
-    PyObject *module = PyModule_Create(&moduledef);
+    module = PyModule_Create(&moduledef);
 #else
-    PyObject *module = Py_InitModule("xxhash", methods);
+    module = Py_InitModule("xxhash", methods);
 #endif
 
     if (module == NULL) {
         INITERROR;
     }
 
-    struct module_state *st = GETSTATE(module);
+    st = GETSTATE(module);
 
     st->error = PyErr_NewException("xxhash.Error", NULL, NULL);
 
@@ -393,9 +399,8 @@ void initxxhash(void)
     Py_INCREF(&PYXXH64Type);
     PyModule_AddObject(module, "XXH64", (PyObject *)&PYXXH64Type);
 
-
-    PyModule_AddStringConstant(module, "VERSION", VERSION);
-    PyModule_AddStringConstant(module, "XXHASH_VERSION", XXHASH_VERSION);
+    PyModule_AddStringConstant(module, "VERSION", VALUE_TO_STRING(VERSION));
+    PyModule_AddStringConstant(module, "XXHASH_VERSION", VALUE_TO_STRING(XXHASH_VERSION));
 
 #if PY_MAJOR_VERSION >= 3
     return module;
