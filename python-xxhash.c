@@ -29,7 +29,8 @@
 
 #include "xxhash/xxhash.h"
 
-#define TOSTRING(x) (#x)
+#define TOSTRING(x) #x
+#define VALUE_TO_STRING(x) TOSTRING(x)
 
 #ifndef Py_TYPE
 #define Py_TYPE(ob) (((PyObject*)(ob))->ob_type)
@@ -398,8 +399,8 @@ void initxxhash(void)
     Py_INCREF(&PYXXH64Type);
     PyModule_AddObject(module, "XXH64", (PyObject *)&PYXXH64Type);
 
-    PyModule_AddStringConstant(module, "VERSION", TOSTRING(VERSION));
-    PyModule_AddStringConstant(module, "XXHASH_VERSION", TOSTRING(XXHASH_VERSION));
+    PyModule_AddStringConstant(module, "VERSION", VALUE_TO_STRING(VERSION));
+    PyModule_AddStringConstant(module, "XXHASH_VERSION", VALUE_TO_STRING(XXHASH_VERSION));
 
 #if PY_MAJOR_VERSION >= 3
     return module;
