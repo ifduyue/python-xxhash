@@ -110,6 +110,10 @@ static int PYXXH32_init(PYXXH32Object *self, PyObject *args, PyObject *kwargs)
     }
 
     self->xxhash_state = XXH32_init(seed);
+    if (self->xxhash_state == NULL) {
+        PyErr_NoMemory();
+        return -1;
+    }
 
     return 0;
 }
@@ -221,6 +225,10 @@ static int PYXXH64_init(PYXXH64Object *self, PyObject *args, PyObject *kwargs)
     }
 
     self->xxhash_state = XXH64_init(seed);
+    if (self->xxhash_state == NULL) {
+        PyErr_NoMemory();
+        return -1;
+    }
 
     return 0;
 }
