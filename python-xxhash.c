@@ -49,7 +49,7 @@ static PyObject *xxh32(PyObject *self, PyObject *args, PyObject *kwargs)
     unsigned int ns;
     (void)self;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#|I", keywords, &s, &ns, &seed)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#|I:xxh32", keywords, &s, &ns, &seed)) {
         return NULL;
     }
 
@@ -64,7 +64,7 @@ static PyObject *xxh64(PyObject *self, PyObject *args, PyObject *kwargs)
     unsigned int ns;
     (void)self;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#|K", keywords, &s, &ns, &seed)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#|K:xxh64", keywords, &s, &ns, &seed)) {
         return NULL;
     }
 
@@ -81,15 +81,11 @@ static PyObject *xxh64(PyObject *self, PyObject *args, PyObject *kwargs)
 typedef struct {
     PyObject_HEAD
     /* Type-specific fields go here. */
-    void *xxhash_state;
+    XXH32_state_t xxhash_state[1];
 } PYXXH32Object;
 
 static void PYXXH32_dealloc(PYXXH32Object *self)
 {
-    if (self->xxhash_state != NULL) {
-        free(self->xxhash_state);
-    }
-
     Py_TYPE(self)->tp_free((PyObject *)self);
 }
 
@@ -105,15 +101,11 @@ static int PYXXH32_init(PYXXH32Object *self, PyObject *args, PyObject *kwargs)
 {
     unsigned int seed = 0;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|I", &keywords[1], &seed)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|I:__init__", &keywords[1], &seed)) {
         return -1;
     }
 
-    self->xxhash_state = XXH32_init(seed);
-    if (self->xxhash_state == NULL) {
-        PyErr_NoMemory();
-        return -1;
-    }
+    XXH32_reset(self->xxhash_state, seed);
 
     return 0;
 }
@@ -123,7 +115,7 @@ static PyObject *PYXXH32_update(PYXXH32Object *self, PyObject *args)
     const char *s;
     unsigned int ns;
 
-    if (!PyArg_ParseTuple(args, "s#", &s, &ns)) {
+    if (!PyArg_ParseTuple(args, "s#:update", &s, &ns)) {
         return NULL;
     }
 
@@ -134,7 +126,7 @@ static PyObject *PYXXH32_update(PYXXH32Object *self, PyObject *args)
 
 static PyObject *PYXXH32_digest(PYXXH32Object *self)
 {
-    unsigned int digest = XXH32_intermediateDigest(self->xxhash_state);
+    unsigned int digest = XXH32_digest(self->xxhash_state);
     return Py_BuildValue("I", digest);
 }
 
@@ -196,15 +188,11 @@ static PyTypeObject PYXXH32Type = {
 typedef struct {
     PyObject_HEAD
     /* Type-specific fields go here. */
-    void *xxhash_state;
+    XXH64_state_t xxhash_state[1];
 } PYXXH64Object;
 
 static void PYXXH64_dealloc(PYXXH64Object *self)
 {
-    if (self->xxhash_state != NULL) {
-        free(self->xxhash_state);
-    }
-
     ((PyObject *)self)->ob_type->tp_free(self);
 }
 
@@ -220,15 +208,11 @@ static int PYXXH64_init(PYXXH64Object *self, PyObject *args, PyObject *kwargs)
 {
     unsigned long long seed = 0;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|K", &keywords[1], &seed)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|K:__init__", &keywords[1], &seed)) {
         return -1;
     }
 
-    self->xxhash_state = XXH64_init(seed);
-    if (self->xxhash_state == NULL) {
-        PyErr_NoMemory();
-        return -1;
-    }
+    XXH64_reset(self->xxhash_state, seed);
 
     return 0;
 }
@@ -238,7 +222,7 @@ static PyObject *PYXXH64_update(PYXXH64Object *self, PyObject *args)
     const char *s;
     unsigned int ns;
 
-    if (!PyArg_ParseTuple(args, "s#", &s, &ns)) {
+    if (!PyArg_ParseTuple(args, "s#:update", &s, &ns)) {
         return NULL;
     }
 
@@ -249,7 +233,7 @@ static PyObject *PYXXH64_update(PYXXH64Object *self, PyObject *args)
 
 static PyObject *PYXXH64_digest(PYXXH64Object *self)
 {
-    unsigned long long digest = XXH64_intermediateDigest(self->xxhash_state);
+    unsigned long long digest = XXH64_digest(self->xxhash_state);
     return Py_BuildValue("K", digest);
 }
 

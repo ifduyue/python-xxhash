@@ -4,8 +4,8 @@
 from setuptools import setup, Extension
 import os
 
-VERSION = "0.1.2"
-XXHASH_VERSION = "r36"
+VERSION = "0.1.3"
+XXHASH_VERSION = "r37"
 
 if os.name == 'posix':
     extra_compile_args = [
