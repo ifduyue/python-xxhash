@@ -95,7 +95,7 @@ Caveats
 -------
 
 Though you can use xxhash as an HMAC hash function, but it's
-highly recommend not to. 
+highly recommended not to.
 
 xxhash is **NOT** a cryptographic hash function, it is a
 non-cryptographic hash algorithm aimed at speed and quality.
