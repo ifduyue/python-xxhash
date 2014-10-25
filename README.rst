@@ -22,7 +22,14 @@ python-xxhash
     :alt: License
 
 
-xxhash is a Python binding for the `xxHash library <http://code.google.com/p/xxhash/>`_ by Yann Collet.
+.. _HMAC: http://en.wikipedia.org/wiki/Hash-based_message_authentication_code
+.. _xxHash: https://code.google.com/p/xxhash/
+.. _Cyan4973: https://github.com/Cyan4973
+
+
+xxhash is a Python binding for the xxHash_ library by `Yann Collet`__.
+
+__ Cyan4973_
 
 Installation
 ------------
@@ -94,7 +101,7 @@ An optional seed (default is 0) can be used to alter the result predictably::
 Caveats
 -------
 
-Though you can use xxhash as an HMAC hash function, but it's
+Though you can use xxhash as an HMAC_ hash function, but it's
 highly recommended not to.
 
 xxhash is **NOT** a cryptographic hash function, it is a
