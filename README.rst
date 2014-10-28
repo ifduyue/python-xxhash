@@ -41,7 +41,9 @@ Usage
 --------
 
 Module version and its backend xxHash library version can be retrieved using
-the module properties ``VERSION`` AND ``XXHASH_VERSION`` respectively::
+the module properties ``VERSION`` AND ``XXHASH_VERSION`` respectively.
+
+.. code-block:: python
 
     >>> import xxhash
     >>> xxhash.VERSION
@@ -63,7 +65,9 @@ get the integer digest.
 
 Constructors for hash algorithms provided by this module are ``xxh32()`` and ``xxh64()``.
 
-For example, to obtain the digest of the byte string ``b'Nobody inspects the spammish repetition'``::
+For example, to obtain the digest of the byte string ``b'Nobody inspects the spammish repetition'``.
+
+.. code-block:: python
 
     >>> import xxhash
     >>> x = xxhash.xxh32()
@@ -76,14 +80,18 @@ For example, to obtain the digest of the byte string ``b'Nobody inspects the spa
     >>> x.block_size
     16L
 
-More condensed::
+More condensed.
+
+.. code-block:: python
 
     >>> xxhash.xxh32(b'Nobody inspects the spammish repetition').hexdigest()
     '2f3b29e2'
     >>> xxhash.xxh32(b'Nobody inspects the spammish repetition').digest() == x.digest()
     True
 
-An optional seed (default is 0) can be used to alter the result predictably::
+An optional seed (default is 0) can be used to alter the result predictably.
+
+.. code-block:: python
 
     >>> import xxhash
     >>> xxhash.xxh64('xxhash').hexdigest()
