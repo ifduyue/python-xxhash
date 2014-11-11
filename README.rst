@@ -47,7 +47,7 @@ the module properties ``VERSION`` AND ``XXHASH_VERSION`` respectively.
 
     >>> import xxhash
     >>> xxhash.VERSION
-    '0.2.0'
+    '0.3.0'
     >>> xxhash.XXHASH_VERSION
     'r37'
 
