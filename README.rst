@@ -74,18 +74,18 @@ For example, to obtain the digest of the byte string ``b'Nobody inspects the spa
     >>> x.update(b'Nobody inspects')
     >>> x.update(b' the spammish repetition')
     >>> x.digest()
-    '/;)\xe2'
+    b'\xe2);/'
     >>> x.digest_size
-    4L
+    4
     >>> x.block_size
-    16L
+    16
 
 More condensed.
 
 .. code-block:: python
 
     >>> xxhash.xxh32(b'Nobody inspects the spammish repetition').hexdigest()
-    '2f3b29e2'
+    'e2293b2f'
     >>> xxhash.xxh32(b'Nobody inspects the spammish repetition').digest() == x.digest()
     True
 
@@ -95,20 +95,49 @@ An optional seed (default is 0) can be used to alter the result predictably.
 
     >>> import xxhash
     >>> xxhash.xxh64('xxhash').hexdigest()
-    '20c74b2c9538dd32'
+    '32dd38952c4bc720'
     >>> xxhash.xxh64('xxhash', seed=20141025).hexdigest()
-    '35064e848db959b5'
+    'b559b98d844e0635'
     >>> x = xxhash.xxh64(seed=20141025)
     >>> x.update('xxhash')
     >>> x.hexdigest()
-    '35064e848db959b5'
+    'b559b98d844e0635'
     >>> x.intdigest()
-    13067679811253438005L
+    13067679811253438005
+
+``digest()`` returns bytes of the big-endian** representation of the integer
+digest.
+
+.. code-block:: python
+
+    >>> import xxhash
+    >>> h = xxhash.xxh64()
+    >>> h.digest()
+    b'\xefF\xdb7Q\xd8\xe9\x99'
+    >>> h.intdigest().to_bytes(8, 'big')
+    b'\xefF\xdb7Q\xd8\xe9\x99'
+    >>> h.hexdigest()
+    'ef46db3751d8e999'
+    >>> format(h.intdigest(), '016x')
+    'ef46db3751d8e999'
+    >>> h.intdigest()
+    17241709254077376921
+    >>> int(h.hexdigest(), 16)
+    17241709254077376921
 
 
 Caveats
 -------
 
+ENDIANNESS
+~~~~~~~~~~~
+
+As of python-xxhash 0.3.0, ``digest()`` returns bytes of the
+**big-endian** representation of the integer digest. It used
+to be little-endian.
+
+DONT USE XXHASH IN HMAC
+~~~~~~~~~~~~~~~~~~~~~~~
 Though you can use xxhash as an HMAC_ hash function, but it's
 highly recommended not to.
 
