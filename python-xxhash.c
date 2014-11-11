@@ -45,29 +45,33 @@
  * Helper Functions ***********************************************************
  ****************************************************************************/
 
+/* u2bytes converts an unsigned int to bytes, which are the big-endian
+   representation of this integer */
 static void u2bytes(unsigned in, char *out)
 {
     unsigned char *s = (unsigned char *)out;
 
-    s[0] = in & 0xFF;
-    s[1] = (in >> 8) & 0xFF;
-    s[2] = (in >> 16) & 0xFF;
-    s[3] = (in >> 24) & 0xFF;
+    s[0] = (in >> 24) & 0xFF;
+    s[1] = (in >> 16) & 0xFF;
+    s[2] = (in >> 8) & 0xFF;
+    s[3] = in & 0xFF;
     s[4] = '\0';
 }
 
+/* ull2bytes converts an unsigned long long to bytes, which are the big-endian
+   representation of this integer */
 static void ull2bytes(unsigned long long in, char *out)
 {
     unsigned char *s = (unsigned char *)out;
 
-    s[0] = in & 0xFF;
-    s[1] = (in >> 8) & 0xFF;
-    s[2] = (in >> 16) & 0xFF;
-    s[3] = (in >> 24) & 0xFF;
-    s[4] = (in >> 32) & 0xFF;
-    s[5] = (in >> 40) & 0xFF;
-    s[6] = (in >> 48) & 0xFF;
-    s[7] = (in >> 56) & 0xFF;
+    s[0] = (in >> 56) & 0xFF;
+    s[1] = (in >> 48) & 0xFF;
+    s[2] = (in >> 40) & 0xFF;
+    s[3] = (in >> 32) & 0xFF;
+    s[4] = (in >> 24) & 0xFF;
+    s[5] = (in >> 16) & 0xFF;
+    s[6] = (in >> 8) & 0xFF;
+    s[7] = in & 0xFF;
     s[8] = '\0';
 }
 
