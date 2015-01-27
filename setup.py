@@ -4,7 +4,7 @@
 from setuptools import setup, Extension
 import os
 
-VERSION = "0.3.1"
+VERSION = "0.3.2"
 XXHASH_VERSION = "r39"
 
 if os.name == 'posix':

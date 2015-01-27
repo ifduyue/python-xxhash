@@ -246,7 +246,7 @@ static PyObject *PYXXH32_hexdigest(PYXXH32Object *self)
 
 PyDoc_STRVAR(
     PYXXH32_intdigest_doc,
-    "hexdigest() -> int\n\n"
+    "intdigest() -> int\n\n"
     "Like digest(), but returns the digest as an integer, which is the integer\n"
     "returned by xxhash C API");
 
@@ -570,7 +570,7 @@ static PyObject *PYXXH64_hexdigest(PYXXH64Object *self)
 
 PyDoc_STRVAR(
     PYXXH64_intdigest_doc,
-    "hexdigest() -> int\n\n"
+    "intdigest() -> int\n\n"
     "Like digest(), but returns the digest as an integer, which is the integer\n"
     "returned by xxhash C API");
 
