@@ -360,7 +360,7 @@ PyDoc_STRVAR(
 
 static PyTypeObject PYXXH32Type = {
 #if PY_MAJOR_VERSION >= 3
-    PyVarObject_HEAD_INIT(&PyType_Type, 0)
+    PyVarObject_HEAD_INIT(NULL, 0)
 #else
     PyObject_HEAD_INIT(NULL)
     0,                             /* ob_size */
@@ -684,7 +684,7 @@ PyDoc_STRVAR(
 
 static PyTypeObject PYXXH64Type = {
 #if PY_MAJOR_VERSION >= 3
-    PyVarObject_HEAD_INIT(&PyType_Type, 0)
+    PyVarObject_HEAD_INIT(NULL, 0)
 #else
     PyObject_HEAD_INIT(NULL)
     0,                             /* ob_size */
