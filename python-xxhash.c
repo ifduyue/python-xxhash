@@ -275,12 +275,24 @@ static PyObject *PYXXH32_copy(PYXXH32Object *self)
     return (PyObject *)p;
 }
 
+PyDoc_STRVAR(
+    PYXXH32_reset_doc,
+    "reset()\n\n"
+    "Reset state.");
+
+static PyObject *PYXXH32_reset(PYXXH32Object *self)
+{
+    XXH32_reset(self->xxhash_state, self->seed);
+    Py_RETURN_NONE;
+}
+
 static PyMethodDef PYXXH32_methods[] = {
     {"update", (PyCFunction)PYXXH32_update, METH_VARARGS, PYXXH32_update_doc},
     {"digest", (PyCFunction)PYXXH32_digest, METH_NOARGS, PYXXH32_digest_doc},
     {"hexdigest", (PyCFunction)PYXXH32_hexdigest, METH_NOARGS, PYXXH32_hexdigest_doc},
     {"intdigest", (PyCFunction)PYXXH32_intdigest, METH_NOARGS, PYXXH32_intdigest_doc},
     {"copy", (PyCFunction)PYXXH32_copy, METH_NOARGS, PYXXH32_copy_doc},
+    {"reset", (PyCFunction)PYXXH32_reset, METH_NOARGS, PYXXH32_reset_doc},
     {NULL, NULL, 0, NULL}
 };
 
@@ -599,12 +611,24 @@ static PyObject *PYXXH64_copy(PYXXH64Object *self)
     return (PyObject *)p;
 }
 
+PyDoc_STRVAR(
+    PYXXH64_reset_doc,
+    "reset()\n\n"
+    "Reset state.");
+
+static PyObject *PYXXH64_reset(PYXXH64Object *self)
+{
+    XXH64_reset(self->xxhash_state, self->seed);
+    Py_RETURN_NONE;
+}
+
 static PyMethodDef PYXXH64_methods[] = {
     {"update", (PyCFunction)PYXXH64_update, METH_VARARGS, PYXXH64_update_doc},
     {"digest", (PyCFunction)PYXXH64_digest, METH_NOARGS, PYXXH64_digest_doc},
     {"hexdigest", (PyCFunction)PYXXH64_hexdigest, METH_NOARGS, PYXXH64_hexdigest_doc},
     {"intdigest", (PyCFunction)PYXXH64_intdigest, METH_NOARGS, PYXXH64_intdigest_doc},
     {"copy", (PyCFunction)PYXXH64_copy, METH_NOARGS, PYXXH64_copy_doc},
+    {"reset", (PyCFunction)PYXXH64_reset, METH_NOARGS, PYXXH64_reset_doc},
     {NULL, NULL, 0, NULL}
 };
 

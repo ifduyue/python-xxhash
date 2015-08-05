@@ -1,3 +1,4 @@
+import os
 import unittest
 import random
 import xxhash
@@ -49,6 +50,28 @@ class TestXXHASH(unittest.TestCase):
         self.assertEqual(xxhash.xxh64('ab', seed).digest(), x.digest())
         x.update('c')
         self.assertEqual(xxhash.xxh64('abc', seed).digest(), x.digest())
+
+    def test_XXH32_reset(self):
+        x = xxhash.xxh32()
+        h = x.intdigest()
+
+        for i in range(10, 50):
+            x.update(os.urandom(i))
+
+        x.reset()
+
+        self.assertEqual(h, x.intdigest())
+
+    def test_XXH64_reset(self):
+        x = xxhash.xxh64()
+        h = x.intdigest()
+
+        for i in range(10, 50):
+            x.update(os.urandom(i))
+
+        x.reset()
+
+        self.assertEqual(h, x.intdigest())
 
 if __name__ == '__main__':
     unittest.main()
