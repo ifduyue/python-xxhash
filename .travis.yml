@@ -1,10 +1,18 @@
 language: python
 python:
-  - 2.6
-  - 2.7
-  - 3.2
-  - 3.3
-  - 3.4
+- 2.6
+- 2.7
+- 3.2
+- 3.3
+- 3.4
 install:
-  - gcc --version
+- gcc --version
 script: python setup.py test
+deploy:
+  provider: pypi
+  user: ifduyue
+  password:
+    secure: noL5GVgTeiYyYjw7DnsQwzcHG4zKkHAkEGvN3J4tkIkyRdn/ppm+1TbWSpVis6hD8OXaozMwoUnXTaRmj9wVTu28+UYONgKablQUdHzCdA/QrG7XtD8DTxS76E4tzgcAztM+NKzyP12Z6TA5Y6XJ6M00AFxhMB6zaeAgqROgF2s=
+  on:
+    tags: true
+    repo: ifduyue/python-xxhash
