@@ -47,17 +47,18 @@ the module properties ``VERSION`` AND ``XXHASH_VERSION`` respectively.
 
     >>> import xxhash
     >>> xxhash.VERSION
-    '0.3.0'
+    '0.4.1'
     >>> xxhash.XXHASH_VERSION
-    'r37'
+    'r41'
 
 This module is hashlib-compliant, which means you can use it in the same way as ``hashlib.md5``.
 
-    | update() -- updates the current digest with an additional string
+    | update() -- update the current digest with an additional string
     | digest() -- return the current digest value
     | hexdigest() -- return the current digest as a string of hexadecimal digits
     | intdigest() -- return the current digest as an integer
     | copy() -- return a copy of the current xxhash object
+    | reset() -- reset state
 
 md5 digest returns bytes, but the original xxh32 and xxh64 C APIs return integers.
 While this module is made hashlib-compliant, ``intdigest()`` is also provided to
