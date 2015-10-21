@@ -23,7 +23,7 @@ python-xxhash
 
 
 .. _HMAC: http://en.wikipedia.org/wiki/Hash-based_message_authentication_code
-.. _xxHash: https://code.google.com/p/xxhash/
+.. _xxHash: https://github.com/Cyan4973/xxHash
 .. _Cyan4973: https://github.com/Cyan4973
 
 
