@@ -5,19 +5,19 @@ python-xxhash
     :target: https://travis-ci.org/ifduyue/python-xxhash
     :alt: Build Status
 
-.. image:: https://img.shields.io/pypi/v/urlfetch.svg
+.. image:: https://img.shields.io/pypi/v/xxhash.svg
     :target: https://warehouse.python.org/project/xxhash/
     :alt: Latest Version
 
-.. image:: https://img.shields.io/pypi/dm/urlfetch.svg
+.. image:: https://img.shields.io/pypi/dm/xxhash.svg
     :target: https://warehouse.python.org/project/xxhash/
     :alt: Downloads
 
-.. image:: https://img.shields.io/pypi/pyversions/urlfetch.svg
+.. image:: https://img.shields.io/pypi/pyversions/xxhash.svg
     :target: https://warehouse.python.org/project/xxhash/
     :alt: Supported Python versions
 
-.. image:: https://img.shields.io/pypi/l/urlfetch.svg
+.. image:: https://img.shields.io/pypi/l/xxhash.svg
     :target: https://warehouse.python.org/project/xxhash/
     :alt: License
 
