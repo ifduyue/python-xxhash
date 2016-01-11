@@ -33,6 +33,7 @@ setup(
     author='Yue Du',
     author_email='ifduyue@gmail.com',
     url='https://github.com/ifduyue/python-xxhash',
+    license='BSD',
     ext_modules=[
         Extension('xxhash', [
             'python-xxhash.c',
