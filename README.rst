@@ -106,7 +106,7 @@ An optional seed (default is 0) can be used to alter the result predictably.
     >>> x.intdigest()
     13067679811253438005
 
-``digest()`` returns bytes of the big-endian** representation of the integer
+``digest()`` returns bytes of the **big-endian** representation of the integer
 digest.
 
 .. code-block:: python
