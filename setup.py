@@ -4,8 +4,7 @@
 from setuptools import setup, Extension
 import os
 
-VERSION = "0.4.3"
-XXHASH_VERSION = "r42"
+VERSION = "0.5.0"
 
 if os.name == 'posix':
     extra_compile_args = [
@@ -22,7 +21,6 @@ else:
 
 define_macros = [
     ('VERSION', VERSION),
-    ('XXHASH_VERSION', XXHASH_VERSION)
 ]
 
 setup(
