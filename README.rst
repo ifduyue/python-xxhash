@@ -151,7 +151,7 @@ functions are required.
 Copyright and License
 ---------------------
 
-Copyright (c) 2014 Yue Du - https://github.com/ifduyue
+Copyright (c) 2014-2016 Yue Du - https://github.com/ifduyue
 
 Licensed under `BSD 2-Clause License <http://opensource.org/licenses/BSD-2-Clause>`_
 
