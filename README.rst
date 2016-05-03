@@ -91,6 +91,9 @@ More condensed.
     True
 
 An optional seed (default is 0) can be used to alter the result predictably.
+Be careful that xxh32 takes an unsigned 32-bit integer as seed, while xxh64
+takes an unsigned 64-bit integer. Giving an inapropriate integer that is
+not in the supposing range, the output is unreliable and undefined.
 
 .. code-block:: python
 
