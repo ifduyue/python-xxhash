@@ -91,9 +91,6 @@ More condensed.
     True
 
 An optional seed (default is 0) can be used to alter the result predictably.
-Be careful that xxh32 takes an unsigned 32-bit integer as seed, while xxh64
-takes an unsigned 64-bit integer. Giving an inapropriate integer that is
-not in the supposing range, the output is unreliable and undefined.
 
 .. code-block:: python
 
@@ -108,6 +105,31 @@ not in the supposing range, the output is unreliable and undefined.
     'b559b98d844e0635'
     >>> x.intdigest()
     13067679811253438005
+
+Be careful that xxh32 takes an unsigned 32-bit integer as seed, while xxh64
+takes an unsigned 64-bit integer. Although unsigned integer overflow is
+defined behavior, it's better to not to let it happen.
+
+.. code-block:: python
+
+    >>> xxhash.xxh32('I want an unsigned 32-bit seed!', seed=0).hexdigest()
+    'f7a35af8'
+    >>> xxhash.xxh32('I want an unsigned 32-bit seed!', seed=2**32).hexdigest()
+    'f7a35af8'
+    >>> xxhash.xxh32('I want an unsigned 32-bit seed!', seed=-1).hexdigest()
+    'eb9e6f02'
+    >>> xxhash.xxh32('I want an unsigned 32-bit seed!', seed=2**32-1).hexdigest()
+    'eb9e6f02'
+    >>>
+    >>> xxhash.xxh64('I want an unsigned 64-bit seed!', seed=0).hexdigest()
+    'd4cb0a70a2b8c7c1'
+    >>> xxhash.xxh64('I want an unsigned 64-bit seed!', seed=2**64).hexdigest()
+    'd4cb0a70a2b8c7c1'
+    >>> xxhash.xxh64('I want an unsigned 64-bit seed!', seed=-1).hexdigest()
+    '5d714af8fd50e4af'
+    >>> xxhash.xxh64('I want an unsigned 64-bit seed!', seed=2**64-1).hexdigest()
+    '5d714af8fd50e4af'
+
 
 ``digest()`` returns bytes of the **big-endian** representation of the integer
 digest.
