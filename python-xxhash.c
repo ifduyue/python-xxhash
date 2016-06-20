@@ -132,8 +132,8 @@ static int PYXXH32_init(PYXXH32Object *self, PyObject *args, PyObject *kwargs)
 
 PyDoc_STRVAR(
     PYXXH32_update_doc,
-    "update (arg)\n\n"
-    "Update the xxh32 object with the string arg. Repeated calls are\n"
+    "update (input)\n\n"
+    "Update the xxh32 object with the string input. Repeated calls are\n"
     "equivalent to a single call with the concatenation of all the arguments.");
 
 static PyObject *PYXXH32_update(PYXXH32Object *self, PyObject *args)
@@ -365,7 +365,7 @@ PyDoc_STRVAR(
     "\n"
     "Methods:\n"
     "\n"
-    "update() -- updates the current digest with an additional string\n"
+    "update(input) -- updates the current digest with the provided string.\n"
     "digest() -- return the current digest value\n"
     "hexdigest() -- return the current digest as a string of hexadecimal digits\n"
     "intdigest() -- return the current digest as an integer\n"
@@ -468,8 +468,8 @@ static int PYXXH64_init(PYXXH64Object *self, PyObject *args, PyObject *kwargs)
 
 PyDoc_STRVAR(
     PYXXH64_update_doc,
-    "update (arg)\n\n"
-    "Update the xxh64 object with the string arg. Repeated calls are\n"
+    "update (input)\n\n"
+    "Update the xxh64 object with the string input. Repeated calls are\n"
     "equivalent to a single call with the concatenation of all the arguments.");
 
 static PyObject *PYXXH64_update(PYXXH64Object *self, PyObject *args)
@@ -701,7 +701,7 @@ PyDoc_STRVAR(
     "\n"
     "Methods:\n"
     "\n"
-    "update() -- updates the current digest with an additional string\n"
+    "update(input) -- updates the current digest with an additional string\n"
     "digest() -- return the current digest value\n"
     "hexdigest() -- return the current digest as a string of hexadecimal digits\n"
     "intdigest() -- return the current digest as an integer\n"
