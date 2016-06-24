@@ -85,7 +85,7 @@ static void ull2bytes(unsigned long long in, char *out)
 typedef struct {
     PyObject_HEAD
     /* Type-specific fields go here. */
-    XXH32_stateBody_t xxhash_state[1];
+    XXH32_state_t *xxhash_state;
     unsigned int seed;
 } PYXXH32Object;
 
@@ -93,6 +93,7 @@ static PyTypeObject PYXXH32Type;
 
 static void PYXXH32_dealloc(PYXXH32Object *self)
 {
+    XXH32_freeState(self->xxhash_state);
     PyObject_Del(self);
 }
 
@@ -103,6 +104,10 @@ static PyObject *PYXXH32_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
     PYXXH32Object *self;
 
     if ((self = PyObject_New(PYXXH32Object, &PYXXH32Type)) == NULL) {
+        return NULL;
+    }
+
+    if ((self->xxhash_state = XXH32_createState()) == NULL) {
         return NULL;
     }
 
@@ -121,10 +126,10 @@ static int PYXXH32_init(PYXXH32Object *self, PyObject *args, PyObject *kwargs)
     }
 
     self->seed = seed;
-    XXH32_reset((XXH32_state_t *)self->xxhash_state, seed);
+    XXH32_reset(self->xxhash_state, seed);
 
     if (s) {
-        XXH32_update((XXH32_state_t *)self->xxhash_state, s, ns);
+        XXH32_update(self->xxhash_state, s, ns);
     }
 
     return 0;
@@ -145,7 +150,7 @@ static PyObject *PYXXH32_update(PYXXH32Object *self, PyObject *args)
         return NULL;
     }
 
-    XXH32_update((XXH32_state_t *)self->xxhash_state, s, ns);
+    XXH32_update(self->xxhash_state, s, ns);
 
     Py_RETURN_NONE;
 }
@@ -185,7 +190,7 @@ static PyObject *PYXXH32_digest(PYXXH32Object *self)
         return NULL;
     }
 
-    digest = XXH32_digest((XXH32_state_t *)self->xxhash_state);
+    digest = XXH32_digest(self->xxhash_state);
     u2bytes(digest, retbuf);
 
     return retval;
@@ -229,7 +234,7 @@ static PyObject *PYXXH32_hexdigest(PYXXH32Object *self)
         return NULL;
     }
 
-    intdigest = XXH32_digest((XXH32_state_t *)self->xxhash_state);
+    intdigest = XXH32_digest(self->xxhash_state);
     u2bytes(intdigest, digest);
 
     for (i = j = 0; i < XXH32_DIGESTSIZE; i++) {
@@ -253,7 +258,7 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH32_intdigest(PYXXH32Object *self)
 {
-    unsigned int digest = XXH32_digest((XXH32_state_t *)self->xxhash_state);
+    unsigned int digest = XXH32_digest(self->xxhash_state);
     return Py_BuildValue("I", digest);
 }
 
@@ -270,8 +275,12 @@ static PyObject *PYXXH32_copy(PYXXH32Object *self)
         return NULL;
     }
 
+    if ((self->xxhash_state = XXH32_createState()) == NULL) {
+        return NULL;
+    }
+
     p->seed = self->seed;
-    memcpy(p->xxhash_state, self->xxhash_state, sizeof(self->xxhash_state));
+    XXH32_copyState(p->xxhash_state, self->xxhash_state);
 
     return (PyObject *)p;
 }
@@ -283,7 +292,7 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH32_reset(PYXXH32Object *self)
 {
-    XXH32_reset((XXH32_state_t *)self->xxhash_state, self->seed);
+    XXH32_reset(self->xxhash_state, self->seed);
     Py_RETURN_NONE;
 }
 
@@ -423,7 +432,7 @@ static PyTypeObject PYXXH32Type = {
 typedef struct {
     PyObject_HEAD
     /* Type-specific fields go here. */
-    XXH64_stateBody_t xxhash_state[1];
+    XXH64_state_t *xxhash_state;
     unsigned long long seed;
 } PYXXH64Object;
 
@@ -431,6 +440,7 @@ static PyTypeObject PYXXH64Type;
 
 static void PYXXH64_dealloc(PYXXH64Object *self)
 {
+    XXH64_freeState(self->xxhash_state);
     PyObject_Del(self);
 }
 
@@ -439,6 +449,10 @@ static PyObject *PYXXH64_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
     PYXXH64Object *self;
 
     if ((self = PyObject_New(PYXXH64Object, &PYXXH64Type)) == NULL) {
+        return NULL;
+    }
+
+    if ((self->xxhash_state = XXH64_createState()) == NULL) {
         return NULL;
     }
 
@@ -457,10 +471,10 @@ static int PYXXH64_init(PYXXH64Object *self, PyObject *args, PyObject *kwargs)
     }
 
     self->seed = seed;
-    XXH64_reset((XXH64_state_t *)self->xxhash_state, seed);
+    XXH64_reset(self->xxhash_state, seed);
 
     if (s) {
-        XXH64_update((XXH64_state_t *)self->xxhash_state, s, ns);
+        XXH64_update(self->xxhash_state, s, ns);
     }
 
     return 0;
@@ -481,7 +495,7 @@ static PyObject *PYXXH64_update(PYXXH64Object *self, PyObject *args)
         return NULL;
     }
 
-    XXH64_update((XXH64_state_t *)self->xxhash_state, s, ns);
+    XXH64_update(self->xxhash_state, s, ns);
 
     Py_RETURN_NONE;
 }
@@ -520,7 +534,7 @@ static PyObject *PYXXH64_digest(PYXXH64Object *self)
         return NULL;
     }
 
-    digest = XXH64_digest((XXH64_state_t *)self->xxhash_state);
+    digest = XXH64_digest(self->xxhash_state);
     ull2bytes(digest, retbuf);
 
     return retval;
@@ -564,7 +578,7 @@ static PyObject *PYXXH64_hexdigest(PYXXH64Object *self)
         return NULL;
     }
 
-    intdigest = XXH64_digest((XXH64_state_t *)self->xxhash_state);
+    intdigest = XXH64_digest(self->xxhash_state);
     ull2bytes(intdigest, digest);
 
     for (i = j = 0; i < XXH64_DIGESTSIZE; i++) {
@@ -589,7 +603,7 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH64_intdigest(PYXXH64Object *self)
 {
-    unsigned long long digest = XXH64_digest((XXH64_state_t *)self->xxhash_state);
+    unsigned long long digest = XXH64_digest(self->xxhash_state);
     return Py_BuildValue("K", digest);
 }
 
@@ -606,8 +620,12 @@ static PyObject *PYXXH64_copy(PYXXH64Object *self)
         return NULL;
     }
 
+    if ((self->xxhash_state = XXH64_createState()) == NULL) {
+        return NULL;
+    }
+
     p->seed = self->seed;
-    memcpy(p->xxhash_state, self->xxhash_state, sizeof(self->xxhash_state));
+    XXH64_copyState(p->xxhash_state, self->xxhash_state);
 
     return (PyObject *)p;
 }
@@ -619,7 +637,7 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH64_reset(PYXXH64Object *self)
 {
-    XXH64_reset((XXH64_state_t *)self->xxhash_state, self->seed);
+    XXH64_reset(self->xxhash_state, self->seed);
     Py_RETURN_NONE;
 }
 
@@ -834,8 +852,6 @@ void initxxhash(void)
         INITERROR;
     }
 
-    PYXXH32Type.tp_new = PyType_GenericNew;
-
     if (PyType_Ready(&PYXXH32Type) < 0) {
         INITERROR;
     }
@@ -843,8 +859,6 @@ void initxxhash(void)
     Py_INCREF(&PYXXH32Type);
     PyModule_AddObject(module, "xxh32", (PyObject *)&PYXXH32Type);
 
-
-    PYXXH64Type.tp_new = PyType_GenericNew;
 
     if (PyType_Ready(&PYXXH64Type) < 0) {
         INITERROR;
