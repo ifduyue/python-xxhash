@@ -129,7 +129,9 @@ static int PYXXH32_init(PYXXH32Object *self, PyObject *args, PyObject *kwargs)
     XXH32_reset(self->xxhash_state, seed);
 
     if (s) {
+        Py_BEGIN_ALLOW_THREADS
         XXH32_update(self->xxhash_state, s, ns);
+        Py_END_ALLOW_THREADS
     }
 
     return 0;
@@ -150,7 +152,9 @@ static PyObject *PYXXH32_update(PYXXH32Object *self, PyObject *args)
         return NULL;
     }
 
+    Py_BEGIN_ALLOW_THREADS
     XXH32_update(self->xxhash_state, s, ns);
+    Py_END_ALLOW_THREADS
 
     Py_RETURN_NONE;
 }
@@ -474,7 +478,9 @@ static int PYXXH64_init(PYXXH64Object *self, PyObject *args, PyObject *kwargs)
     XXH64_reset(self->xxhash_state, seed);
 
     if (s) {
+        Py_BEGIN_ALLOW_THREADS
         XXH64_update(self->xxhash_state, s, ns);
+        Py_END_ALLOW_THREADS
     }
 
     return 0;
@@ -495,7 +501,9 @@ static PyObject *PYXXH64_update(PYXXH64Object *self, PyObject *args)
         return NULL;
     }
 
+    Py_BEGIN_ALLOW_THREADS
     XXH64_update(self->xxhash_state, s, ns);
+    Py_END_ALLOW_THREADS
 
     Py_RETURN_NONE;
 }
