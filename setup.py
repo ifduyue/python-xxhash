@@ -4,7 +4,7 @@
 from setuptools import setup, Extension
 import os
 
-with open('xxhash/__init__.py', 'rb') as f:
+with open('xxhash/__init__.py') as f:
     for line in f:
         if line.startswith('VERSION = '):
             VERSION = eval(line.rsplit(None, 1)[-1])

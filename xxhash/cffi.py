@@ -58,7 +58,7 @@ class xxh32(object):
         self.seed = seed
         self.reset()
         if input:
-            lib.XXH32_update(self.xxhash_state, input, len(input))
+            self.update(input)
 
     def update(self, input):
         lib.XXH32_update(self.xxhash_state, input, len(input))
@@ -82,7 +82,7 @@ class xxh64(object):
         self.seed = seed
         self.reset()
         if input:
-            lib.XXH64_update(self.xxhash_state, input, len(input))
+            self.update(input)
 
     def update(self, input):
         lib.XXH64_update(self.xxhash_state, input, len(input))
