@@ -55,7 +55,8 @@ XXHASH_VERSION = "{}.{}.{}".format(lib.XXH_VERSION_MAJOR,
 class xxh32(object):
     def __init__(self, input=None, seed=0):
         self.xxhash_state = ffibuilder.gc(lib.XXH32_createState(), lib.XXH32_freeState)
-        lib.XXH32_reset(self.xxhash_state, seed)
+        self.seed = seed
+        self.reset()
         if input:
             lib.XXH32_update(self.xxhash_state, input, len(input))
 
@@ -71,11 +72,15 @@ class xxh32(object):
     def hexdigest(self):
         return binascii.hexlify(self.digest())
 
+    def reset(self):
+        lib.XXH32_reset(self.xxhash_state, self.seed)
+
 
 class xxh64(object):
     def __init__(self, input=None, seed=0):
         self.xxhash_state = ffibuilder.gc(lib.XXH64_createState(), lib.XXH64_freeState)
-        lib.XXH64_reset(self.xxhash_state, seed)
+        self.seed = seed
+        self.reset()
         if input:
             lib.XXH64_update(self.xxhash_state, input, len(input))
 
@@ -90,3 +95,6 @@ class xxh64(object):
 
     def hexdigest(self):
         return binascii.hexlify(self.digest())
+
+    def reset(self):
+        lib.XXH64_reset(self.xxhash_state, self.seed)

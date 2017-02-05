@@ -1,4 +1,3 @@
-#from __future__ import absolute_import
 import os
 import unittest
 import random
@@ -6,6 +5,9 @@ import xxhash
 
 
 class TestXXHASH(unittest.TestCase):
+    def test_version(self):
+        self.assertTrue(xxhash.VERSION)
+        self.assertTrue(xxhash.XXHASH_VERSION)
 
     def test_xxh32(self):
         self.assertEqual(xxhash.xxh32('a').intdigest(), 1426945110)
