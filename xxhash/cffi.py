@@ -1,8 +1,11 @@
 from __future__ import absolute_import
 
+import sys
 import cffi
 import struct
 import binascii
+
+PY3 = sys.version_info[0] == 3
 
 ffibuilder = cffi.FFI()
 ffibuilder.cdef('''
@@ -61,7 +64,10 @@ class xxh32(object):
             self.update(input)
 
     def update(self, input):
-        lib.XXH32_update(self.xxhash_state, input, len(input))
+        if PY3 and isinstance(input, str):
+            lib.XXH32_update(self.xxhash_state, input.encode('utf8'), len(input))
+        else:
+            lib.XXH32_update(self.xxhash_state, input, len(input))
 
     def intdigest(self):
         return lib.XXH32_digest(self.xxhash_state)
@@ -85,7 +91,10 @@ class xxh64(object):
             self.update(input)
 
     def update(self, input):
-        lib.XXH64_update(self.xxhash_state, input, len(input))
+        if PY3 and isinstance(input, str):
+            lib.XXH64_update(self.xxhash_state, input.encode('utf8'), len(input))
+        else:
+            lib.XXH64_update(self.xxhash_state, input, len(input))
 
     def intdigest(self):
         return lib.XXH64_digest(self.xxhash_state)
