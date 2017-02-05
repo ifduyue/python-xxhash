@@ -81,6 +81,12 @@ class xxh32(object):
     def reset(self):
         lib.XXH32_reset(self.xxhash_state, self.seed)
 
+    def copy(self):
+        new = type(self)()
+        lib.XXH32_copyState(new.xxhash_state, self.xxhash_state)
+        new.seed = self.seed
+        return new
+
 
 class xxh64(object):
     def __init__(self, input=None, seed=0):
@@ -107,3 +113,9 @@ class xxh64(object):
 
     def reset(self):
         lib.XXH64_reset(self.xxhash_state, self.seed)
+
+    def copy(self):
+        new = type(self)()
+        lib.XXH64_copyState(new.xxhash_state, self.xxhash_state)
+        new.seed = self.seed
+        return new
