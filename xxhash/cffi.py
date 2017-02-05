@@ -50,9 +50,9 @@ lib = ffibuilder.verify(
 )
 
 
-XXHASH_VERSION = "{}.{}.{}".format(lib.XXH_VERSION_MAJOR,
-                                   lib.XXH_VERSION_MINOR,
-                                   lib.XXH_VERSION_RELEASE)
+XXHASH_VERSION = "%d.%d.%d" % (lib.XXH_VERSION_MAJOR,
+                               lib.XXH_VERSION_MINOR,
+                               lib.XXH_VERSION_RELEASE)
 
 
 class xxh32(object):
