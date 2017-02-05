@@ -4,7 +4,12 @@
 from setuptools import setup, Extension
 import os
 
-VERSION = "0.6.1"
+with open('xxhash/__init__.py', 'rb') as f:
+    for line in f:
+        if line.startswith('VERSION = '):
+            VERSION = eval(line.rsplit(None, 1)[-1])
+
+USE_CPYTHON = os.getenv('XXHASH_FORCE_CFFI') in (None, '0')
 
 if os.name == 'posix':
     extra_compile_args = [
@@ -23,6 +28,20 @@ define_macros = [
     ('VERSION', VERSION),
 ]
 
+if USE_CPYTHON:
+    ext_modules = [
+        Extension(
+            'xxhash_cpython',
+            ['xxhash/cpython.c', 'c-xxhash/xxhash.c'],
+            extra_compile_args=extra_compile_args,
+            define_macros=define_macros,
+            include_dirs=['c-xxhash']
+        )
+    ]
+else:
+    import xxhash.cffi
+    ext_modules = [xxhash.cffi.ffibuilder.verifier.get_extension()]
+
 setup(
     name='xxhash',
     version=VERSION,
@@ -32,14 +51,9 @@ setup(
     author_email='ifduyue@gmail.com',
     url='https://github.com/ifduyue/python-xxhash',
     license='BSD',
-    ext_modules=[
-        Extension('xxhash', [
-            'python-xxhash.c',
-            'xxhash/xxhash.c',
-        ],
-        extra_compile_args=extra_compile_args,
-        define_macros=define_macros)
-    ],
+    packages=['xxhash'],
+    ext_package='xxhash',
+    ext_modules=ext_modules,
     setup_requires=["nose>=1.3.0"],
     test_suite='nose.collector',
     classifiers=[

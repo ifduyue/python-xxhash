@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, Yue Du
+ * Copyright (c) 2014-2017, Yue Du
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
@@ -30,12 +30,12 @@
 
 #include <Python.h>
 
-#include "xxhash/xxhash.h"
+#include "xxhash.h"
 
 #define TOSTRING(x) #x
 #define VALUE_TO_STRING(x) TOSTRING(x)
-
 #define XXHASH_VERSION XXH_VERSION_MAJOR.XXH_VERSION_MINOR.XXH_VERSION_RELEASE
+
 #define XXH32_DIGESTSIZE 4
 #define XXH32_BLOCKSIZE 16
 #define XXH64_DIGESTSIZE 8
@@ -810,7 +810,7 @@ static int myextension_clear(PyObject *m)
 
 static struct PyModuleDef moduledef = {
     PyModuleDef_HEAD_INIT,
-    "xxhash",
+    "xxhash_cpython",
     NULL,
     sizeof(struct module_state),
     methods,
@@ -822,12 +822,12 @@ static struct PyModuleDef moduledef = {
 
 #define INITERROR return NULL
 
-PyObject *PyInit_xxhash(void)
+PyObject *PyInit_xxhash_cpython(void)
 
 #else
 #define INITERROR return
 
-void initxxhash(void)
+void initxxhash_cpython(void)
 #endif
 {
     PyObject *module;
@@ -836,7 +836,7 @@ void initxxhash(void)
 #if PY_MAJOR_VERSION >= 3
     module = PyModule_Create(&moduledef);
 #else
-    module = Py_InitModule("xxhash", methods);
+    module = Py_InitModule("xxhash_cpython", methods);
 #endif
 
     if (module == NULL) {
@@ -845,7 +845,7 @@ void initxxhash(void)
 
     st = GETSTATE(module);
 
-    st->error = PyErr_NewException("xxhash.Error", NULL, NULL);
+    st->error = PyErr_NewException("xxhash_cpython.Error", NULL, NULL);
 
     if (st->error == NULL) {
         Py_DECREF(module);
@@ -867,7 +867,6 @@ void initxxhash(void)
     Py_INCREF(&PYXXH64Type);
     PyModule_AddObject(module, "xxh64", (PyObject *)&PYXXH64Type);
 
-    PyModule_AddStringConstant(module, "VERSION", VALUE_TO_STRING(VERSION));
     PyModule_AddStringConstant(module, "XXHASH_VERSION", VALUE_TO_STRING(XXHASH_VERSION));
 
 #if PY_MAJOR_VERSION >= 3

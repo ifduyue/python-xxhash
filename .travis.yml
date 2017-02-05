@@ -1,4 +1,5 @@
 language: python
+
 python:
 - 2.6
 - 2.7
@@ -7,8 +8,16 @@ python:
 - 3.4
 - 3.5
 - 3.6
+- pypy
+
 install:
+- pip install cffi
 - gcc --version
+
+env:
+- XXHASH_FORCE_CFFI=1
+- XXHASH_FORCE_CFFI=0
+
 script: python setup.py test
 deploy:
   provider: pypi

@@ -1,4 +1,7 @@
 include README.rst
 include LICENSE
-include xxhash/xxhash.h
-include xxhash/xxhash.c
+include c-xxhash/xxhash.h
+include c-xxhash/xxhash.c
+graft tests
+global-exclude __pycache__
+global-exclude *.py[co]
