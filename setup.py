@@ -24,17 +24,12 @@ if os.name == 'posix':
 else:
     extra_compile_args = None
 
-define_macros = [
-    ('VERSION', VERSION),
-]
-
 if USE_CPYTHON:
     ext_modules = [
         Extension(
             'xxhash_cpython',
             ['xxhash/cpython.c', 'c-xxhash/xxhash.c'],
             extra_compile_args=extra_compile_args,
-            define_macros=define_macros,
             include_dirs=['c-xxhash']
         )
     ]
