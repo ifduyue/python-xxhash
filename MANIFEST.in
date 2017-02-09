@@ -2,6 +2,7 @@ include README.rst
 include LICENSE
 include c-xxhash/xxhash.h
 include c-xxhash/xxhash.c
+include ffibuild.py
 graft tests
 global-exclude __pycache__
 global-exclude *.py[co]

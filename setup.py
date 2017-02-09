@@ -24,18 +24,23 @@ if os.name == 'posix':
 else:
     extra_compile_args = None
 
+setup_requires = ['nose>=1.3.0']
 if USE_CPYTHON:
+    install_requires = None
     ext_modules = [
         Extension(
-            'xxhash_cpython',
+            'cpython',
             ['xxhash/cpython.c', 'c-xxhash/xxhash.c'],
             extra_compile_args=extra_compile_args,
             include_dirs=['c-xxhash']
         )
     ]
+    cffi_modules = None
 else:
-    import xxhash.cffi
-    ext_modules = [xxhash.cffi.ffibuilder.verifier.get_extension()]
+    install_requires = ['cffi']
+    setup_requires.append('cffi')
+    cffi_modules = ['ffibuild.py:ffi']
+    ext_modules = None
 
 setup(
     name='xxhash',
@@ -49,7 +54,9 @@ setup(
     packages=['xxhash'],
     ext_package='xxhash',
     ext_modules=ext_modules,
-    setup_requires=["nose>=1.3.0"],
+    cffi_modules=cffi_modules,
+    setup_requires=setup_requires,
+    install_requires=install_requires,
     test_suite='nose.collector',
     classifiers=[
         'Development Status :: 4 - Beta',

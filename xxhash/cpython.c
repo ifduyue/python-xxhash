@@ -778,77 +778,43 @@ static PyTypeObject PYXXH64Type = {
 
 /* ref: https://docs.python.org/2/howto/cporting.html */
 
-struct module_state {
-    PyObject *error;
-};
-
-#if PY_MAJOR_VERSION >= 3
-#define GETSTATE(m) ((struct module_state*)PyModule_GetState(m))
-#else
-#define GETSTATE(m) (&_state)
-static struct module_state _state;
-#endif
-
 static PyMethodDef methods[] = {
     {NULL, NULL, 0, NULL}
 };
 
 #if PY_MAJOR_VERSION >= 3
 
-static int myextension_traverse(PyObject *m, visitproc visit, void *arg)
-{
-    Py_VISIT(GETSTATE(m)->error);
-    return 0;
-}
-
-static int myextension_clear(PyObject *m)
-{
-    Py_CLEAR(GETSTATE(m)->error);
-    return 0;
-}
-
-
 static struct PyModuleDef moduledef = {
     PyModuleDef_HEAD_INIT,
-    "xxhash_cpython",
+    "cpython",
     NULL,
-    sizeof(struct module_state),
+    -1,
     methods,
     NULL,
-    myextension_traverse,
-    myextension_clear,
+    NULL,
+    NULL,
     NULL
 };
 
 #define INITERROR return NULL
 
-PyObject *PyInit_xxhash_cpython(void)
+PyObject *PyInit_cpython(void)
 
 #else
 #define INITERROR return
 
-void initxxhash_cpython(void)
+void initcpython(void)
 #endif
 {
     PyObject *module;
-    struct module_state *st;
 
 #if PY_MAJOR_VERSION >= 3
     module = PyModule_Create(&moduledef);
 #else
-    module = Py_InitModule("xxhash_cpython", methods);
+    module = Py_InitModule("cpython", methods);
 #endif
 
     if (module == NULL) {
-        INITERROR;
-    }
-
-    st = GETSTATE(module);
-
-    st->error = PyErr_NewException("xxhash_cpython.Error", NULL, NULL);
-
-    if (st->error == NULL) {
-        Py_DECREF(module);
         INITERROR;
     }
 
