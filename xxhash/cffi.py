@@ -12,6 +12,9 @@ XXHASH_VERSION = "%d.%d.%d" % (lib.XXH_VERSION_MAJOR,
 
 
 class xxh32(object):
+    digest_size = digestsize = 4
+    block_size = 16
+
     def __init__(self, input=None, seed=0):
         self.xxhash_state = ffi.gc(lib.XXH32_createState(), lib.XXH32_freeState)
         self.seed = seed
@@ -45,6 +48,9 @@ class xxh32(object):
 
 
 class xxh64(object):
+    digest_size = digestsize = 8
+    block_size = 32
+
     def __init__(self, input=None, seed=0):
         self.xxhash_state = ffi.gc(lib.XXH64_createState(), lib.XXH64_freeState)
         self.seed = seed
