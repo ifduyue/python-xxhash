@@ -18,7 +18,10 @@ env:
 - XXHASH_FORCE_CFFI=1
 - XXHASH_FORCE_CFFI=0
 
-script: python setup.py test
+script:
+- python setup.py install
+- cd ..
+- python python-xxhash/tests/test.py
 deploy:
   provider: pypi
   user: ifduyue
