@@ -9,10 +9,6 @@ python-xxhash
     :target: https://warehouse.python.org/project/xxhash/
     :alt: Latest Version
 
-.. image:: https://img.shields.io/pypi/dm/xxhash.svg
-    :target: https://warehouse.python.org/project/xxhash/
-    :alt: Downloads
-
 .. image:: https://img.shields.io/pypi/pyversions/xxhash.svg
     :target: https://warehouse.python.org/project/xxhash/
     :alt: Supported Python versions
