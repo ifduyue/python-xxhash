@@ -4,7 +4,7 @@
 from setuptools import setup, Extension
 import os
 
-VERSION = "0.6.1"
+VERSION = "0.6.3"
 
 if os.name == 'posix':
     extra_compile_args = [
@@ -55,6 +55,7 @@ setup(
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: Implementation :: CPython',
     ],
 )
