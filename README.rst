@@ -46,7 +46,7 @@ setting env variable ``XXHASH_FORCE_CFFI=1`` to install the CFFI variant:
 Installation Prerequisites
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-CPython variant
+CPython Variant
 ^^^^^^^^^^^^^^^^
 
 On Debian/Ubuntu:
@@ -59,9 +59,9 @@ On CentOS/Fedora:
 
 .. code-block:: bash
 
-   $ yum install python-devel gcc
+   $ yum install python-devel gcc redhat-rpm-config
 
-CFFI variant
+CFFI Variant
 ^^^^^^^^^^^^^
 
 On Debian/Ubuntu:
@@ -74,7 +74,7 @@ On CentOS/Fedora:
 
 .. code-block:: bash
 
-   $ yum install libcffi-devel python-devel gcc
+   $ yum install libcffi-devel python-devel gcc redhat-rpm-config
 
 
 Usage
