@@ -10,6 +10,7 @@ with open('xxhash/__init__.py') as f:
             VERSION = eval(line.rsplit(None, 1)[-1])
 
 USE_CPYTHON = os.getenv('XXHASH_FORCE_CFFI') in (None, '0')
+setup_kwargs = {}
 
 if os.name == 'posix':
     extra_compile_args = [
@@ -24,10 +25,8 @@ if os.name == 'posix':
 else:
     extra_compile_args = None
 
-setup_requires = ['nose>=1.3.0']
 if USE_CPYTHON:
-    install_requires = None
-    ext_modules = [
+    setup_kwargs['ext_modules'] = [
         Extension(
             'cpython',
             ['xxhash/cpython.c', 'c-xxhash/xxhash.c'],
@@ -35,12 +34,10 @@ if USE_CPYTHON:
             include_dirs=['c-xxhash']
         )
     ]
-    cffi_modules = None
 else:
-    install_requires = ['cffi']
-    setup_requires.append('cffi')
-    cffi_modules = ['ffibuild.py:ffi']
-    ext_modules = None
+    setup_kwargs['install_requires'] = ['cffi']
+    setup_kwargs['setup_requires'] = ['cffi']
+    setup_kwargs['cffi_modules'] = ['ffibuild.py:ffi']
 
 setup(
     name='xxhash',
@@ -53,11 +50,8 @@ setup(
     license='BSD',
     packages=['xxhash'],
     ext_package='xxhash',
-    ext_modules=ext_modules,
-    cffi_modules=cffi_modules,
-    setup_requires=setup_requires,
-    install_requires=install_requires,
     test_suite='nose.collector',
+    tests_require=['nose>1.3.0'],
     classifiers=[
         'Development Status :: 4 - Beta',
         'License :: OSI Approved :: BSD License',
@@ -75,4 +69,5 @@ setup(
         'Programming Language :: Python :: Implementation :: CPython',
         'Programming Language :: Python :: Implementation :: PyPy',
     ],
+    **setup_kwargs
 )
