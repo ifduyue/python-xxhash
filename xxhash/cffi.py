@@ -17,7 +17,7 @@ class xxh32(object):
 
     def __init__(self, input=None, seed=0):
         self.xxhash_state = ffi.gc(lib.XXH32_createState(), lib.XXH32_freeState)
-        self.seed = seed
+        self.seed = seed & (2 ** 32 - 1)
         self.reset()
         if input:
             self.update(input)
@@ -53,7 +53,7 @@ class xxh64(object):
 
     def __init__(self, input=None, seed=0):
         self.xxhash_state = ffi.gc(lib.XXH64_createState(), lib.XXH64_freeState)
-        self.seed = seed
+        self.seed = seed & (2 ** 64 - 1)
         self.reset()
         if input:
             self.update(input)

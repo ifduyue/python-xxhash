@@ -114,5 +114,26 @@ class TestXXHASH(unittest.TestCase):
         self.assertEqual(a.intdigest(), b.intdigest())
         self.assertEqual(a.hexdigest(), b.hexdigest())
 
+    def test_xxh32_overflow(self):
+        self.assertEqual(
+            xxhash.xxh32('I want an unsigned 32-bit seed!', seed=0).digest(),
+            xxhash.xxh32('I want an unsigned 32-bit seed!', seed=2**32).digest()
+        )
+        self.assertEqual(
+            xxhash.xxh32('I want an unsigned 32-bit seed!', seed=-1).digest(),
+            xxhash.xxh32('I want an unsigned 32-bit seed!', seed=2**32-1).digest()
+        )
+
+    def test_xxh64_overflow(self):
+        self.assertEqual(
+            xxhash.xxh64('I want an unsigned 32-bit seed!', seed=0).digest(),
+            xxhash.xxh64('I want an unsigned 32-bit seed!', seed=2**64).digest()
+        )
+        self.assertEqual(
+            xxhash.xxh64('I want an unsigned 32-bit seed!', seed=-1).digest(),
+            xxhash.xxh64('I want an unsigned 32-bit seed!', seed=2**64-1).digest()
+        )
+
+
 if __name__ == '__main__':
     unittest.main()
