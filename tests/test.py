@@ -76,5 +76,43 @@ class TestXXHASH(unittest.TestCase):
 
         self.assertEqual(h, x.intdigest())
 
+    def test_xxh32_copy(self):
+        a = xxhash.xxh32()
+        a.update('xxhash')
+
+        b = a.copy()
+        self.assertEqual(a.digest(), b.digest())
+        self.assertEqual(a.intdigest(), b.intdigest())
+        self.assertEqual(a.hexdigest(), b.hexdigest())
+
+        b.update('xxhash')
+        self.assertNotEqual(a.digest(), b.digest())
+        self.assertNotEqual(a.intdigest(), b.intdigest())
+        self.assertNotEqual(a.hexdigest(), b.hexdigest())
+
+        a.update('xxhash')
+        self.assertEqual(a.digest(), b.digest())
+        self.assertEqual(a.intdigest(), b.intdigest())
+        self.assertEqual(a.hexdigest(), b.hexdigest())
+
+    def test_xxh64_copy(self):
+        a = xxhash.xxh64()
+        a.update('xxhash')
+
+        b = a.copy()
+        self.assertEqual(a.digest(), b.digest())
+        self.assertEqual(a.intdigest(), b.intdigest())
+        self.assertEqual(a.hexdigest(), b.hexdigest())
+
+        b.update('xxhash')
+        self.assertNotEqual(a.digest(), b.digest())
+        self.assertNotEqual(a.intdigest(), b.intdigest())
+        self.assertNotEqual(a.hexdigest(), b.hexdigest())
+
+        a.update('xxhash')
+        self.assertEqual(a.digest(), b.digest())
+        self.assertEqual(a.intdigest(), b.intdigest())
+        self.assertEqual(a.hexdigest(), b.hexdigest())
+
 if __name__ == '__main__':
     unittest.main()
