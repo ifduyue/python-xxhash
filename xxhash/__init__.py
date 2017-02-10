@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 try:
     from xxhash.cpython import xxh32, xxh64, XXHASH_VERSION
 except ImportError:
