@@ -275,7 +275,7 @@ static PyObject *PYXXH32_copy(PYXXH32Object *self)
         return NULL;
     }
 
-    if ((self->xxhash_state = XXH32_createState()) == NULL) {
+    if ((p->xxhash_state = XXH32_createState()) == NULL) {
         return NULL;
     }
 
@@ -620,7 +620,7 @@ static PyObject *PYXXH64_copy(PYXXH64Object *self)
         return NULL;
     }
 
-    if ((self->xxhash_state = XXH64_createState()) == NULL) {
+    if ((p->xxhash_state = XXH64_createState()) == NULL) {
         return NULL;
     }
 
