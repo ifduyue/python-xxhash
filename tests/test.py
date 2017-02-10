@@ -19,7 +19,7 @@ class TestXXHASH(unittest.TestCase):
         self.assertEqual(xxhash.xxh64('a', 0).intdigest(), 15154266338359012955)
         self.assertEqual(xxhash.xxh64('a', 1).intdigest(), 16051599287423682246)
 
-    def test_XXH32(self):
+    def test_xxh32_update(self):
         x = xxhash.xxh32()
         x.update('a')
         self.assertEqual(xxhash.xxh32('a').digest(), x.digest())
@@ -37,7 +37,7 @@ class TestXXHASH(unittest.TestCase):
         x.update('c')
         self.assertEqual(xxhash.xxh32('abc', seed).digest(), x.digest())
 
-    def test_XXH64(self):
+    def test_xxh64_update(self):
         x = xxhash.xxh64()
         x.update('a')
         self.assertEqual(xxhash.xxh64('a').digest(), x.digest())
@@ -45,7 +45,7 @@ class TestXXHASH(unittest.TestCase):
         self.assertEqual(xxhash.xxh64('ab').digest(), x.digest())
         x.update('c')
         self.assertEqual(xxhash.xxh64('abc').digest(), x.digest())
-        seed = random.randint(0, 2**32)
+        seed = random.randint(0, 2**64)
         x = xxhash.xxh64(seed=seed)
         x.update('a')
         self.assertEqual(xxhash.xxh64('a', seed).digest(), x.digest())
@@ -54,7 +54,7 @@ class TestXXHASH(unittest.TestCase):
         x.update('c')
         self.assertEqual(xxhash.xxh64('abc', seed).digest(), x.digest())
 
-    def test_XXH32_reset(self):
+    def test_xxh32_reset(self):
         x = xxhash.xxh32()
         h = x.intdigest()
 
@@ -65,7 +65,7 @@ class TestXXHASH(unittest.TestCase):
 
         self.assertEqual(h, x.intdigest())
 
-    def test_XXH64_reset(self):
+    def test_xxh64_reset(self):
         x = xxhash.xxh64()
         h = x.intdigest()
 
