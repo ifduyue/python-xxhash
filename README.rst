@@ -33,9 +33,53 @@ __ Cyan4973_
 
 Installation
 ------------
-::
 
-    $ pip install xxhash
+.. code-block:: bash
+
+   $ pip install xxhash
+
+As of version 1.0.0, xxhash provides two variants: the original CPython variant,
+and the new CFFI variant. By default the installation is the CPython variant,
+setting env variable ``XXHASH_FORCE_CFFI=1`` to install the CFFI variant:
+
+.. code-block:: bash
+
+   $ export XXHASH_FORCE_CFFI=1
+   $ pip install xxhash
+
+Installation Prerequisites
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+CPython variant
+^^^^^^^^^^^^^^^^
+
+On Debian/Ubuntu:
+
+.. code-block:: bash
+
+   $ apt-get install python-dev gcc
+
+On CentOS/Fedora:
+
+.. code-block:: bash
+
+   $ yum install python-devel gcc
+
+CFFI variant
+^^^^^^^^^^^^^
+
+On Debian/Ubuntu:
+
+.. code-block:: bash
+
+   $ apt-get install libcffi-dev python-dev gcc
+
+On CentOS/Fedora:
+
+.. code-block:: bash
+
+   $ yum install libcffi-devel python-devel gcc
+
 
 Usage
 --------
@@ -47,9 +91,9 @@ the module properties ``VERSION`` AND ``XXHASH_VERSION`` respectively.
 
     >>> import xxhash
     >>> xxhash.VERSION
-    '0.6.0'
+    '1.0.0'
     >>> xxhash.XXHASH_VERSION
-    '0.6.0'
+    '0.6.2'
 
 This module is hashlib-compliant, which means you can use it in the same way as ``hashlib.md5``.
 
