@@ -1,0 +1,66 @@
+environment:
+  matrix:
+    - PYTHON: "C:\\Python26"
+    - PYTHON: "C:\\Python26-x64"
+    - PYTHON: "C:\\Python27"
+    - PYTHON: "C:\\Python27-x64"
+    - PYTHON: "C:\\Python33"
+    - PYTHON: "C:\\Python33-x64"
+    - PYTHON: "C:\\Python34"
+    - PYTHON: "C:\\Python34-x64"
+    - PYTHON: "C:\\Python35"
+    - PYTHON: "C:\\Python35-x64"
+    - PYTHON: "C:\\Python36"
+    - PYTHON: "C:\\Python36-x64"
+
+    - PYTHON: "C:\\Python26"
+      XXHASH_FORCE_CFFI: "1"
+    - PYTHON: "C:\\Python26-x64"
+      XXHASH_FORCE_CFFI: "1"
+    - PYTHON: "C:\\Python27"
+      XXHASH_FORCE_CFFI: "1"
+    - PYTHON: "C:\\Python27-x64"
+      XXHASH_FORCE_CFFI: "1"
+    - PYTHON: "C:\\Python33"
+      XXHASH_FORCE_CFFI: "1"
+    - PYTHON: "C:\\Python33-x64"
+      XXHASH_FORCE_CFFI: "1"
+    - PYTHON: "C:\\Python34"
+      XXHASH_FORCE_CFFI: "1"
+    - PYTHON: "C:\\Python34-x64"
+      XXHASH_FORCE_CFFI: "1"
+    - PYTHON: "C:\\Python35"
+      XXHASH_FORCE_CFFI: "1"
+    - PYTHON: "C:\\Python35-x64"
+      XXHASH_FORCE_CFFI: "1"
+    - PYTHON: "C:\\Python36"
+      XXHASH_FORCE_CFFI: "1"
+    - PYTHON: "C:\\Python36-x64"
+      XXHASH_FORCE_CFFI: "1"
+
+build: off
+
+install:
+    - git --version
+    - python --version
+    - git submodule update --init --recursive
+    - pip install --disable-pip-version-check --user --upgrade pip
+    - pip install --upgrade cffi wheel setuptools
+    - pip --version
+
+before_test:
+    - python appveyor.py
+    #- bash -c "cl.exe sizes.c"
+    #- sizes
+
+test_script:
+    - python setup.py test
+
+after_test:
+    - python setup.py bdist_wheel
+    - python setup.py bdist_wininst
+    - python setup.py bdist_msi
+    - ps: ls dist
+
+artifacts:
+    - path: dist\*
