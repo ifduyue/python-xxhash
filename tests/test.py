@@ -13,11 +13,13 @@ class TestXXHASH(unittest.TestCase):
         self.assertEqual(xxhash.xxh32('a').intdigest(), 1426945110)
         self.assertEqual(xxhash.xxh32('a', 0).intdigest(), 1426945110)
         self.assertEqual(xxhash.xxh32('a', 1).intdigest(), 4111757423)
+        self.assertEqual(xxhash.xxh32('a', 2**32-1).intdigest(), 3443684653)
 
     def test_xxh64(self):
         self.assertEqual(xxhash.xxh64('a').intdigest(), 15154266338359012955)
         self.assertEqual(xxhash.xxh64('a', 0).intdigest(), 15154266338359012955)
         self.assertEqual(xxhash.xxh64('a', 1).intdigest(), 16051599287423682246)
+        self.assertEqual(xxhash.xxh64('a', 2**64-1).intdigest(), 6972758980737027682)
 
     def test_xxh32_update(self):
         x = xxhash.xxh32()
