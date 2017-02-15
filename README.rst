@@ -6,15 +6,15 @@ python-xxhash
     :alt: Build Status
 
 .. image:: https://img.shields.io/pypi/v/xxhash.svg
-    :target: https://warehouse.python.org/project/xxhash/
+    :target: https://pypi.python.org/pypi/xxhash
     :alt: Latest Version
 
 .. image:: https://img.shields.io/pypi/pyversions/xxhash.svg
-    :target: https://warehouse.python.org/project/xxhash/
+    :target: https://pypi.python.org/pypi/xxhash
     :alt: Supported Python versions
 
 .. image:: https://img.shields.io/pypi/l/xxhash.svg
-    :target: https://warehouse.python.org/project/xxhash/
+    :target: https://pypi.python.org/pypi/xxhash
     :alt: License
 
 
