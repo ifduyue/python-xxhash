@@ -16,7 +16,7 @@ class xxh32(object):
     block_size = 16
 
     def __init__(self, input=None, seed=0):
-        self.xxhash_state = ffi.gc(lib.XXH32_createState(), lib.XXH32_freeState)
+        self.xxhash_state = lib.XXH32_createState()
         self.seed = seed & (2 ** 32 - 1)
         self.reset()
         if input:
@@ -46,13 +46,16 @@ class xxh32(object):
         new.seed = self.seed
         return new
 
+    def __del__(self):
+        lib.XXH32_freeState(self.xxhash_state)
+
 
 class xxh64(object):
     digest_size = digestsize = 8
     block_size = 32
 
     def __init__(self, input=None, seed=0):
-        self.xxhash_state = ffi.gc(lib.XXH64_createState(), lib.XXH64_freeState)
+        self.xxhash_state = lib.XXH64_createState()
         self.seed = seed & (2 ** 64 - 1)
         self.reset()
         if input:
@@ -81,3 +84,6 @@ class xxh64(object):
         lib.XXH64_copyState(new.xxhash_state, self.xxhash_state)
         new.seed = self.seed
         return new
+
+    def __del__(self):
+        lib.XXH64_freeState(self.xxhash_state)
