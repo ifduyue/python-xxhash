@@ -50,8 +50,6 @@ install:
 
 before_test:
     - python appveyor.py
-    #- bash -c "cl.exe sizes.c"
-    #- sizes
 
 test_script:
     - python setup.py test
