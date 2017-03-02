@@ -131,6 +131,20 @@ class TestXXHASH(unittest.TestCase):
         self.assertEqual(a.hexdigest(), b.hexdigest())
         self.assertEqual(a.digest(), b.digest())
 
+        a = xxhash.xxh32('I want an unsigned 32-bit seed!', seed=2**33-1)
+        b = xxhash.xxh32('I want an unsigned 32-bit seed!', seed=2**34-1)
+        self.assertEqual(a.seed, b.seed)
+        self.assertEqual(a.intdigest(), b.intdigest())
+        self.assertEqual(a.hexdigest(), b.hexdigest())
+        self.assertEqual(a.digest(), b.digest())
+
+        a = xxhash.xxh32('I want an unsigned 32-bit seed!', seed=2**65-1)
+        b = xxhash.xxh32('I want an unsigned 32-bit seed!', seed=2**66-1)
+        self.assertEqual(a.seed, b.seed)
+        self.assertEqual(a.intdigest(), b.intdigest())
+        self.assertEqual(a.hexdigest(), b.hexdigest())
+        self.assertEqual(a.digest(), b.digest())
+
     def test_xxh64_overflow(self):
         a = xxhash.xxh64('I want an unsigned 64-bit seed!', seed=0)
         b = xxhash.xxh64('I want an unsigned 64-bit seed!', seed=2**64)
@@ -141,6 +155,13 @@ class TestXXHASH(unittest.TestCase):
 
         a = xxhash.xxh64('I want an unsigned 64-bit seed!', seed=1)
         b = xxhash.xxh64('I want an unsigned 64-bit seed!', seed=2**64+1)
+        self.assertEqual(a.seed, b.seed)
+        self.assertEqual(a.intdigest(), b.intdigest())
+        self.assertEqual(a.hexdigest(), b.hexdigest())
+        self.assertEqual(a.digest(), b.digest())
+
+        a = xxhash.xxh64('I want an unsigned 64-bit seed!', seed=2**65-1)
+        b = xxhash.xxh64('I want an unsigned 64-bit seed!', seed=2**66-1)
         self.assertEqual(a.seed, b.seed)
         self.assertEqual(a.intdigest(), b.intdigest())
         self.assertEqual(a.hexdigest(), b.hexdigest())
