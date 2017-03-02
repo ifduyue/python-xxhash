@@ -21,11 +21,3 @@ env:
 - XXHASH_FORCE_CFFI=0
 
 script: python setup.py test
-deploy:
-  provider: pypi
-  user: ifduyue
-  password:
-    secure: noL5GVgTeiYyYjw7DnsQwzcHG4zKkHAkEGvN3J4tkIkyRdn/ppm+1TbWSpVis6hD8OXaozMwoUnXTaRmj9wVTu28+UYONgKablQUdHzCdA/QrG7XtD8DTxS76E4tzgcAztM+NKzyP12Z6TA5Y6XJ6M00AFxhMB6zaeAgqROgF2s=
-  on:
-    tags: true
-    repo: ifduyue/python-xxhash
