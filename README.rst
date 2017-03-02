@@ -160,19 +160,19 @@ defined behavior, it's better to not to let it happen.
     'f7a35af8'
     >>> xxhash.xxh32('I want an unsigned 32-bit seed!', seed=2**32).hexdigest()
     'f7a35af8'
-    >>> xxhash.xxh32('I want an unsigned 32-bit seed!', seed=-1).hexdigest()
-    'eb9e6f02'
-    >>> xxhash.xxh32('I want an unsigned 32-bit seed!', seed=2**32-1).hexdigest()
-    'eb9e6f02'
+    >>> xxhash.xxh32('I want an unsigned 32-bit seed!', seed=1).hexdigest()
+    'd8d4b4ba'
+    >>> xxhash.xxh32('I want an unsigned 32-bit seed!', seed=2**32+1).hexdigest()
+    'd8d4b4ba'
     >>>
     >>> xxhash.xxh64('I want an unsigned 64-bit seed!', seed=0).hexdigest()
     'd4cb0a70a2b8c7c1'
     >>> xxhash.xxh64('I want an unsigned 64-bit seed!', seed=2**64).hexdigest()
     'd4cb0a70a2b8c7c1'
-    >>> xxhash.xxh64('I want an unsigned 64-bit seed!', seed=-1).hexdigest()
-    '5d714af8fd50e4af'
-    >>> xxhash.xxh64('I want an unsigned 64-bit seed!', seed=2**64-1).hexdigest()
-    '5d714af8fd50e4af'
+    >>> xxhash.xxh64('I want an unsigned 64-bit seed!', seed=1).hexdigest()
+    'ce5087f12470d961'
+    >>> xxhash.xxh64('I want an unsigned 64-bit seed!', seed=2**64+1).hexdigest()
+    'ce5087f12470d961'
 
 
 ``digest()`` returns bytes of the **big-endian** representation of the integer
@@ -198,6 +198,13 @@ digest.
 
 Caveats
 -------
+
+SEED OVERFLOW
+~~~~~~~~~~~~~~
+
+xxh32 takes an unsigned 32-bit integer as seed, and xxh64 takes
+an unsigned 64-bit integer as seed. Make sure that the seed is greater than
+or equal to ``0``.
 
 ENDIANNESS
 ~~~~~~~~~~~
