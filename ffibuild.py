@@ -5,8 +5,8 @@ ffi = cffi.FFI()
 ffi.set_source(
     '_cffi',
     '#include "xxhash.h"',
-    sources=['c-xxhash/xxhash.c'],
-    include_dirs=['c-xxhash']
+    sources=['deps/xxhash/xxhash.c'],
+    include_dirs=['deps/xxhash']
 )
 
 ffi.cdef('''

@@ -1,3 +1,3 @@
 [submodule "xxhash"]
-	path = c-xxhash
+	path = deps/xxhash
 	url = https://github.com/Cyan4973/xxHash.git

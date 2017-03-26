@@ -29,9 +29,9 @@ if USE_CPYTHON:
     setup_kwargs['ext_modules'] = [
         Extension(
             'cpython',
-            ['xxhash/cpython.c', 'c-xxhash/xxhash.c'],
+            ['xxhash/cpython.c', 'deps/xxhash/xxhash.c'],
             extra_compile_args=extra_compile_args,
-            include_dirs=['c-xxhash']
+            include_dirs=['deps/xxhash']
         )
     ]
 else:
