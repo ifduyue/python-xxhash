@@ -8,6 +8,7 @@ with open('xxhash/__init__.py') as f:
     for line in f:
         if line.startswith('VERSION = '):
             VERSION = eval(line.rsplit(None, 1)[-1])
+            break
 
 USE_CPYTHON = os.getenv('XXHASH_FORCE_CFFI') in (None, '0')
 setup_kwargs = {}
