@@ -49,7 +49,7 @@ install:
     - pip --version
 
 before_test:
-    - python appveyor.py
+    - python .appveyor.py
 
 test_script:
     - python setup.py test
