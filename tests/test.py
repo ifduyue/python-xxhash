@@ -7,9 +7,6 @@ import sys
 import xxhash
 
 
-uses_cffi = hasattr(xxhash, "cffi")
-
-
 def getrefcount(obj):
     if hasattr(sys, "getrefcount"):
         return sys.getrefcount(obj)

@@ -12,11 +12,14 @@ XXHASH_VERSION = "%d.%d.%d" % (lib.XXH_VERSION_MAJOR,
 
 
 def _get_buffer(val):
+    """
+    Best-effort function to get the pointer and byte length of a buffer-like
+    object.
+    """
     if PY3 and isinstance(val, str):
         return val.encode('utf8'), len(val)
     if isinstance(val, bytes):
         return val, len(val)
-    print("cdata %r" % (val,))
     cdata = ffi.from_buffer(val)
     return cdata, ffi.sizeof(cdata)
 
