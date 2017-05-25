@@ -41,6 +41,9 @@
 #define XXH64_DIGESTSIZE 8
 #define XXH64_BLOCKSIZE 32
 
+/* Release the GIL if taking more than ~10 µs */
+#define GIL_MINSIZE 100 * 1000
+
 
 /*****************************************************************************
  * Helper Functions ***********************************************************
@@ -97,6 +100,19 @@ static void PYXXH32_dealloc(PYXXH32Object *self)
     PyObject_Del(self);
 }
 
+static void PYXXH32_do_update(PYXXH32Object *self, Py_buffer *buf)
+{
+    if (buf->len >= GIL_MINSIZE) {
+        Py_BEGIN_ALLOW_THREADS
+        XXH32_update(self->xxhash_state, buf->buf, buf->len);
+        Py_END_ALLOW_THREADS
+    }
+    else {
+        XXH32_update(self->xxhash_state, buf->buf, buf->len);
+    }
+    PyBuffer_Release(buf);
+}
+
 /* XXH32 methods */
 
 static PyObject *PYXXH32_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
@@ -128,8 +144,7 @@ static int PYXXH32_init(PYXXH32Object *self, PyObject *args, PyObject *kwargs)
     XXH32_reset(self->xxhash_state, seed);
 
     if (buf.buf) {
-        XXH32_update(self->xxhash_state, buf.buf, buf.len);
-        PyBuffer_Release(&buf);
+        PYXXH32_do_update(self, &buf);
     }
 
     return 0;
@@ -149,8 +164,7 @@ static PyObject *PYXXH32_update(PYXXH32Object *self, PyObject *args)
         return NULL;
     }
 
-    XXH32_update(self->xxhash_state, buf.buf, buf.len);
-    PyBuffer_Release(&buf);
+    PYXXH32_do_update(self, &buf);
 
     Py_RETURN_NONE;
 }
@@ -444,6 +458,19 @@ static void PYXXH64_dealloc(PYXXH64Object *self)
     PyObject_Del(self);
 }
 
+static void PYXXH64_do_update(PYXXH64Object *self, Py_buffer *buf)
+{
+    if (buf->len >= GIL_MINSIZE) {
+        Py_BEGIN_ALLOW_THREADS
+        XXH64_update(self->xxhash_state, buf->buf, buf->len);
+        Py_END_ALLOW_THREADS
+    }
+    else {
+        XXH64_update(self->xxhash_state, buf->buf, buf->len);
+    }
+    PyBuffer_Release(buf);
+}
+
 static PyObject *PYXXH64_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
     PYXXH64Object *self;
@@ -473,8 +500,7 @@ static int PYXXH64_init(PYXXH64Object *self, PyObject *args, PyObject *kwargs)
     XXH64_reset(self->xxhash_state, seed);
 
     if (buf.buf) {
-        XXH64_update(self->xxhash_state, buf.buf, buf.len);
-        PyBuffer_Release(&buf);
+        PYXXH64_do_update(self, &buf);
     }
 
     return 0;
@@ -494,8 +520,7 @@ static PyObject *PYXXH64_update(PYXXH64Object *self, PyObject *args)
         return NULL;
     }
 
-    XXH64_update(self->xxhash_state, buf.buf, buf.len);
-    PyBuffer_Release(&buf);
+    PYXXH64_do_update(self, &buf);
 
     Py_RETURN_NONE;
 }
