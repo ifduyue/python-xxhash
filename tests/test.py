@@ -1,7 +1,17 @@
+import array
 import os
 import unittest
 import random
+import sys
 import xxhash
+
+
+def getrefcount(obj):
+    if hasattr(sys, "getrefcount"):
+        return sys.getrefcount(obj)
+    else:
+        # Non-CPython implementation
+        return 0
 
 
 class TestXXHASH(unittest.TestCase):
@@ -166,6 +176,26 @@ class TestXXHASH(unittest.TestCase):
         self.assertEqual(a.intdigest(), b.intdigest())
         self.assertEqual(a.hexdigest(), b.hexdigest())
         self.assertEqual(a.digest(), b.digest())
+
+    def test_buffer_types(self):
+        # Various buffer-like objects are accepted, and they give similar values
+        args = [b'ab\x00c', bytearray(b'ab\x00c'), memoryview(b'ab\x00c'),
+                array.array('b', b'ab\x00c')]
+        for func in [xxhash.xxh32, xxhash.xxh64]:
+            old_refcounts = list(map(getrefcount, args))
+            # With constructor
+            values = set(func(arg).hexdigest() for arg in args)
+            self.assertEqual(len(values), 1, values)
+            # With update()
+            values = set()
+            for arg in args:
+                x = func()
+                x.update(arg)
+                values.add(x.hexdigest())
+            self.assertEqual(len(values), 1, values)
+            # No reference leak in CPython extension
+            del arg
+            self.assertEqual(list(map(getrefcount, args)), old_refcounts)
 
 
 if __name__ == '__main__':
