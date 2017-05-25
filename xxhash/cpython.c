@@ -118,18 +118,18 @@ static int PYXXH32_init(PYXXH32Object *self, PyObject *args, PyObject *kwargs)
 {
     unsigned int seed = 0;
     char *keywords[] = {"input", "seed", NULL};
-    const char *s = NULL;
-    int ns;
+    Py_buffer buf = {NULL, NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|s#I:__init__", keywords, &s, &ns, &seed)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|s*I:__init__", keywords, &buf, &seed)) {
         return -1;
     }
 
     self->seed = seed;
     XXH32_reset(self->xxhash_state, seed);
 
-    if (s) {
-        XXH32_update(self->xxhash_state, s, ns);
+    if (buf.buf) {
+        XXH32_update(self->xxhash_state, buf.buf, buf.len);
+        PyBuffer_Release(&buf);
     }
 
     return 0;
@@ -143,14 +143,14 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH32_update(PYXXH32Object *self, PyObject *args)
 {
-    const char *s;
-    int ns;
+    Py_buffer buf;
 
-    if (!PyArg_ParseTuple(args, "s#:update", &s, &ns)) {
+    if (!PyArg_ParseTuple(args, "s*:update", &buf)) {
         return NULL;
     }
 
-    XXH32_update(self->xxhash_state, s, ns);
+    XXH32_update(self->xxhash_state, buf.buf, buf.len);
+    PyBuffer_Release(&buf);
 
     Py_RETURN_NONE;
 }
@@ -463,18 +463,18 @@ static int PYXXH64_init(PYXXH64Object *self, PyObject *args, PyObject *kwargs)
 {
     unsigned long long seed = 0;
     char *keywords[] = {"input", "seed", NULL};
-    const char *s = NULL;
-    int ns;
+    Py_buffer buf = {NULL, NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|s#K:__init__", keywords, &s, &ns, &seed)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|s*K:__init__", keywords, &buf, &seed)) {
         return -1;
     }
 
     self->seed = seed;
     XXH64_reset(self->xxhash_state, seed);
 
-    if (s) {
-        XXH64_update(self->xxhash_state, s, ns);
+    if (buf.buf) {
+        XXH64_update(self->xxhash_state, buf.buf, buf.len);
+        PyBuffer_Release(&buf);
     }
 
     return 0;
@@ -488,14 +488,14 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH64_update(PYXXH64Object *self, PyObject *args)
 {
-    const char *s;
-    int ns;
+    Py_buffer buf;
 
-    if (!PyArg_ParseTuple(args, "s#:update", &s, &ns)) {
+    if (!PyArg_ParseTuple(args, "s*:update", &buf)) {
         return NULL;
     }
 
-    XXH64_update(self->xxhash_state, s, ns);
+    XXH64_update(self->xxhash_state, buf.buf, buf.len);
+    PyBuffer_Release(&buf);
 
     Py_RETURN_NONE;
 }
