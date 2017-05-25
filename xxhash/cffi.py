@@ -32,7 +32,7 @@ class xxh32(object):
         self.xxhash_state = lib.XXH32_createState()
         self.seed = seed & (2 ** 32 - 1)
         self.reset()
-        if input:
+        if input is not None:
             self.update(input)
 
     def update(self, input):
@@ -68,7 +68,7 @@ class xxh64(object):
         self.xxhash_state = lib.XXH64_createState()
         self.seed = seed & (2 ** 64 - 1)
         self.reset()
-        if input:
+        if input is not None:
             self.update(input)
 
     def update(self, input):
