@@ -2,8 +2,12 @@ import array
 import os
 import unittest
 import random
+import struct
 import sys
 import xxhash
+
+
+uses_cffi = hasattr(xxhash, "cffi")
 
 
 def getrefcount(obj):
@@ -179,8 +183,15 @@ class TestXXHASH(unittest.TestCase):
 
     def test_buffer_types(self):
         # Various buffer-like objects are accepted, and they give similar values
-        args = [b'ab\x00c', bytearray(b'ab\x00c'), memoryview(b'ab\x00c'),
-                array.array('b', b'ab\x00c')]
+        args = [b'ab\x00c', bytearray(b'ab\x00c'), array.array('b', b'ab\x00c')]
+        # An array object with non-1 itemsize
+        a = array.array('i', struct.unpack('i', b'ab\x00c'))
+        assert a.itemsize == 4
+        args.append(a)
+        # A memoryview, where supported
+        if sys.version_info >= (2, 7):
+            args.append(memoryview(b'ab\x00c'))
+
         for func in [xxhash.xxh32, xxhash.xxh64]:
             old_refcounts = list(map(getrefcount, args))
             # With constructor

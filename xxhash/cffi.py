@@ -11,6 +11,16 @@ XXHASH_VERSION = "%d.%d.%d" % (lib.XXH_VERSION_MAJOR,
                                lib.XXH_VERSION_RELEASE)
 
 
+def _get_buffer(val):
+    if PY3 and isinstance(val, str):
+        return val.encode('utf8'), len(val)
+    if isinstance(val, bytes):
+        return val, len(val)
+    print("cdata %r" % (val,))
+    cdata = ffi.from_buffer(val)
+    return cdata, ffi.sizeof(cdata)
+
+
 class xxh32(object):
     digest_size = digestsize = 4
     block_size = 16
@@ -23,10 +33,7 @@ class xxh32(object):
             self.update(input)
 
     def update(self, input):
-        if PY3 and isinstance(input, str):
-            lib.XXH32_update(self.xxhash_state, input.encode('utf8'), len(input))
-        else:
-            lib.XXH32_update(self.xxhash_state, input, len(input))
+        lib.XXH32_update(self.xxhash_state, *_get_buffer(input))
 
     def intdigest(self):
         return lib.XXH32_digest(self.xxhash_state)
@@ -62,10 +69,7 @@ class xxh64(object):
             self.update(input)
 
     def update(self, input):
-        if PY3 and isinstance(input, str):
-            lib.XXH64_update(self.xxhash_state, input.encode('utf8'), len(input))
-        else:
-            lib.XXH64_update(self.xxhash_state, input, len(input))
+        lib.XXH64_update(self.xxhash_state, *_get_buffer(input))
 
     def intdigest(self):
         return lib.XXH64_digest(self.xxhash_state)
