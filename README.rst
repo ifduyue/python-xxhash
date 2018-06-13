@@ -10,15 +10,15 @@ python-xxhash
     :alt: Appveyor Build Status
 
 .. image:: https://img.shields.io/pypi/v/xxhash.svg
-    :target: https://pypi.python.org/pypi/xxhash
+    :target: https://pypi.org/project/xxhash/
     :alt: Latest Version
 
 .. image:: https://img.shields.io/pypi/pyversions/xxhash.svg
-    :target: https://pypi.python.org/pypi/xxhash
+    :target: https://pypi.org/project/xxhash/
     :alt: Supported Python versions
 
 .. image:: https://img.shields.io/pypi/l/xxhash.svg
-    :target: https://pypi.python.org/pypi/xxhash
+    :target: https://pypi.org/project/xxhash/
     :alt: License
 
 
