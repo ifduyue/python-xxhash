@@ -45,6 +45,7 @@ setup(
     version=VERSION,
     description="Python binding for xxHash",
     long_description=open('README.rst', 'r').read(),
+    long_description_content_type="text/x-rst",
     author='Yue Du',
     author_email='ifduyue@gmail.com',
     url='https://github.com/ifduyue/python-xxhash',
