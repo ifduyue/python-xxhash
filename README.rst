@@ -235,6 +235,13 @@ Licensed under `BSD 2-Clause License <http://opensource.org/licenses/BSD-2-Claus
 CHANGELOG
 -----------
 
+v1.1.0 2018-07-05
+~~~~~~~~~~~~~~~~~
+
+- Allow input larger than 2GB
+- Release the GIL on sufficiently large input
+- Drop support for Python 3.2
+
 v1.0.1 2017-03-02
 ~~~~~~~~~~~~~~~~~~
 
