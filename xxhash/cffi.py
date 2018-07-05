@@ -21,7 +21,7 @@ def _get_buffer(val):
     if isinstance(val, bytes):
         return val, len(val)
     cdata = ffi.from_buffer(val)
-    return cdata, ffi.sizeof(cdata)
+    return cdata, len(cdata)
 
 
 class xxh32(object):
