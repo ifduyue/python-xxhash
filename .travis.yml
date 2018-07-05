@@ -9,6 +9,7 @@ python:
 - 3.6
 - 3.7-dev
 - pypy
+- pypy3
 
 install:
 - pip install cffi
