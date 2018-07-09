@@ -23,6 +23,16 @@ def _get_buffer(val):
     cdata = ffi.from_buffer(val)
     return cdata, len(cdata)
 
+def xxh32_digest(input, seed=0):
+    return struct.pack('>I', xxh32_intdigest(input, seed))
+
+def xxh32_intdigest(input, seed=0):
+    seed &= (2 ** 32 -1)
+    buf, len = _get_buffer(input)
+    return lib.XXH32(buf, len, seed)
+
+def xxh32_hexdigest(input, seed=0):
+    return binascii.hexlify(xxh32_digest(input, seed))
 
 class xxh32(object):
     digest_size = digestsize = 4
@@ -59,6 +69,16 @@ class xxh32(object):
     def __del__(self):
         lib.XXH32_freeState(self.xxhash_state)
 
+def xxh64_digest(input, seed=0):
+    return struct.pack('>Q', xxh64_intdigest(input, seed))
+
+def xxh64_intdigest(input, seed=0):
+    seed &= (2 ** 64 - 1)
+    buf, len = _get_buffer(input)
+    return lib.XXH64(buf, len, seed)
+
+def xxh64_hexdigest(input, seed=0):
+    return binascii.hexlify(xxh64_digest(input, seed))
 
 class xxh64(object):
     digest_size = digestsize = 8

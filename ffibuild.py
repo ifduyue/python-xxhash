@@ -19,6 +19,8 @@ typedef enum { XXH_OK=0, XXH_ERROR } XXH_errorcode;
 
 typedef unsigned int       XXH32_hash_t;
 
+XXH32_hash_t XXH32 (const void* input, size_t length, unsigned int seed);
+
 typedef struct XXH32_state_s XXH32_state_t;   /* incomplete type */
  XXH32_state_t* XXH32_createState(void);
  XXH_errorcode  XXH32_freeState(XXH32_state_t* statePtr);
@@ -30,6 +32,8 @@ typedef struct XXH32_state_s XXH32_state_t;   /* incomplete type */
 
 
 typedef unsigned long long XXH64_hash_t;
+
+XXH64_hash_t XXH64 (const void* input, size_t length, unsigned long long seed);
 
 typedef struct XXH64_state_s XXH64_state_t;   /* incomplete type */
  XXH64_state_t* XXH64_createState(void);
