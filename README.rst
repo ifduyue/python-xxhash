@@ -263,6 +263,11 @@ Licensed under `BSD 2-Clause License <http://opensource.org/licenses/BSD-2-Claus
 CHANGELOG
 -----------
 
+v1.2.0 2018-07-13
+~~~~~~~~~~~~~~~~~
+
+- Add oneshot functions xxh{32,64}_{,int,hex}digest
+
 v1.1.0 2018-07-05
 ~~~~~~~~~~~~~~~~~
 
@@ -295,7 +300,6 @@ v0.6.1 2016-06-26
 ~~~~~~~~~~~~~~~~~~
 
 - Upgrade xxHash to v0.6.1
-
 
 v0.5.0 2016-03-02
 ~~~~~~~~~~~~~~~~~~
@@ -347,7 +351,6 @@ v0.1.3 2014-10-23
 v0.1.2 2014-10-19
 ~~~~~~~~~~~~~~~~~~
 
-
 - Improve: Check XXHnn_init() return value.
 - Update xxHash to r36
 
@@ -358,7 +361,6 @@ v0.1.1 2014-08-07
 
 v0.1.0 2014-08-05
 ~~~~~~~~~~~~~~~~~~
-
 
 - New: XXH32 and XXH64 type, which support partially update.
 - Fix: build under Python 3.4
