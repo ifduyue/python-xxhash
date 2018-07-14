@@ -14,38 +14,13 @@ environment:
     - PYTHON: "C:\\Python36"
     - PYTHON: "C:\\Python36-x64"
 
-    - PYTHON: "C:\\Python26"
-      XXHASH_FORCE_CFFI: "1"
-    - PYTHON: "C:\\Python26-x64"
-      XXHASH_FORCE_CFFI: "1"
-    - PYTHON: "C:\\Python27"
-      XXHASH_FORCE_CFFI: "1"
-    - PYTHON: "C:\\Python27-x64"
-      XXHASH_FORCE_CFFI: "1"
-    - PYTHON: "C:\\Python33"
-      XXHASH_FORCE_CFFI: "1"
-    #- PYTHON: "C:\\Python33-x64"
-    #  XXHASH_FORCE_CFFI: "1"
-    - PYTHON: "C:\\Python34"
-      XXHASH_FORCE_CFFI: "1"
-    #- PYTHON: "C:\\Python34-x64"
-    #  XXHASH_FORCE_CFFI: "1"
-    - PYTHON: "C:\\Python35"
-      XXHASH_FORCE_CFFI: "1"
-    - PYTHON: "C:\\Python35-x64"
-      XXHASH_FORCE_CFFI: "1"
-    - PYTHON: "C:\\Python36"
-      XXHASH_FORCE_CFFI: "1"
-    - PYTHON: "C:\\Python36-x64"
-      XXHASH_FORCE_CFFI: "1"
-
 build: off
 
 install:
     - git --version
     - '%PYTHON%\python.exe --version'
     - git submodule update --init --recursive
-    - '%PYTHON%\scripts\pip.exe install cffi wheel'
+    - '%PYTHON%\scripts\pip.exe install wheel'
     - '%PYTHON%\scripts\pip.exe --version'
 
 test_script:

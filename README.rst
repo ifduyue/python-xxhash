@@ -38,20 +38,8 @@ Installation
 
    $ pip install xxhash
 
-As of version 1.0.0, xxhash provides two variants: the original CPython variant,
-and the new CFFI variant. By default the installation is the CPython variant,
-setting env variable ``XXHASH_FORCE_CFFI=1`` to install the CFFI variant:
-
-.. code-block:: bash
-
-   $ export XXHASH_FORCE_CFFI=1
-   $ pip install xxhash
-
 Installation Prerequisites
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-CPython Variant
-^^^^^^^^^^^^^^^^
 
 On Debian/Ubuntu:
 
@@ -64,22 +52,6 @@ On CentOS/Fedora:
 .. code-block:: bash
 
    $ yum install python-devel gcc redhat-rpm-config
-
-CFFI Variant
-^^^^^^^^^^^^^
-
-On Debian/Ubuntu:
-
-.. code-block:: bash
-
-   $ apt-get install libcffi-dev python-dev gcc
-
-On CentOS/Fedora:
-
-.. code-block:: bash
-
-   $ yum install libcffi-devel python-devel gcc redhat-rpm-config
-
 
 Usage
 --------

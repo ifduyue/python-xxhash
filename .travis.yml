@@ -12,11 +12,6 @@ python:
 - pypy3
 
 install:
-- pip install cffi
 - gcc --version
-
-env:
-- XXHASH_FORCE_CFFI=1
-- XXHASH_FORCE_CFFI=0
 
 script: python setup.py test

@@ -10,7 +10,6 @@ with open('xxhash/__init__.py') as f:
             VERSION = eval(line.rsplit(None, 1)[-1])
             break
 
-USE_CPYTHON = os.getenv('XXHASH_FORCE_CFFI') in (None, '0')
 setup_kwargs = {}
 
 if os.name == 'posix':
@@ -26,19 +25,14 @@ if os.name == 'posix':
 else:
     extra_compile_args = None
 
-if USE_CPYTHON:
-    setup_kwargs['ext_modules'] = [
-        Extension(
-            'cpython',
-            ['xxhash/cpython.c', 'deps/xxhash/xxhash.c'],
-            extra_compile_args=extra_compile_args,
-            include_dirs=['deps/xxhash']
-        )
-    ]
-else:
-    setup_kwargs['install_requires'] = ['cffi']
-    setup_kwargs['setup_requires'] = ['cffi']
-    setup_kwargs['cffi_modules'] = ['ffibuild.py:ffi']
+setup_kwargs['ext_modules'] = [
+    Extension(
+        'cpython',
+        ['xxhash/cpython.c', 'deps/xxhash/xxhash.c'],
+        extra_compile_args=extra_compile_args,
+        include_dirs=['deps/xxhash']
+    )
+]
 
 setup(
     name='xxhash',
@@ -69,7 +63,6 @@ setup(
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: Implementation :: CPython',
-        'Programming Language :: Python :: Implementation :: PyPy',
     ],
     **setup_kwargs
 )
