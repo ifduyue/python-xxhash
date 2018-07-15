@@ -46,8 +46,7 @@ setup(
     license='BSD',
     packages=['xxhash'],
     ext_package='xxhash',
-    test_suite='nose.collector',
-    tests_require=['nose>1.3.0'],
+    test_suite='tests',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: BSD License',
