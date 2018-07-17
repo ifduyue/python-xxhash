@@ -11,6 +11,10 @@ python:
 - pypy
 - pypy3
 
+allow_failures:
+- pypy
+- pypy3
+
 install:
 - gcc --version
 
