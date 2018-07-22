@@ -63,5 +63,6 @@ setup(
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: Implementation :: CPython',
     ],
+    python_requires=">=2.6, !=3.0.*, !=3.1.*, !=3.2.*",
     **setup_kwargs
 )
