@@ -14,11 +14,17 @@ matrix:
     dist: xenial
   - python: 3.7
     dist: xenial
+  - python: 3.8-dev
+    dist: xenial
+  - python: nightly
+    dist: xenial
   - python: pypy
   - python: pypy3
   allow_failures:
   - python: pypy
   - python: pypy3
+  - python: 3.8-dev
+  - python: nightly
 
 install:
 - gcc --version
