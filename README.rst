@@ -167,8 +167,8 @@ digest.
     >>> int(h.hexdigest(), 16)
     17241709254077376921
 
-Besides xxh32/xxh64 mentioned above, oneshot functions are also provided.
-By using oneshot functions we can avoid creating XXH32/64_state on heap.
+Besides xxh32/xxh64 mentioned above, oneshot functions are also provided,
+so we can avoid creating XXH32/64 state on heap.
 
     | xxh32_digest(bytes, seed)
     | xxh32_intdigest(bytes, seed)
