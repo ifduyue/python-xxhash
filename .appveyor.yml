@@ -31,7 +31,8 @@ test_script:
 after_test:
     - '%PYTHON%\python.exe setup.py bdist_wheel'
     - '%PYTHON%\python.exe setup.py bdist_wininst'
-    - '%PYTHON%\python.exe setup.py bdist_msi'
+    #  https://bugs.python.org/issue34251
+    #- '%PYTHON%\python.exe setup.py bdist_msi'
     - ps: ls dist
 
 artifacts:
