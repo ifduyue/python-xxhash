@@ -10,24 +10,10 @@ with open('xxhash/__init__.py') as f:
             VERSION = eval(line.rsplit(None, 1)[-1])
             break
 
-if os.name == 'posix':
-    extra_compile_args = [
-        "-std=c99",
-        "-O3",
-        "-Wall",
-        "-W",
-        "-Wundef",
-        # ref: http://bugs.python.org/issue21121
-        "-Wno-error=declaration-after-statement",
-    ]
-else:
-    extra_compile_args = None
-
 ext_modules = [
     Extension(
         'cpython',
         ['xxhash/cpython.c', 'deps/xxhash/xxhash.c'],
-        extra_compile_args=extra_compile_args,
         include_dirs=['deps/xxhash']
     )
 ]
