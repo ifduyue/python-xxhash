@@ -10,8 +10,6 @@ with open('xxhash/__init__.py') as f:
             VERSION = eval(line.rsplit(None, 1)[-1])
             break
 
-setup_kwargs = {}
-
 if os.name == 'posix':
     extra_compile_args = [
         "-std=c99",
@@ -25,7 +23,7 @@ if os.name == 'posix':
 else:
     extra_compile_args = None
 
-setup_kwargs['ext_modules'] = [
+ext_modules = [
     Extension(
         'cpython',
         ['xxhash/cpython.c', 'deps/xxhash/xxhash.c'],
@@ -64,5 +62,5 @@ setup(
         'Programming Language :: Python :: Implementation :: CPython',
     ],
     python_requires=">=2.6, !=3.0.*, !=3.1.*, !=3.2.*",
-    **setup_kwargs
+    ext_modules=ext_modules,
 )
