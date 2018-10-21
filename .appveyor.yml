@@ -1,4 +1,10 @@
 environment:
+  global:
+      PYPI_USER: ifduyue
+      PYPI_TEST_PASSWORD:
+        secure: Ub5TGKonq/xFgzRLFMCcKQ==
+      PYPI_PASSWORD:
+        secure: fFfFN5N5920gtX3+pwrOddk/psDk3wK67snCOt209bc=
   matrix:
     - PYTHON: "C:\\Python26"
     - PYTHON: "C:\\Python26-x64"
@@ -15,25 +21,52 @@ environment:
     - PYTHON: "C:\\Python36-x64"
     - PYTHON: "C:\\Python37"
     - PYTHON: "C:\\Python37-x64"
+    # build wheels
+    - PYTHON: "C:\\Python36-x64"
+      XXHASH_BUILDWHEELS: 1
 
 build: off
 
 install:
     - git --version
+    - python --version
     - '%PYTHON%\python.exe --version'
+
     - git submodule update --init --recursive
     - '%PYTHON%\scripts\pip.exe install wheel'
     - '%PYTHON%\scripts\pip.exe --version'
 
 test_script:
     - '%PYTHON%\python.exe setup.py test'
-
-after_test:
-    - '%PYTHON%\python.exe setup.py bdist_wheel'
-    - '%PYTHON%\python.exe setup.py bdist_wininst'
-    #  https://bugs.python.org/issue34251
-    #- '%PYTHON%\python.exe setup.py bdist_msi'
-    - ps: ls dist
+    #- cibuildwheel --output-dir wheels
+    #- ls wheels
+    - ps: |
+        if (Test-Path env:XXHASH_BUILDWHEELS) {
+          python -m pip install -U pip setuptools cibuildwheel
+          cibuildwheel --output-dir wheels
+          ls wheels
+        }
 
 artifacts:
-    - path: dist\*
+    - path: wheels\*.whl
+      name: Wheels
+
+
+on_success:
+    # deploy master non-tags to Test PyPI
+    - ps: |
+        if (!(Test-Path env:XXHASH_BUILDWHEELS)) { return }
+        if (Test-Path env:APPVEYOR_PULL_REQUEST_NUMBER) { return }
+        if ($env:APPVEYOR_REPO_NAME -ne 'ifduyue/python-xxhash') { return }
+        if ($env:APPVEYOR_REPO_BRANCH -ne 'master') { return }
+        pip install -U twine
+        twine upload -u $env:PYPI_USER -p $env:PYPI_TEST_PASSWORD --repository-url https://test.pypi.org/legacy/ --skip-existing wheels\*.whl
+
+    # deploy tags to PyPI
+    - ps: |
+        if (!(Test-Path env:XXHASH_BUILDWHEELS)) { return }
+        if (Test-Path env:APPVEYOR_PULL_REQUEST_NUMBER) { return }
+        if ($env:APPVEYOR_REPO_NAME -ne 'ifduyue/python-xxhash') { return }
+        if ($env:APPVEYOR_REPO_TAG -ne 'true') { return }
+        pip install -U twine
+        twine upload -u $env:PYPI_USER -p $env:PYPI_PASSWORD --skip-existing wheels\*.whl
