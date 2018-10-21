@@ -20,7 +20,7 @@ ext_modules = [
 
 setup(
     # xxhash wasn't available on test.pypi.org
-    name='xxhash' if not os.getenv('XXHASH_BUILDWHEELS') else 'xxhash-test'
+    name='xxhash' if not os.getenv('XXHASH_BUILDWHEELS') else 'xxhash-test',
     version=VERSION,
     description="Python binding for xxHash",
     long_description=open('README.rst', 'r').read(),
