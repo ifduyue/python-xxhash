@@ -1,32 +1,71 @@
 language: python
+python: 3.6
 dist: trusty
 
-
 matrix:
-  include:
-  - python: 2.6
-  - python: 2.7
-  - python: 3.3
-  - python: 3.4
-  - python: 3.5
-    dist: xenial
-  - python: 3.6
-    dist: xenial
-  - python: 3.7
-    dist: xenial
-  - python: 3.8-dev
-    dist: xenial
-  - python: nightly
-    dist: xenial
-  - python: pypy
-  - python: pypy3
   allow_failures:
-  - python: pypy
-  - python: pypy3
-  - python: 3.8-dev
-  - python: nightly
+    - python: pypy
+    - python: pypy3
+    - python: 3.8-dev
+    - python: nightly
+  include:
+    - python: 2.6
+    - python: 2.7
+    - python: 3.3
+    - python: 3.4
+    - python: 3.5
+      dist: xenial
+    - python: 3.6
+      dist: xenial
+    - python: 3.7
+      dist: xenial
+    - python: 3.8-dev
+      dist: xenial
+    - python: nightly
+      dist: xenial
+    - python: pypy
+    - python: pypy3
+    - dist: trusty
+      sudo: required
+      services:
+        - docker
+      env: XXHASH_BUILDWHEELS=1
+    - os: osx
+      osx_image: xcode9.4
+      language: generic
+      env: XXHASH_BUILDWHEELS=1
+      before_install:
+        - SSL_CERT_FILE=$(brew --prefix)/etc/openssl/cert.pem
+        - sudo pip install -U pip setuptools twine
 
 install:
-- gcc --version
+  - gcc --version
+  - |
+    if [ -n "${XXHASH_BUILDWHEELS:-}" ]; then
+      pip install cibuildwheel
+    fi
 
-script: python setup.py test
+script:
+  - |
+    if [ -n "${XXHASH_BUILDWHEELS:-}" ]; then
+      cibuildwheel --output-dir dist
+    else
+      python setup.py test
+    fi
+
+before_deploy: ls dist/
+
+deploy:
+  provider: pypi
+  user: ifduyue
+  password:
+      secure: "AKWSOlvoiBvXkUJYg/WWueMDON9EmUXgy5GIO1LFhXGmWChHaEuLRhjn9PtU0GUeaUIUGPwleTbF9YMUiXr0zCCjllV6hNGwJ/wrRNfI6+I0m4YLTjS5uQ4/P0uhPCNIroD1YI9GtLtySdyvmOJI4wDxEd57gycHE47re3jwF90="
+  server: https://test.pypi.org/legacy/
+  distributions: sdist
+  skip_existing: true
+  skip_cleanup: true
+  on:
+      repo: ifduyue/python-xxhash
+      tags: false
+      all_branches: true
+      condition: -n "${XXHASH_BUILDWHEELS:-}"
