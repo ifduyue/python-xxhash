@@ -235,6 +235,12 @@ Licensed under `BSD 2-Clause License <http://opensource.org/licenses/BSD-2-Claus
 CHANGELOG
 -----------
 
+v1.3.0 2018-10-21
+~~~~~~~~~~~~~~~~~
+
+- Wheels are now built automatically
+- Split CFFI variant into a separate package `ifduyue/python-xxhash-cffi <https://github.com/ifduyue/python-xxhash-cffi>`_
+
 v1.2.0 2018-07-13
 ~~~~~~~~~~~~~~~~~
 
