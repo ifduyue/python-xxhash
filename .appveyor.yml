@@ -35,6 +35,7 @@ install:
     - git submodule update --init --recursive
     - '%PYTHON%\scripts\pip.exe install wheel'
     - '%PYTHON%\scripts\pip.exe --version'
+    - set
 
 test_script:
     - '%PYTHON%\python.exe setup.py test'
