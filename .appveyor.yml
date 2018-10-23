@@ -55,13 +55,13 @@ artifacts:
 
 on_success:
   # deploy master non-tags to Test PyPI
-  #- ps: |
-  #    if (!(Test-Path env:XXHASH_BUILDWHEELS)) { return }
-  #    if (Test-Path env:APPVEYOR_PULL_REQUEST_NUMBER) { return }
-  #    if ($env:APPVEYOR_REPO_NAME -ne 'ifduyue/python-xxhash') { return }
-  #    if ($env:APPVEYOR_REPO_BRANCH -ne 'master') { return }
-  #    pip install -U twine
-  #    twine upload -u $env:PYPI_USER -p $env:PYPI_TEST_PASSWORD --repository-url https://test.pypi.org/legacy/ --skip-existing wheels\*.whl
+  - ps: |
+      if (!(Test-Path env:XXHASH_BUILDWHEELS)) { return }
+      if (Test-Path env:APPVEYOR_PULL_REQUEST_NUMBER) { return }
+      if ($env:APPVEYOR_REPO_NAME -ne 'ifduyue/python-xxhash') { return }
+      if ($env:APPVEYOR_REPO_BRANCH -ne 'master') { return }
+      pip install -U twine
+      twine upload -u $env:PYPI_USER -p $env:PYPI_TEST_PASSWORD --repository-url https://test.pypi.org/legacy/ --skip-existing wheels\*.whl
 
   # deploy tags to PyPI
   - ps: |

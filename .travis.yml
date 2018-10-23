@@ -59,19 +59,19 @@ before_deploy: ls dist/
 
 deploy:
   # deploy master non-tags to Test PyPI
-  #- provider: pypi
-  #  user: ifduyue
-  #  password:
-  #    secure: "AKWSOlvoiBvXkUJYg/WWueMDON9EmUXgy5GIO1LFhXGmWChHaEuLRhjn9PtU0GUeaUIUGPwleTbF9YMUiXr0zCCjllV6hNGwJ/wrRNfI6+I0m4YLTjS5uQ4/P0uhPCNIroD1YI9GtLtySdyvmOJI4wDxEd57gycHE47re3jwF90="
-  #  server: https://test.pypi.org/legacy/
-  #  distributions: sdist
-  #  skip_existing: true
-  #  skip_cleanup: true
-  #  on:
-  #    repo: ifduyue/python-xxhash
-  #    tags: false
-  #    branch: master
-  #    condition: -n "${XXHASH_BUILDWHEELS:-}"
+  - provider: pypi
+    user: ifduyue
+    password:
+      secure: "AKWSOlvoiBvXkUJYg/WWueMDON9EmUXgy5GIO1LFhXGmWChHaEuLRhjn9PtU0GUeaUIUGPwleTbF9YMUiXr0zCCjllV6hNGwJ/wrRNfI6+I0m4YLTjS5uQ4/P0uhPCNIroD1YI9GtLtySdyvmOJI4wDxEd57gycHE47re3jwF90="
+    server: https://test.pypi.org/legacy/
+    distributions: sdist
+    skip_existing: true
+    skip_cleanup: true
+    on:
+      repo: ifduyue/python-xxhash
+      tags: false
+      branch: master
+      condition: -n "${XXHASH_BUILDWHEELS:-}"
 
   # deploy tags to PyPI
   - provider: pypi
