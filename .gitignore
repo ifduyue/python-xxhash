@@ -3,3 +3,4 @@
 *.o
 __pycache__/
 build
+/xxhash.egg-info/
