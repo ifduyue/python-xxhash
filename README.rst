@@ -170,12 +170,12 @@ digest:
 Besides xxh32/xxh64 mentioned above, oneshot functions are also provided,
 so we can avoid allocating XXH32/64 state on heap:
 
-    | xxh32_digest(bytes, seed)
-    | xxh32_intdigest(bytes, seed)
-    | xxh32_hexdigest(bytes, seed)
-    | xxh64_digest(bytes, seed)
-    | xxh64_intdigest(bytes, seed)
-    | xxh64_hexdigest(bytes, seed)
+    | xxh32_digest(bytes, seed=0)
+    | xxh32_intdigest(bytes, seed=0)
+    | xxh32_hexdigest(bytes, seed=0)
+    | xxh64_digest(bytes, seed=0)
+    | xxh64_intdigest(bytes, seed=0)
+    | xxh64_hexdigest(bytes, seed=0)
 
 .. code-block:: python
 
