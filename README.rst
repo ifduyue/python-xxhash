@@ -168,7 +168,7 @@ digest:
     17241709254077376921
 
 Besides xxh32/xxh64 mentioned above, oneshot functions are also provided,
-so we can avoid creating XXH32/64 state on heap:
+so we can avoid allocating XXH32/64 state on heap:
 
     | xxh32_digest(bytes, seed)
     | xxh32_intdigest(bytes, seed)
