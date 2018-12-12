@@ -180,8 +180,6 @@ so we can avoid allocating XXH32/64 state on heap:
 .. code-block:: python
 
     >>> import xxhash
-    >>> xxhash.xxh64('a').digest == xxhash.xxh64_digest('a')
-    False
     >>> xxhash.xxh64('a').digest() == xxhash.xxh64_digest('a')
     True
     >>> xxhash.xxh64('a').intdigest() == xxhash.xxh64_intdigest('a')
