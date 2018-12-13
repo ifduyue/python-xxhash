@@ -82,7 +82,7 @@ get the integer digest.
 
 Constructors for hash algorithms provided by this module are ``xxh32()`` and ``xxh64()``.
 
-For example, to obtain the digest of the byte string ``b'Nobody inspects the spammish repetition'``.
+For example, to obtain the digest of the byte string ``b'Nobody inspects the spammish repetition'``:
 
 .. code-block:: python
 
