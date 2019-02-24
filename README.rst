@@ -193,6 +193,15 @@ so we can avoid allocating XXH32/64 state on heap:
     >>> xxhash.xxh64_digest('xxhash', seed=20141025)
     '\xb5Y\xb9\x8d\x84N\x065'
 
+.. code-block:: python
+
+    In [1]: import xxhash
+
+    In [2]: %timeit xxhash.xxh64_hexdigest('xxhash')
+    268 ns ± 24.1 ns per loop (mean ± std. dev. of 7 runs, 1000000 loops each)
+
+    In [3]: %timeit xxhash.xxh64('xxhash').hexdigest()
+    416 ns ± 17.3 ns per loop (mean ± std. dev. of 7 runs, 1000000 loops each)
 
 Caveats
 -------
