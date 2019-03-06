@@ -10,11 +10,21 @@ with open('xxhash/__init__.py') as f:
             VERSION = eval(line.rsplit(None, 1)[-1])
             break
 
+if os.getenv('XXHASH_FORCE_SYSTEM'):
+    libraries = ['xxhash']
+    source = ['xxhash/cpython.c']
+    include_dirs = []
+else:
+    libraries = []
+    source = ['xxhash/cpython.c', 'deps/xxhash/xxhash.c']
+    include_dirs = ['deps/xxhash']
+
 ext_modules = [
     Extension(
         'cpython',
-        ['xxhash/cpython.c', 'deps/xxhash/xxhash.c'],
-        include_dirs=['deps/xxhash']
+        source,
+        include_dirs=include_dirs,
+        libraries=libraries,
     )
 ]
 
