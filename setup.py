@@ -10,7 +10,7 @@ with open('xxhash/__init__.py') as f:
             VERSION = eval(line.rsplit(None, 1)[-1])
             break
 
-if os.getenv('XXHASH_FORCE_SYSTEM'):
+if os.getenv('XXHASH_LINK_SO'):
     libraries = ['xxhash']
     source = ['xxhash/cpython.c']
     include_dirs = []

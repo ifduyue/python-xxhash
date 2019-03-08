@@ -38,8 +38,16 @@ Installation
 
    $ pip install xxhash
 
-Installation Prerequisites
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Installing From Source
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: bash
+
+   $ pip install --no-binary xxhash xxhash
+
+Prerequisites
+++++++++++++++
 
 On Debian/Ubuntu:
 
@@ -52,6 +60,16 @@ On CentOS/Fedora:
 .. code-block:: bash
 
    $ yum install python-devel gcc redhat-rpm-config
+
+Linking to libxxhash.so
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+By default python-xxhash will use bundled xxHash,
+we can change this by specifying ENV var ``XXHASH_LINK_SO``:
+
+.. code-block:: bash
+
+   $ XXHASH_LINK_SO=1 pip install --no-binary xxhash xxhash
 
 Usage
 --------
