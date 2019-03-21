@@ -12,16 +12,16 @@ with open('xxhash/__init__.py') as f:
 
 if os.getenv('XXHASH_LINK_SO'):
     libraries = ['xxhash']
-    source = ['xxhash/cpython.c']
+    source = ['src/_xxhash.c']
     include_dirs = []
 else:
     libraries = []
-    source = ['xxhash/cpython.c', 'deps/xxhash/xxhash.c']
+    source = ['src/_xxhash.c', 'deps/xxhash/xxhash.c']
     include_dirs = ['deps/xxhash']
 
 ext_modules = [
     Extension(
-        'cpython',
+        '_xxhash',
         source,
         include_dirs=include_dirs,
         libraries=libraries,

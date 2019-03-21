@@ -1045,7 +1045,7 @@ static PyMethodDef methods[] = {
 
 static struct PyModuleDef moduledef = {
     PyModuleDef_HEAD_INIT,
-    "cpython",
+    "_xxhash",
     NULL,
     -1,
     methods,
@@ -1057,12 +1057,12 @@ static struct PyModuleDef moduledef = {
 
 #define INITERROR return NULL
 
-PyObject *PyInit_cpython(void)
+PyObject *PyInit__xxhash(void)
 
 #else
 #define INITERROR return
 
-void initcpython(void)
+void init_xxhash(void)
 #endif
 {
     PyObject *module;
@@ -1070,7 +1070,7 @@ void initcpython(void)
 #if PY_MAJOR_VERSION >= 3
     module = PyModule_Create(&moduledef);
 #else
-    module = Py_InitModule("cpython", methods);
+    module = Py_InitModule("_xxhash", methods);
 #endif
 
     if (module == NULL) {
