@@ -53,6 +53,7 @@ script:
       cibuildwheel --output-dir dist
     else
       python setup.py test
+      ./bench.sh
     fi
 
 before_deploy: ls dist/
