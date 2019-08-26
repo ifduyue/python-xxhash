@@ -1,6 +1,7 @@
 include README.rst
 include CHANGELOG.rst
 include LICENSE
+include deps/xxhash/xxh3.h
 include deps/xxhash/xxhash.h
 include deps/xxhash/xxhash.c
 include deps/xxhash/LICENSE
