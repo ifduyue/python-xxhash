@@ -1,6 +1,11 @@
 CHANGELOG
 -----------
 
+v1.4.1 2019-08-27
+~~~~~~~~~~~~~~~~~
+
+- Fixed: xxh3.h in missing from source tarball
+
 v1.4.0 2019-08-25
 ~~~~~~~~~~~~~~~~~
 
