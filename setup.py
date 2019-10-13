@@ -3,6 +3,8 @@
 
 from setuptools import setup, Extension
 import os
+import codecs
+
 
 with open('xxhash/__init__.py') as f:
     for line in f:
@@ -28,11 +30,17 @@ ext_modules = [
     )
 ]
 
+# Read README with explicit encoding
+f = codecs.open('README.rst', encoding='utf-8', mode='r')
+long_description = f.read()
+f.close()
+
+
 setup(
     name='xxhash',
     version=VERSION,
     description="Python binding for xxHash",
-    long_description=open('README.rst', 'r').read(),
+    long_description=long_description,
     long_description_content_type="text/x-rst",
     author='Yue Du',
     author_email='ifduyue@gmail.com',
