@@ -1,6 +1,11 @@
 CHANGELOG
 -----------
 
+v1.4.2 2019-10-13
+~~~~~~~~~~~~~~~~~
+
+- Fixed: setup.py fails when reading README.rst and the default encoding is not UTF-8
+
 v1.4.1 2019-08-27
 ~~~~~~~~~~~~~~~~~
 

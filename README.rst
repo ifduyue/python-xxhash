@@ -81,7 +81,7 @@ the module properties ``VERSION`` AND ``XXHASH_VERSION`` respectively.
 
     >>> import xxhash
     >>> xxhash.VERSION
-    '1.4.0'
+    '1.4.2'
     >>> xxhash.XXHASH_VERSION
     '0.7.1'
 
