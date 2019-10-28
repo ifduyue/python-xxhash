@@ -7,20 +7,50 @@ environment:
       secure: fFfFN5N5920gtX3+pwrOddk/psDk3wK67snCOt209bc=
   matrix:
     - PYTHON: "C:\\Python26"
+      PYTHON_VERSION: "2.6"
+      PYTHON_ARCH: "32"
     - PYTHON: "C:\\Python26-x64"
+      PYTHON_VERSION: "2.6"
+      PYTHON_ARCH: "64"
     - PYTHON: "C:\\Python27"
+      PYTHON_VERSION: "2.7"
+      PYTHON_ARCH: "32"
     - PYTHON: "C:\\Python27-x64"
+      PYTHON_VERSION: "2.7"
+      PYTHON_ARCH: "64"
     - PYTHON: "C:\\Python33"
+      PYTHON_VERSION: "3.3"
+      PYTHON_ARCH: "32"
     # https://bugs.python.org/issue7511
     #- PYTHON: "C:\\Python33-x64"
     - PYTHON: "C:\\Python34"
+      PYTHON_VERSION: "3.4"
+      PYTHON_ARCH: "32"
     #- PYTHON: "C:\\Python34-x64"
     - PYTHON: "C:\\Python35"
+      PYTHON_VERSION: "3.5"
+      PYTHON_ARCH: "32"
     - PYTHON: "C:\\Python35-x64"
+      PYTHON_VERSION: "3.5"
+      PYTHON_ARCH: "64"
     - PYTHON: "C:\\Python36"
+      PYTHON_VERSION: "3.6"
+      PYTHON_ARCH: "32"
     - PYTHON: "C:\\Python36-x64"
+      PYTHON_VERSION: "3.6"
+      PYTHON_ARCH: "64"
     - PYTHON: "C:\\Python37"
+      PYTHON_VERSION: "3.7"
+      PYTHON_ARCH: "32"
     - PYTHON: "C:\\Python37-x64"
+      PYTHON_VERSION: "3.7"
+      PYTHON_ARCH: "64"
+    - PYTHON: "C:\\Python38"
+      PYTHON_VERSION: "3.8"
+      PYTHON_ARCH: "32"
+    - PYTHON: "C:\\Python38-x64"
+      PYTHON_VERSION: "3.8"
+      PYTHON_ARCH: "64"
     # build wheels
     - PYTHON: "C:\\Python36-x64"
       XXHASH_BUILDWHEELS: 1
@@ -28,6 +58,15 @@ environment:
 build: off
 
 install:
+  - ps: |
+      Set-PSDebug -Trace 1
+      if ($Env:PYTHON_VERSION.StartsWith("3.8")) {
+        if ($Env:PYTHON_ARCH -eq "64") {
+          iex "choco install python3 --version=3.8 --no-progress --params /InstallDir:$Env:PYTHON"
+        } else {
+          iex "choco install python3 --version=3.8 --no-progress --params /InstallDir:$Env:PYTHON --x86"
+        }
+      }
   - git --version
   - python --version
   - '%PYTHON%\python.exe --version'
