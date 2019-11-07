@@ -44,19 +44,18 @@ install:
   - gcc --version
   - |
     if [ -n "${XXHASH_BUILDWHEELS:-}" ]; then
-      pip install cibuildwheel
+      pip install git+https://github.com/joerick/cibuildwheel.git#egg=cibuildsheel
     fi
 
 script:
   - |
     if [ -n "${XXHASH_BUILDWHEELS:-}" ]; then
       cibuildwheel --output-dir dist
+      ls dist/
     else
       python setup.py test
       ./bench.sh
     fi
-
-before_deploy: ls dist/
 
 deploy:
   # deploy master non-tags to Test PyPI

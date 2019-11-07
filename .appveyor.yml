@@ -53,6 +53,8 @@ environment:
       PYTHON_ARCH: "64"
     # build wheels
     - PYTHON: "C:\\Python36-x64"
+      PYTHON_VERSION: "3.6"
+      PYTHON_ARCH: "64"
       XXHASH_BUILDWHEELS: 1
 
 build: off
@@ -82,7 +84,7 @@ test_script:
   #- ls wheels
   - ps: |
       if (Test-Path env:XXHASH_BUILDWHEELS) {
-        python -m pip install -U pip setuptools cibuildwheel
+        python -m pip install -U pip setuptools git+https://github.com/joerick/cibuildwheel.git#egg=cibuildwheel
         cibuildwheel --output-dir wheels
         ls wheels
       }
