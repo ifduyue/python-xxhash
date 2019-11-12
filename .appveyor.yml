@@ -75,7 +75,7 @@ test_script:
   #- ls wheels
   - ps: |
       if (Test-Path env:XXHASH_BUILDWHEELS) {
-        python -m pip install -U pip setuptools git+https://github.com/joerick/cibuildwheel.git#egg=cibuildwheel
+        python -m pip install -U pip setuptools cibuildwheel
         cibuildwheel --output-dir wheels
         ls wheels
       }

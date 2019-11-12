@@ -44,7 +44,7 @@ install:
   - gcc --version
   - |
     if [ -n "${XXHASH_BUILDWHEELS:-}" ]; then
-      pip install git+https://github.com/joerick/cibuildwheel.git#egg=cibuildsheel
+      pip install cibuildwheel
     fi
 
 script:
