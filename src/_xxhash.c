@@ -46,40 +46,6 @@
 
 
 /*****************************************************************************
- * Helper Functions ***********************************************************
- ****************************************************************************/
-
-/* u2bytes converts an unsigned int to bytes, which are the big-endian
-   representation of this integer */
-static void u2bytes(unsigned in, char *out)
-{
-    unsigned char *s = (unsigned char *)out;
-
-    s[0] = (in >> 24) & 0xFF;
-    s[1] = (in >> 16) & 0xFF;
-    s[2] = (in >> 8) & 0xFF;
-    s[3] = in & 0xFF;
-    s[4] = '\0';
-}
-
-/* ull2bytes converts an unsigned long long to bytes, which are the big-endian
-   representation of this integer */
-static void ull2bytes(unsigned long long in, char *out)
-{
-    unsigned char *s = (unsigned char *)out;
-
-    s[0] = (in >> 56) & 0xFF;
-    s[1] = (in >> 48) & 0xFF;
-    s[2] = (in >> 40) & 0xFF;
-    s[3] = (in >> 32) & 0xFF;
-    s[4] = (in >> 24) & 0xFF;
-    s[5] = (in >> 16) & 0xFF;
-    s[6] = (in >> 8) & 0xFF;
-    s[7] = in & 0xFF;
-    s[8] = '\0';
-}
-
-/*****************************************************************************
  * Module Functions ***********************************************************
  ****************************************************************************/
 
@@ -117,7 +83,7 @@ static PyObject *xxh32_digest(PyObject *self, PyObject *args, PyObject *kwargs)
     retbuf = PyString_AS_STRING(retval);
 #endif
 
-    u2bytes(intdigest, retbuf);
+    XXH32_canonicalFromHash((XXH32_canonical_t *)retbuf, intdigest);
 
     return retval;
 }
@@ -180,7 +146,7 @@ static PyObject *xxh32_hexdigest(PyObject *self, PyObject *args, PyObject *kwarg
         return NULL;
     }
 
-    u2bytes(intdigest, digest);
+    XXH32_canonicalFromHash((XXH32_canonical_t *)digest, intdigest);
 
     for (i = j = 0; i < XXH32_DIGESTSIZE; i++) {
         unsigned char c;
@@ -229,7 +195,7 @@ static PyObject *xxh64_digest(PyObject *self, PyObject *args, PyObject *kwargs)
     retbuf = PyString_AS_STRING(retval);
 #endif
 
-    ull2bytes(intdigest, retbuf);
+    XXH64_canonicalFromHash((XXH64_canonical_t *)retbuf, intdigest);
 
     return retval;
 }
@@ -292,7 +258,7 @@ static PyObject *xxh64_hexdigest(PyObject *self, PyObject *args, PyObject *kwarg
         return NULL;
     }
 
-    ull2bytes(intdigest, digest);
+    XXH64_canonicalFromHash((XXH64_canonical_t *)digest, intdigest);
 
     for (i = j = 0; i < XXH64_DIGESTSIZE; i++) {
         unsigned char c;
@@ -433,7 +399,7 @@ static PyObject *PYXXH32_digest(PYXXH32Object *self)
     }
 
     digest = XXH32_digest(self->xxhash_state);
-    u2bytes(digest, retbuf);
+    XXH32_canonicalFromHash((XXH32_canonical_t *)retbuf, digest);
 
     return retval;
 }
@@ -477,7 +443,7 @@ static PyObject *PYXXH32_hexdigest(PYXXH32Object *self)
     }
 
     intdigest = XXH32_digest(self->xxhash_state);
-    u2bytes(intdigest, digest);
+    XXH32_canonicalFromHash((XXH32_canonical_t *)digest, intdigest);
 
     for (i = j = 0; i < XXH32_DIGESTSIZE; i++) {
         unsigned char c;
@@ -788,7 +754,7 @@ static PyObject *PYXXH64_digest(PYXXH64Object *self)
     }
 
     digest = XXH64_digest(self->xxhash_state);
-    ull2bytes(digest, retbuf);
+    XXH64_canonicalFromHash((XXH64_canonical_t *)retbuf, digest);
 
     return retval;
 }
@@ -832,7 +798,7 @@ static PyObject *PYXXH64_hexdigest(PYXXH64Object *self)
     }
 
     intdigest = XXH64_digest(self->xxhash_state);
-    ull2bytes(intdigest, digest);
+    XXH64_canonicalFromHash((XXH64_canonical_t *)digest, intdigest);
 
     for (i = j = 0; i < XXH64_DIGESTSIZE; i++) {
         unsigned char c;
