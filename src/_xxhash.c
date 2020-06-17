@@ -44,6 +44,10 @@
 /* Release the GIL if taking more than ~10 µs */
 #define GIL_MINSIZE 100 * 1000
 
+/* Use byte string on PY2 */
+#if PY_MAJOR_VERSION < 3
+#define PyUnicode_FromStringAndSize PyString_FromStringAndSize
+#endif
 
 /*****************************************************************************
  * Module Functions ***********************************************************
@@ -110,12 +114,7 @@ static PyObject *xxh32_hexdigest(PyObject *self, PyObject *args, PyObject *kwarg
     char digest[XXH32_DIGESTSIZE + 1];
     char *keywords[] = {"input", "seed", NULL};
     Py_buffer buf;
-#if PY_MAJOR_VERSION >= 3
-    Py_UNICODE *retbuf;
-#else
-    char *retbuf;
-#endif
-    PyObject *retval;
+    char retbuf[XXH32_DIGESTSIZE * 2];
     int i, j;
 
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s*|I:xxh32_hexdigest", keywords, &buf, &seed)) {
@@ -124,27 +123,6 @@ static PyObject *xxh32_hexdigest(PyObject *self, PyObject *args, PyObject *kwarg
 
     intdigest = XXH32(buf.buf, buf.len, seed);
     PyBuffer_Release(&buf);
-
-#if PY_MAJOR_VERSION >= 3
-    retval = PyUnicode_FromStringAndSize(NULL, XXH32_DIGESTSIZE * 2);
-#else
-    retval = PyString_FromStringAndSize(NULL, XXH32_DIGESTSIZE * 2);
-#endif
-
-    if (!retval) {
-        return NULL;
-    }
-
-#if PY_MAJOR_VERSION >= 3
-    retbuf = PyUnicode_AS_UNICODE(retval);
-#else
-    retbuf = PyString_AS_STRING(retval);
-#endif
-
-    if (!retbuf) {
-        Py_DECREF(retval);
-        return NULL;
-    }
 
     XXH32_canonicalFromHash((XXH32_canonical_t *)digest, intdigest);
 
@@ -158,7 +136,7 @@ static PyObject *xxh32_hexdigest(PyObject *self, PyObject *args, PyObject *kwarg
         retbuf[j++] = c;
     }
 
-    return retval;
+    return PyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
 }
 
 /* XXH64 */
@@ -222,12 +200,7 @@ static PyObject *xxh64_hexdigest(PyObject *self, PyObject *args, PyObject *kwarg
     char digest[XXH64_DIGESTSIZE + 1];
     char *keywords[] = {"input", "seed", NULL};
     Py_buffer buf;
-#if PY_MAJOR_VERSION >= 3
-    Py_UNICODE *retbuf;
-#else
-    char *retbuf;
-#endif
-    PyObject *retval;
+    char retbuf[XXH64_DIGESTSIZE * 2];
     int i, j;
 
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s*|K:xxh64_hexdigest", keywords, &buf, &seed)) {
@@ -236,27 +209,6 @@ static PyObject *xxh64_hexdigest(PyObject *self, PyObject *args, PyObject *kwarg
 
     intdigest = XXH64(buf.buf, buf.len, seed);
     PyBuffer_Release(&buf);
-
-#if PY_MAJOR_VERSION >= 3
-    retval = PyUnicode_FromStringAndSize(NULL, XXH64_DIGESTSIZE * 2);
-#else
-    retval = PyString_FromStringAndSize(NULL, XXH64_DIGESTSIZE * 2);
-#endif
-
-    if (!retval) {
-        return NULL;
-    }
-
-#if PY_MAJOR_VERSION >= 3
-    retbuf = PyUnicode_AS_UNICODE(retval);
-#else
-    retbuf = PyString_AS_STRING(retval);
-#endif
-
-    if (!retbuf) {
-        Py_DECREF(retval);
-        return NULL;
-    }
 
     XXH64_canonicalFromHash((XXH64_canonical_t *)digest, intdigest);
 
@@ -270,7 +222,7 @@ static PyObject *xxh64_hexdigest(PyObject *self, PyObject *args, PyObject *kwarg
         retbuf[j++] = c;
     }
 
-    return retval;
+    return PyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
 }
 
 /*****************************************************************************
@@ -411,36 +363,10 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH32_hexdigest(PYXXH32Object *self)
 {
-    PyObject *retval;
-#if PY_MAJOR_VERSION >= 3
-    Py_UNICODE *retbuf;
-#else
-    char *retbuf;
-#endif
     unsigned int intdigest;
     char digest[XXH32_DIGESTSIZE + 1];
+    char retbuf[XXH32_DIGESTSIZE * 2];
     int i, j;
-
-#if PY_MAJOR_VERSION >= 3
-    retval = PyUnicode_FromStringAndSize(NULL, XXH32_DIGESTSIZE * 2);
-#else
-    retval = PyString_FromStringAndSize(NULL, XXH32_DIGESTSIZE * 2);
-#endif
-
-    if (!retval) {
-        return NULL;
-    }
-
-#if PY_MAJOR_VERSION >= 3
-    retbuf = PyUnicode_AS_UNICODE(retval);
-#else
-    retbuf = PyString_AS_STRING(retval);
-#endif
-
-    if (!retbuf) {
-        Py_DECREF(retval);
-        return NULL;
-    }
 
     intdigest = XXH32_digest(self->xxhash_state);
     XXH32_canonicalFromHash((XXH32_canonical_t *)digest, intdigest);
@@ -455,7 +381,7 @@ static PyObject *PYXXH32_hexdigest(PYXXH32Object *self)
         retbuf[j++] = c;
     }
 
-    return retval;
+    return PyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
 }
 
 PyDoc_STRVAR(
@@ -528,11 +454,7 @@ PYXXH32_get_digest_size(PYXXH32Object *self, void *closure)
 static PyObject *
 PYXXH32_get_name(PYXXH32Object *self, void *closure)
 {
-#if PY_MAJOR_VERSION >= 3
     return PyUnicode_FromStringAndSize("XXH32", 5);
-#else
-    return PyString_FromStringAndSize("XXH32", 5);
-#endif
 }
 
 static PyObject *
@@ -766,36 +688,10 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH64_hexdigest(PYXXH64Object *self)
 {
-    PyObject *retval;
-#if PY_MAJOR_VERSION >= 3
-    Py_UNICODE *retbuf;
-#else
-    char *retbuf;
-#endif
     unsigned long long intdigest;
     char digest[XXH64_DIGESTSIZE + 1];
+    char retbuf[XXH64_DIGESTSIZE * 2];
     int i, j;
-
-#if PY_MAJOR_VERSION >= 3
-    retval = PyUnicode_FromStringAndSize(NULL, XXH64_DIGESTSIZE * 2);
-#else
-    retval = PyString_FromStringAndSize(NULL, XXH64_DIGESTSIZE * 2);
-#endif
-
-    if (!retval) {
-        return NULL;
-    }
-
-#if PY_MAJOR_VERSION >= 3
-    retbuf = PyUnicode_AS_UNICODE(retval);
-#else
-    retbuf = PyString_AS_STRING(retval);
-#endif
-
-    if (!retbuf) {
-        Py_DECREF(retval);
-        return NULL;
-    }
 
     intdigest = XXH64_digest(self->xxhash_state);
     XXH64_canonicalFromHash((XXH64_canonical_t *)digest, intdigest);
@@ -810,7 +706,7 @@ static PyObject *PYXXH64_hexdigest(PYXXH64Object *self)
         retbuf[j++] = c;
     }
 
-    return retval;
+    return PyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
 }
 
 
@@ -884,11 +780,7 @@ PYXXH64_get_digest_size(PYXXH64Object *self, void *closure)
 static PyObject *
 PYXXH64_get_name(PYXXH64Object *self, void *closure)
 {
-#if PY_MAJOR_VERSION >= 3
     return PyUnicode_FromStringAndSize("XXH64", 5);
-#else
-    return PyString_FromStringAndSize("XXH64", 5);
-#endif
 }
 
 static PyObject *
