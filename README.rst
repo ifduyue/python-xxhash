@@ -81,9 +81,9 @@ the module properties ``VERSION`` AND ``XXHASH_VERSION`` respectively.
 
     >>> import xxhash
     >>> xxhash.VERSION
-    '1.4.3'
+    '1.4.4'
     >>> xxhash.XXHASH_VERSION
-    '0.7.2'
+    '0.7.3'
 
 This module is hashlib-compliant, which means you can use it in the same way as ``hashlib.md5``.
 
