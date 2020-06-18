@@ -6,7 +6,7 @@ v1.4.4 unreleased
 
 - Upgrade xxHash to v0.7.3
 - Stop using PEP393 deprecated APIs 
-- Use XXH(32|64)_canonicalFromHas to replace u2bytes and ull2bytes
+- Use XXH(32|64)_canonicalFromHash to replace u2bytes and ull2bytes
 
 v1.4.3 2019-11-12
 ~~~~~~~~~~~~~~~~~
