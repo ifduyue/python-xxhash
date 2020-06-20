@@ -56,6 +56,15 @@ matrix:
       services:
         - docker
       env: XXHASH_BUILDWHEELS=1
+    # linux arm wheels
+    - dist: xenial
+      arch: amd64
+      python: 3.7
+      sudo: required
+      services:
+        - docker
+      arch: arm64
+      env: XXHASH_BUILDWHEELS=1
     # osx wheels
     - os: osx
       osx_image: xcode9.4
