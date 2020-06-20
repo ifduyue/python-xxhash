@@ -1,7 +1,7 @@
 CHANGELOG
 -----------
 
-v1.4.4 unreleased
+v1.4.4 2020-06-20
 ~~~~~~~~~~~~~~~~~
 
 - Upgrade xxHash to v0.7.3
