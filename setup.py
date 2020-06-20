@@ -30,11 +30,11 @@ ext_modules = [
     )
 ]
 
-# Read README with explicit encoding
-f = codecs.open('README.rst', encoding='utf-8', mode='r')
-long_description = f.read()
-f.close()
+def readfile(filename):
+    with codecs.open(filename, encoding='utf-8', mode='r') as f:
+        return f.read()
 
+long_description = readfile('README.rst') + '\n' + readfile('CHANGELOG.rst')
 
 setup(
     name='xxhash',
