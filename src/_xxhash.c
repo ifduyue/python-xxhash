@@ -1038,6 +1038,7 @@ static PyObject *PYXXH3_64_new(PyTypeObject *type, PyObject *args, PyObject *kwa
     if ((self->xxhash_state = XXH3_createState()) == NULL) {
         return NULL;
     }
+    XXH3_64bits_reset_withSeed(self->xxhash_state, 0);
 
     return (PyObject *)self;
 }
@@ -1347,6 +1348,8 @@ static PyObject *PYXXH3_128_new(PyTypeObject *type, PyObject *args, PyObject *kw
     if ((self->xxhash_state = XXH3_createState()) == NULL) {
         return NULL;
     }
+
+    XXH3_64bits_reset_withSeed(self->xxhash_state, 0);
 
     return (PyObject *)self;
 }
