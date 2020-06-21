@@ -47,6 +47,7 @@
 /* Use byte string on PY2 */
 #if PY_MAJOR_VERSION < 3
 #define PyUnicode_FromStringAndSize PyString_FromStringAndSize
+#define PyBytes_FromStringAndSize   PyString_FromStringAndSize
 #endif
 
 /*****************************************************************************
@@ -60,8 +61,7 @@ static PyObject *xxh32_digest(PyObject *self, PyObject *args, PyObject *kwargs)
     unsigned int seed = 0, intdigest = 0;
     char *keywords[] = {"input", "seed", NULL};
     Py_buffer buf;
-    PyObject *retval;
-    char *retbuf;
+    char retbuf[XXH32_DIGESTSIZE];
 
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s*|I:xxh32_digest", keywords, &buf, &seed)) {
         return NULL;
@@ -70,26 +70,9 @@ static PyObject *xxh32_digest(PyObject *self, PyObject *args, PyObject *kwargs)
     intdigest = XXH32(buf.buf, buf.len, seed);
     PyBuffer_Release(&buf);
 
-
-#if PY_MAJOR_VERSION >= 3
-    retval = PyBytes_FromStringAndSize(NULL, XXH32_DIGESTSIZE);
-#else
-    retval = PyString_FromStringAndSize(NULL, XXH32_DIGESTSIZE);
-#endif
-
-    if (!retval) {
-        return NULL;
-    }
-
-#if PY_MAJOR_VERSION >= 3
-    retbuf = PyBytes_AS_STRING(retval);
-#else
-    retbuf = PyString_AS_STRING(retval);
-#endif
-
     XXH32_canonicalFromHash((XXH32_canonical_t *)retbuf, intdigest);
 
-    return retval;
+    return PyBytes_FromStringAndSize(retbuf, sizeof(retbuf));
 }
 
 static PyObject *xxh32_intdigest(PyObject *self, PyObject *args, PyObject *kwargs)
@@ -111,7 +94,7 @@ static PyObject *xxh32_intdigest(PyObject *self, PyObject *args, PyObject *kwarg
 static PyObject *xxh32_hexdigest(PyObject *self, PyObject *args, PyObject *kwargs)
 {
     unsigned int seed = 0, intdigest = 0;
-    char digest[XXH32_DIGESTSIZE + 1];
+    char digest[XXH32_DIGESTSIZE];
     char *keywords[] = {"input", "seed", NULL};
     Py_buffer buf;
     char retbuf[XXH32_DIGESTSIZE * 2];
@@ -146,8 +129,7 @@ static PyObject *xxh64_digest(PyObject *self, PyObject *args, PyObject *kwargs)
     unsigned long long seed = 0, intdigest = 0;
     char *keywords[] = {"input", "seed", NULL};
     Py_buffer buf;
-    PyObject *retval;
-    char *retbuf;
+    char retbuf[XXH64_DIGESTSIZE];
 
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s*|K:xxh64_digest", keywords, &buf, &seed)) {
         return NULL;
@@ -156,26 +138,9 @@ static PyObject *xxh64_digest(PyObject *self, PyObject *args, PyObject *kwargs)
     intdigest = XXH64(buf.buf, buf.len, seed);
     PyBuffer_Release(&buf);
 
-
-#if PY_MAJOR_VERSION >= 3
-    retval = PyBytes_FromStringAndSize(NULL, XXH64_DIGESTSIZE);
-#else
-    retval = PyString_FromStringAndSize(NULL, XXH64_DIGESTSIZE);
-#endif
-
-    if (!retval) {
-        return NULL;
-    }
-
-#if PY_MAJOR_VERSION >= 3
-    retbuf = PyBytes_AS_STRING(retval);
-#else
-    retbuf = PyString_AS_STRING(retval);
-#endif
-
     XXH64_canonicalFromHash((XXH64_canonical_t *)retbuf, intdigest);
 
-    return retval;
+    return PyBytes_FromStringAndSize(retbuf, sizeof(retbuf));
 }
 
 static PyObject *xxh64_intdigest(PyObject *self, PyObject *args, PyObject *kwargs)
@@ -197,7 +162,7 @@ static PyObject *xxh64_intdigest(PyObject *self, PyObject *args, PyObject *kwarg
 static PyObject *xxh64_hexdigest(PyObject *self, PyObject *args, PyObject *kwargs)
 {
     unsigned long long seed = 0, intdigest = 0;
-    char digest[XXH64_DIGESTSIZE + 1];
+    char digest[XXH64_DIGESTSIZE];
     char *keywords[] = {"input", "seed", NULL};
     Py_buffer buf;
     char retbuf[XXH64_DIGESTSIZE * 2];
@@ -325,35 +290,13 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH32_digest(PYXXH32Object *self)
 {
-    PyObject *retval;
-    char *retbuf;
-    unsigned int digest;
-
-#if PY_MAJOR_VERSION >= 3
-    retval = PyBytes_FromStringAndSize(NULL, XXH32_DIGESTSIZE);
-#else
-    retval = PyString_FromStringAndSize(NULL, XXH32_DIGESTSIZE);
-#endif
-
-    if (!retval) {
-        return NULL;
-    }
-
-#if PY_MAJOR_VERSION >= 3
-    retbuf = PyBytes_AS_STRING(retval);
-#else
-    retbuf = PyString_AS_STRING(retval);
-#endif
-
-    if (!retbuf) {
-        Py_DECREF(retval);
-        return NULL;
-    }
+    char retbuf[XXH32_DIGESTSIZE];
+    XXH32_hash_t digest;
 
     digest = XXH32_digest(self->xxhash_state);
     XXH32_canonicalFromHash((XXH32_canonical_t *)retbuf, digest);
 
-    return retval;
+    return PyBytes_FromStringAndSize(retbuf, sizeof(retbuf));
 }
 
 PyDoc_STRVAR(
@@ -363,8 +306,8 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH32_hexdigest(PYXXH32Object *self)
 {
-    unsigned int intdigest;
-    char digest[XXH32_DIGESTSIZE + 1];
+    XXH32_hash_t intdigest;
+    char digest[XXH32_DIGESTSIZE];
     char retbuf[XXH32_DIGESTSIZE * 2];
     int i, j;
 
@@ -392,7 +335,7 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH32_intdigest(PYXXH32Object *self)
 {
-    unsigned int digest = XXH32_digest(self->xxhash_state);
+    XXH32_hash_t digest = XXH32_digest(self->xxhash_state);
     return Py_BuildValue("I", digest);
 }
 
@@ -650,35 +593,13 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH64_digest(PYXXH64Object *self)
 {
-    PyObject *retval;
-    char *retbuf;
-    unsigned long long digest;
-
-#if PY_MAJOR_VERSION >= 3
-    retval = PyBytes_FromStringAndSize(NULL, XXH64_DIGESTSIZE);
-#else
-    retval = PyString_FromStringAndSize(NULL, XXH64_DIGESTSIZE);
-#endif
-
-    if (!retval) {
-        return NULL;
-    }
-
-#if PY_MAJOR_VERSION >= 3
-    retbuf = PyBytes_AS_STRING(retval);
-#else
-    retbuf = PyString_AS_STRING(retval);
-#endif
-
-    if (!retbuf) {
-        Py_DECREF(retval);
-        return NULL;
-    }
+    char retbuf[XXH64_DIGESTSIZE];
+    XXH64_hash_t digest;
 
     digest = XXH64_digest(self->xxhash_state);
     XXH64_canonicalFromHash((XXH64_canonical_t *)retbuf, digest);
 
-    return retval;
+    return PyBytes_FromStringAndSize(retbuf, sizeof(retbuf));
 }
 
 PyDoc_STRVAR(
@@ -688,8 +609,8 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH64_hexdigest(PYXXH64Object *self)
 {
-    unsigned long long intdigest;
-    char digest[XXH64_DIGESTSIZE + 1];
+    XXH64_hash_t intdigest;
+    char digest[XXH64_DIGESTSIZE];
     char retbuf[XXH64_DIGESTSIZE * 2];
     int i, j;
 
@@ -718,7 +639,7 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH64_intdigest(PYXXH64Object *self)
 {
-    unsigned long long digest = XXH64_digest(self->xxhash_state);
+    XXH64_hash_t digest = XXH64_digest(self->xxhash_state);
     return Py_BuildValue("K", digest);
 }
 
