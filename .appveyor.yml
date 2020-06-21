@@ -63,17 +63,18 @@ environment:
 build: off
 
 install:
+  - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
   - git --version
   - python --version
-  - '%PYTHON%\python.exe --version'
+  - pip --version
+  - "python -c \"import struct; print(struct.calcsize('P') * 8)\""
 
   - git submodule update --init --recursive
-  - '%PYTHON%\scripts\pip.exe install wheel'
-  - '%PYTHON%\scripts\pip.exe --version'
+  - pip install wheel
   - set
 
 test_script:
-  - '%PYTHON%\python.exe setup.py test'
+  - python setup.py test
   #- cibuildwheel --output-dir wheels
   #- ls wheels
   - ps: |
