@@ -587,7 +587,7 @@ PYXXH32_get_digest_size(PYXXH32Object *self, void *closure)
 static PyObject *
 PYXXH32_get_name(PYXXH32Object *self, void *closure)
 {
-    return PyUnicode_FromStringAndSize("XXH32", 5);
+    return PyUnicode_FromStringAndSize("XXH32", sizeof("XXH32"));
 }
 
 static PyObject *
@@ -895,7 +895,7 @@ PYXXH64_get_digest_size(PYXXH64Object *self, void *closure)
 static PyObject *
 PYXXH64_get_name(PYXXH64Object *self, void *closure)
 {
-    return PyUnicode_FromStringAndSize("XXH64", 5);
+    return PyUnicode_FromStringAndSize("XXH64", sizeof("XXH64"));
 }
 
 static PyObject *
@@ -1204,7 +1204,7 @@ PYXXH3_64_get_digest_size(PYXXH3_64Object *self, void *closure)
 static PyObject *
 PYXXH3_64_get_name(PYXXH3_64Object *self, void *closure)
 {
-    return PyUnicode_FromStringAndSize("XXH3_64", 7);
+    return PyUnicode_FromStringAndSize("XXH3_64", sizeof("XXH3_64"));
 }
 
 static PyObject *
@@ -1349,7 +1349,8 @@ static PyObject *PYXXH3_128_new(PyTypeObject *type, PyObject *args, PyObject *kw
         return NULL;
     }
 
-    XXH3_64bits_reset_withSeed(self->xxhash_state, 0);
+    self->seed = 0;
+    XXH3_128bits_reset_withSeed(self->xxhash_state, 0);
 
     return (PyObject *)self;
 }
@@ -1472,8 +1473,8 @@ static PyObject *PYXXH3_128_intdigest(PYXXH3_128Object *self)
 
 PyDoc_STRVAR(
     PYXXH3_128_copy_doc,
-    "copy() -> xxh64 object\n\n"
-    "Return a copy (``clone'') of the xxh64 object.");
+    "copy() -> xxh3_128 object\n\n"
+    "Return a copy (``clone'') of the xxh3_128 object.");
 
 static PyObject *PYXXH3_128_copy(PYXXH3_128Object *self)
 {
@@ -1528,7 +1529,7 @@ PYXXH3_128_get_digest_size(PYXXH3_128Object *self, void *closure)
 static PyObject *
 PYXXH3_128_get_name(PYXXH3_128Object *self, void *closure)
 {
-    return PyUnicode_FromStringAndSize("XXH3_64", 7);
+    return PyUnicode_FromStringAndSize("XXH3_128", sizeof("XXH3_128"));
 }
 
 static PyObject *
@@ -1553,7 +1554,7 @@ static PyGetSetDef PYXXH3_128_getseters[] = {
     {
         "name",
         (getter)PYXXH3_128_get_name, NULL,
-        "Name. Always XXH3_64.",
+        "Name. Always XXH3_128.",
         NULL
     },
     {
@@ -1582,7 +1583,7 @@ PyDoc_STRVAR(
     "digest() -- return the current digest value\n"
     "hexdigest() -- return the current digest as a string of hexadecimal digits\n"
     "intdigest() -- return the current digest as an integer\n"
-    "copy() -- return a copy of the current xxh64 object");
+    "copy() -- return a copy of the current xxh3_128 object");
 
 static PyTypeObject PYXXH3_128Type = {
 #if PY_MAJOR_VERSION >= 3
