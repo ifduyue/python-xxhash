@@ -6,16 +6,16 @@ import xxhash
 
 class TestXXH(unittest.TestCase):
     def test_xxh3_128(self):
-        self.assertEqual(xxhash.xxh3_128('a').intdigest(), 189655309141450188657407652374580268703L)
-        self.assertEqual(xxhash.xxh3_128('a', 0).intdigest(), 189655309141450188657407652374580268703L)
-        self.assertEqual(xxhash.xxh3_128('a', 1).intdigest(), 262276778298942662669423066662492437160L)
-        self.assertEqual(xxhash.xxh3_128('a', 2**64-1).intdigest(), 161232002537777978271402649509210140482L)
+        self.assertEqual(xxhash.xxh3_128('a').intdigest(), 189655309141450188657407652374580268703)
+        self.assertEqual(xxhash.xxh3_128('a', 0).intdigest(), 189655309141450188657407652374580268703)
+        self.assertEqual(xxhash.xxh3_128('a', 1).intdigest(), 262276778298942662669423066662492437160)
+        self.assertEqual(xxhash.xxh3_128('a', 2**64-1).intdigest(), 161232002537777978271402649509210140482)
 
     def test_xxh3_128_intdigest(self):
-        self.assertEqual(xxhash.xxh3_128_intdigest('a'), 189655309141450188657407652374580268703L)
-        self.assertEqual(xxhash.xxh3_128_intdigest('a', 0), 189655309141450188657407652374580268703L)
-        self.assertEqual(xxhash.xxh3_128_intdigest('a', 1), 262276778298942662669423066662492437160L)
-        self.assertEqual(xxhash.xxh3_128_intdigest('a', 2**64-1), 161232002537777978271402649509210140482L)
+        self.assertEqual(xxhash.xxh3_128_intdigest('a'), 189655309141450188657407652374580268703)
+        self.assertEqual(xxhash.xxh3_128_intdigest('a', 0), 189655309141450188657407652374580268703)
+        self.assertEqual(xxhash.xxh3_128_intdigest('a', 1), 262276778298942662669423066662492437160)
+        self.assertEqual(xxhash.xxh3_128_intdigest('a', 2**64-1), 161232002537777978271402649509210140482)
 
     def test_xxh3_128_update(self):
         x = xxhash.xxh3_128()
