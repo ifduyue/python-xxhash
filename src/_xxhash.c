@@ -216,8 +216,7 @@ static PyObject *xxh3_64_digest(PyObject *self, PyObject *args, PyObject *kwargs
     XXH64_hash_t intdigest = 0;
     char *keywords[] = {"input", "seed", NULL};
     Py_buffer buf;
-    PyObject *retval;
-    char *retbuf;
+    char retbuf[XXH64_DIGESTSIZE];
 
     buf.buf = buf.obj = NULL;
 
@@ -228,26 +227,9 @@ static PyObject *xxh3_64_digest(PyObject *self, PyObject *args, PyObject *kwargs
     intdigest = XXH3_64bits_withSeed(buf.buf, buf.len, seed);
     PyBuffer_Release(&buf);
 
-
-#if PY_MAJOR_VERSION >= 3
-    retval = PyBytes_FromStringAndSize(NULL, XXH64_DIGESTSIZE);
-#else
-    retval = PyString_FromStringAndSize(NULL, XXH64_DIGESTSIZE);
-#endif
-
-    if (!retval) {
-        return NULL;
-    }
-
-#if PY_MAJOR_VERSION >= 3
-    retbuf = PyBytes_AS_STRING(retval);
-#else
-    retbuf = PyString_AS_STRING(retval);
-#endif
-
     XXH64_canonicalFromHash((XXH64_canonical_t *)retbuf, intdigest);
 
-    return retval;
+    return PyBytes_FromStringAndSize(retbuf, sizeof(retbuf));
 }
 
 static PyObject *xxh3_64_intdigest(PyObject *self, PyObject *args, PyObject *kwargs)
@@ -276,12 +258,7 @@ static PyObject *xxh3_64_hexdigest(PyObject *self, PyObject *args, PyObject *kwa
     char digest[XXH64_DIGESTSIZE];
     char *keywords[] = {"input", "seed", NULL};
     Py_buffer buf;
-#if PY_MAJOR_VERSION >= 3
-    Py_UNICODE *retbuf;
-#else
-    char *retbuf;
-#endif
-    PyObject *retval;
+    char retbuf[XXH64_DIGESTSIZE * 2];
     int i, j;
 
     buf.buf = buf.obj = NULL;
@@ -293,26 +270,6 @@ static PyObject *xxh3_64_hexdigest(PyObject *self, PyObject *args, PyObject *kwa
     intdigest = XXH3_64bits_withSeed(buf.buf, buf.len, seed);
     PyBuffer_Release(&buf);
 
-#if PY_MAJOR_VERSION >= 3
-    retval = PyUnicode_FromStringAndSize(NULL, XXH64_DIGESTSIZE * 2);
-#else
-    retval = PyString_FromStringAndSize(NULL, XXH64_DIGESTSIZE * 2);
-#endif
-
-    if (!retval) {
-        return NULL;
-    }
-
-#if PY_MAJOR_VERSION >= 3
-    retbuf = PyUnicode_AS_UNICODE(retval);
-#else
-    retbuf = PyString_AS_STRING(retval);
-#endif
-
-    if (!retbuf) {
-        Py_DECREF(retval);
-        return NULL;
-    }
 
     XXH64_canonicalFromHash((XXH64_canonical_t *)digest, intdigest);
 
@@ -326,7 +283,7 @@ static PyObject *xxh3_64_hexdigest(PyObject *self, PyObject *args, PyObject *kwa
         retbuf[j++] = c;
     }
 
-    return retval;
+    return PyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
 }
 
 /* XXH3_128 */
@@ -337,8 +294,7 @@ static PyObject *xxh3_128_digest(PyObject *self, PyObject *args, PyObject *kwarg
     XXH128_hash_t intdigest;
     char *keywords[] = {"input", "seed", NULL};
     Py_buffer buf;
-    PyObject *retval;
-    char *retbuf;
+    char retbuf[XXH128_DIGESTSIZE];
 
     buf.buf = buf.obj = NULL;
 
@@ -349,26 +305,9 @@ static PyObject *xxh3_128_digest(PyObject *self, PyObject *args, PyObject *kwarg
     intdigest = XXH3_128bits_withSeed(buf.buf, buf.len, seed);
     PyBuffer_Release(&buf);
 
-
-#if PY_MAJOR_VERSION >= 3
-    retval = PyBytes_FromStringAndSize(NULL, XXH128_DIGESTSIZE);
-#else
-    retval = PyString_FromStringAndSize(NULL, XXH128_DIGESTSIZE);
-#endif
-
-    if (!retval) {
-        return NULL;
-    }
-
-#if PY_MAJOR_VERSION >= 3
-    retbuf = PyBytes_AS_STRING(retval);
-#else
-    retbuf = PyString_AS_STRING(retval);
-#endif
-
     XXH128_canonicalFromHash((XXH128_canonical_t *)retbuf, intdigest);
 
-    return retval;
+    return PyBytes_FromStringAndSize(retbuf, sizeof(retbuf));
 }
 
 static PyObject *xxh3_128_intdigest(PyObject *self, PyObject *args, PyObject *kwargs)
@@ -410,12 +349,7 @@ static PyObject *xxh3_128_hexdigest(PyObject *self, PyObject *args, PyObject *kw
     char digest[XXH128_DIGESTSIZE];
     char *keywords[] = {"input", "seed", NULL};
     Py_buffer buf;
-#if PY_MAJOR_VERSION >= 3
-    Py_UNICODE *retbuf;
-#else
-    char *retbuf;
-#endif
-    PyObject *retval;
+    char retbuf[XXH128_DIGESTSIZE * 2];
     int i, j;
 
     buf.buf = buf.obj = NULL;
@@ -426,27 +360,6 @@ static PyObject *xxh3_128_hexdigest(PyObject *self, PyObject *args, PyObject *kw
 
     intdigest = XXH3_128bits_withSeed(buf.buf, buf.len, seed);
     PyBuffer_Release(&buf);
-
-#if PY_MAJOR_VERSION >= 3
-    retval = PyUnicode_FromStringAndSize(NULL, XXH128_DIGESTSIZE * 2);
-#else
-    retval = PyString_FromStringAndSize(NULL, XXH128_DIGESTSIZE * 2);
-#endif
-
-    if (!retval) {
-        return NULL;
-    }
-
-#if PY_MAJOR_VERSION >= 3
-    retbuf = PyUnicode_AS_UNICODE(retval);
-#else
-    retbuf = PyString_AS_STRING(retval);
-#endif
-
-    if (!retbuf) {
-        Py_DECREF(retval);
-        return NULL;
-    }
 
     XXH128_canonicalFromHash((XXH128_canonical_t *)digest, intdigest);
 
@@ -460,7 +373,7 @@ static PyObject *xxh3_128_hexdigest(PyObject *self, PyObject *args, PyObject *kw
         retbuf[j++] = c;
     }
 
-    return retval;
+    return PyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
 }
 
 /*****************************************************************************
@@ -1181,35 +1094,13 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH3_64_digest(PYXXH3_64Object *self)
 {
-    PyObject *retval;
-    char *retbuf;
+    char retbuf[XXH64_DIGESTSIZE];
     XXH64_hash_t intdigest;
-
-#if PY_MAJOR_VERSION >= 3
-    retval = PyBytes_FromStringAndSize(NULL, XXH64_DIGESTSIZE);
-#else
-    retval = PyString_FromStringAndSize(NULL, XXH64_DIGESTSIZE);
-#endif
-
-    if (!retval) {
-        return NULL;
-    }
-
-#if PY_MAJOR_VERSION >= 3
-    retbuf = PyBytes_AS_STRING(retval);
-#else
-    retbuf = PyString_AS_STRING(retval);
-#endif
-
-    if (!retbuf) {
-        Py_DECREF(retval);
-        return NULL;
-    }
 
     intdigest = XXH3_64bits_digest(self->xxhash_state);
     XXH64_canonicalFromHash((XXH64_canonical_t *)retbuf, intdigest);
 
-    return retval;
+    return PyBytes_FromStringAndSize(retbuf, sizeof(retbuf));
 }
 
 PyDoc_STRVAR(
@@ -1219,36 +1110,11 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH3_64_hexdigest(PYXXH3_64Object *self)
 {
-    PyObject *retval;
-#if PY_MAJOR_VERSION >= 3
-    Py_UNICODE *retbuf;
-#else
-    char *retbuf;
-#endif
     XXH64_hash_t intdigest;
     char digest[XXH64_DIGESTSIZE];
+    char retbuf[XXH64_DIGESTSIZE * 2];
     int i, j;
 
-#if PY_MAJOR_VERSION >= 3
-    retval = PyUnicode_FromStringAndSize(NULL, XXH64_DIGESTSIZE * 2);
-#else
-    retval = PyString_FromStringAndSize(NULL, XXH64_DIGESTSIZE * 2);
-#endif
-
-    if (!retval) {
-        return NULL;
-    }
-
-#if PY_MAJOR_VERSION >= 3
-    retbuf = PyUnicode_AS_UNICODE(retval);
-#else
-    retbuf = PyString_AS_STRING(retval);
-#endif
-
-    if (!retbuf) {
-        Py_DECREF(retval);
-        return NULL;
-    }
 
     intdigest = XXH3_64bits_digest(self->xxhash_state);
     XXH64_canonicalFromHash((XXH64_canonical_t *)digest, intdigest);
@@ -1263,7 +1129,7 @@ static PyObject *PYXXH3_64_hexdigest(PYXXH3_64Object *self)
         retbuf[j++] = c;
     }
 
-    return retval;
+    return PyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
 }
 
 
@@ -1337,11 +1203,7 @@ PYXXH3_64_get_digest_size(PYXXH3_64Object *self, void *closure)
 static PyObject *
 PYXXH3_64_get_name(PYXXH3_64Object *self, void *closure)
 {
-#if PY_MAJOR_VERSION >= 3
     return PyUnicode_FromStringAndSize("XXH3_64", 7);
-#else
-    return PyString_FromStringAndSize("XXH3_64", 7);
-#endif
 }
 
 static PyObject *
@@ -1540,35 +1402,13 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH3_128_digest(PYXXH3_128Object *self)
 {
-    PyObject *retval;
-    char *retbuf;
+    char retbuf[XXH128_DIGESTSIZE];
     XXH128_hash_t intdigest;
-
-#if PY_MAJOR_VERSION >= 3
-    retval = PyBytes_FromStringAndSize(NULL, XXH128_DIGESTSIZE);
-#else
-    retval = PyString_FromStringAndSize(NULL, XXH128_DIGESTSIZE);
-#endif
-
-    if (!retval) {
-        return NULL;
-    }
-
-#if PY_MAJOR_VERSION >= 3
-    retbuf = PyBytes_AS_STRING(retval);
-#else
-    retbuf = PyString_AS_STRING(retval);
-#endif
-
-    if (!retbuf) {
-        Py_DECREF(retval);
-        return NULL;
-    }
 
     intdigest = XXH3_128bits_digest(self->xxhash_state);
     XXH128_canonicalFromHash((XXH128_canonical_t *)retbuf, intdigest);
 
-    return retval;
+    return PyBytes_FromStringAndSize(retbuf, sizeof(retbuf));
 }
 
 PyDoc_STRVAR(
@@ -1578,36 +1418,10 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH3_128_hexdigest(PYXXH3_128Object *self)
 {
-    PyObject *retval;
-#if PY_MAJOR_VERSION >= 3
-    Py_UNICODE *retbuf;
-#else
-    char *retbuf;
-#endif
     XXH128_hash_t intdigest;
     char digest[XXH128_DIGESTSIZE];
+    char retbuf[XXH128_DIGESTSIZE * 2];
     int i, j;
-
-#if PY_MAJOR_VERSION >= 3
-    retval = PyUnicode_FromStringAndSize(NULL, XXH128_DIGESTSIZE * 2);
-#else
-    retval = PyString_FromStringAndSize(NULL, XXH128_DIGESTSIZE * 2);
-#endif
-
-    if (!retval) {
-        return NULL;
-    }
-
-#if PY_MAJOR_VERSION >= 3
-    retbuf = PyUnicode_AS_UNICODE(retval);
-#else
-    retbuf = PyString_AS_STRING(retval);
-#endif
-
-    if (!retbuf) {
-        Py_DECREF(retval);
-        return NULL;
-    }
 
     intdigest = XXH3_128bits_digest(self->xxhash_state);
     XXH128_canonicalFromHash((XXH128_canonical_t *)digest, intdigest);
@@ -1622,7 +1436,7 @@ static PyObject *PYXXH3_128_hexdigest(PYXXH3_128Object *self)
         retbuf[j++] = c;
     }
 
-    return retval;
+    return PyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
 }
 
 
@@ -1711,11 +1525,7 @@ PYXXH3_128_get_digest_size(PYXXH3_128Object *self, void *closure)
 static PyObject *
 PYXXH3_128_get_name(PYXXH3_128Object *self, void *closure)
 {
-#if PY_MAJOR_VERSION >= 3
     return PyUnicode_FromStringAndSize("XXH3_64", 7);
-#else
-    return PyString_FromStringAndSize("XXH3_64", 7);
-#endif
 }
 
 static PyObject *
