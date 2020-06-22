@@ -1165,6 +1165,13 @@ static PyObject *PYXXH3_64_copy(PYXXH3_64Object *self)
 
     p->seed = self->seed;
     XXH3_copyState(p->xxhash_state, self->xxhash_state);
+#if XXH_VERSION_NUMBER < 704
+    // v0.7.3 and earlier have a bug where states reset with a seed
+    // will have a wild pointer to the original state when copied,
+    // causing a use-after-free if the original is freed.
+    if (p->xxhash_state->secret == &self->xxhash_state->customSecret[0])
+        p->xxhash_state->secret = &p->xxhash_state->customSecret[0];
+#endif
 
     return (PyObject *)p;
 }
@@ -1490,6 +1497,13 @@ static PyObject *PYXXH3_128_copy(PYXXH3_128Object *self)
 
     p->seed = self->seed;
     XXH3_copyState(p->xxhash_state, self->xxhash_state);
+#if XXH_VERSION_NUMBER < 704
+    // v0.7.3 and earlier have a bug where states reset with a seed
+    // will have a wild pointer to the original state when copied,
+    // causing a use-after-free if the original is freed.
+    if (p->xxhash_state->secret == &self->xxhash_state->customSecret[0])
+        p->xxhash_state->secret = &p->xxhash_state->customSecret[0];
+#endif
 
     return (PyObject *)p;
 }
