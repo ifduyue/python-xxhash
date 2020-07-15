@@ -58,12 +58,11 @@ matrix:
       env: XXHASH_BUILDWHEELS=1
     # linux arm wheels
     - dist: xenial
-      arch: amd64
+      arch: arm64
       python: 3.7
       sudo: required
       services:
         - docker
-      arch: arm64
       env: XXHASH_BUILDWHEELS=1
       # Travis-CI arm64 issue work-around
       # See https://travis-ci.community/t/permission-issue-while-building-wheels-for-various-python-packages/7822
