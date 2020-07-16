@@ -64,10 +64,6 @@ matrix:
       services:
         - docker
       env: XXHASH_BUILDWHEELS=1
-      # Travis-CI arm64 issue work-around
-      # See https://travis-ci.community/t/permission-issue-while-building-wheels-for-various-python-packages/7822
-      before_install:
-        - sudo chown -fR $USER:$GROUP ~/.cache/pip/wheels
     # osx wheels
     - os: osx
       osx_image: xcode9.4
