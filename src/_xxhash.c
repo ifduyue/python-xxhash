@@ -30,7 +30,6 @@
 
 #include <Python.h>
 
-#include "xxh3.h"
 #include "xxhash.h"
 
 #define TOSTRING(x) #x
