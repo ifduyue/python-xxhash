@@ -1,6 +1,11 @@
 CHANGELOG
 -----------
 
+UNRELEASED
+~~~~~~~~~~~~~~~~~
+
+- XXH3 hashes: `xxh3_64`, `xxh3_128`, and their oneshot functions
+
 v1.4.4 2020-06-20
 ~~~~~~~~~~~~~~~~~
 
