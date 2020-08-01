@@ -81,9 +81,9 @@ the module properties ``VERSION`` AND ``XXHASH_VERSION`` respectively.
 
     >>> import xxhash
     >>> xxhash.VERSION
-    '1.4.4'
+    '2.0.0'
     >>> xxhash.XXHASH_VERSION
-    '0.7.3'
+    '0.8.0'
 
 This module is hashlib-compliant, which means you can use it in the same way as ``hashlib.md5``.
 
@@ -220,6 +220,25 @@ so we can avoid allocating XXH32/64 state on heap:
 
     In [3]: %timeit xxhash.xxh64('xxhash').hexdigest()
     416 ns ± 17.3 ns per loop (mean ± std. dev. of 7 runs, 1000000 loops each)
+
+
+XXH3 hashes are available since v2.0.0 (xxHash v0.8.0), they are:
+
+Streaming classes:
+
+    | xxh3_64
+    | xxh3_128
+
+Oneshot functions:
+
+    | xxh3_64_digest(bytes, seed=0)
+    | xxh3_64_intdigest(bytes, seed=0)
+    | xxh3_64_hexdigest(bytes, seed=0)
+    | xxh3_128_digest(bytes, seed=0)
+    | xxh3_128_intdigest(bytes, seed=0)
+    | xxh3_128_hexdigest(bytes, seed=0)
+
+
 
 Caveats
 -------

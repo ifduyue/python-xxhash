@@ -18,7 +18,7 @@ from ._xxhash import (
     XXHASH_VERSION,
 )
 
-VERSION = "1.5.0.dev1"
+VERSION = "2.0.0.dev1"
 
 __all__ = [
     "xxh32",
