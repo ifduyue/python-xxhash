@@ -55,10 +55,10 @@ environment:
       PYTHON_VERSION: "3.8"
       PYTHON_ARCH: "64"
     # build wheels
-    #- PYTHON: "C:\\Python36-x64"
-    #  PYTHON_VERSION: "3.6"
-    #  PYTHON_ARCH: "64"
-    #  XXHASH_BUILDWHEELS: 1
+    - PYTHON: "C:\\Python36-x64"
+      PYTHON_VERSION: "3.6"
+      PYTHON_ARCH: "64"
+      XXHASH_BUILDWHEELS: 1
 
 build: off
 
