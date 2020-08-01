@@ -20,6 +20,13 @@ from ._xxhash import (
 
 VERSION = "2.0.0.dev1"
 
+
+xxh128 = xxh3_128
+xxh128_hexdigest = xxh3_128_hexdigest
+xxh128_intdigest = xxh3_128_intdigest
+xxh128_digest = xxh3_128_digest
+
+
 __all__ = [
     "xxh32",
     "xxh32_digest",
@@ -37,6 +44,10 @@ __all__ = [
     "xxh3_128_digest",
     "xxh3_128_intdigest",
     "xxh3_128_hexdigest",
+    "xxh128",
+    "xxh128_digest",
+    "xxh128_intdigest",
+    "xxh128_hexdigest",
     "VERSION",
     "XXHASH_VERSION",
 ]
