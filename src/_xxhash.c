@@ -46,8 +46,10 @@
 
 /* Use byte string on PY2 */
 #if PY_MAJOR_VERSION < 3
-#define PyUnicode_FromStringAndSize PyString_FromStringAndSize
+#define MyPyUnicode_FromStringAndSize PyString_FromStringAndSize
 #define PyBytes_FromStringAndSize   PyString_FromStringAndSize
+#else
+#define MyPyUnicode_FromStringAndSize PyUnicode_FromStringAndSize
 #endif
 
 /*****************************************************************************
@@ -122,7 +124,7 @@ static PyObject *xxh32_hexdigest(PyObject *self, PyObject *args, PyObject *kwarg
         retbuf[j++] = c;
     }
 
-    return PyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
+    return MyPyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
 }
 
 /* XXH64 */
@@ -193,7 +195,7 @@ static PyObject *xxh64_hexdigest(PyObject *self, PyObject *args, PyObject *kwarg
         retbuf[j++] = c;
     }
 
-    return PyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
+    return MyPyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
 }
 
 /*****************************************************************************
@@ -330,7 +332,7 @@ static PyObject *PYXXH32_hexdigest(PYXXH32Object *self)
         retbuf[j++] = c;
     }
 
-    return PyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
+    return MyPyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
 }
 
 PyDoc_STRVAR(
@@ -403,7 +405,7 @@ PYXXH32_get_digest_size(PYXXH32Object *self, void *closure)
 static PyObject *
 PYXXH32_get_name(PYXXH32Object *self, void *closure)
 {
-    return PyUnicode_FromStringAndSize("XXH32", sizeof("XXH32"));
+    return MyPyUnicode_FromStringAndSize("XXH32", sizeof("XXH32"));
 }
 
 static PyObject *
@@ -633,7 +635,7 @@ static PyObject *PYXXH64_hexdigest(PYXXH64Object *self)
         retbuf[j++] = c;
     }
 
-    return PyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
+    return MyPyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
 }
 
 
@@ -707,7 +709,7 @@ PYXXH64_get_digest_size(PYXXH64Object *self, void *closure)
 static PyObject *
 PYXXH64_get_name(PYXXH64Object *self, void *closure)
 {
-    return PyUnicode_FromStringAndSize("XXH64", sizeof("XXH64"));
+    return MyPyUnicode_FromStringAndSize("XXH64", sizeof("XXH64"));
 }
 
 static PyObject *
