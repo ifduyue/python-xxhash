@@ -403,7 +403,7 @@ PYXXH32_get_digest_size(PYXXH32Object *self, void *closure)
 static PyObject *
 PYXXH32_get_name(PYXXH32Object *self, void *closure)
 {
-    return PyUnicode_FromStringAndSize("XXH32", 5);
+    return PyUnicode_FromStringAndSize("XXH32", sizeof("XXH32"));
 }
 
 static PyObject *
@@ -707,7 +707,7 @@ PYXXH64_get_digest_size(PYXXH64Object *self, void *closure)
 static PyObject *
 PYXXH64_get_name(PYXXH64Object *self, void *closure)
 {
-    return PyUnicode_FromStringAndSize("XXH64", 5);
+    return PyUnicode_FromStringAndSize("XXH64", sizeof("XXH64"));
 }
 
 static PyObject *
