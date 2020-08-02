@@ -58,7 +58,8 @@
 
 static PyObject *xxh32_digest(PyObject *self, PyObject *args, PyObject *kwargs)
 {
-    unsigned int seed = 0, intdigest = 0;
+    XXH32_hash_t seed = 0;
+    XXH32_hash_t intdigest;
     char *keywords[] = {"input", "seed", NULL};
     Py_buffer buf;
     char retbuf[XXH32_DIGESTSIZE];
@@ -77,7 +78,8 @@ static PyObject *xxh32_digest(PyObject *self, PyObject *args, PyObject *kwargs)
 
 static PyObject *xxh32_intdigest(PyObject *self, PyObject *args, PyObject *kwargs)
 {
-    unsigned int seed = 0, intdigest = 0;
+    XXH32_hash_t seed = 0;
+    XXH32_hash_t intdigest;
     char *keywords[] = {"input", "seed", NULL};
     Py_buffer buf;
 
@@ -93,7 +95,8 @@ static PyObject *xxh32_intdigest(PyObject *self, PyObject *args, PyObject *kwarg
 
 static PyObject *xxh32_hexdigest(PyObject *self, PyObject *args, PyObject *kwargs)
 {
-    unsigned int seed = 0, intdigest = 0;
+    XXH32_hash_t seed = 0;
+    XXH32_hash_t intdigest;
     char digest[XXH32_DIGESTSIZE];
     char *keywords[] = {"input", "seed", NULL};
     Py_buffer buf;
@@ -126,7 +129,8 @@ static PyObject *xxh32_hexdigest(PyObject *self, PyObject *args, PyObject *kwarg
 
 static PyObject *xxh64_digest(PyObject *self, PyObject *args, PyObject *kwargs)
 {
-    unsigned long long seed = 0, intdigest = 0;
+    XXH64_hash_t seed = 0;
+    XXH64_hash_t intdigest;
     char *keywords[] = {"input", "seed", NULL};
     Py_buffer buf;
     char retbuf[XXH64_DIGESTSIZE];
@@ -145,7 +149,8 @@ static PyObject *xxh64_digest(PyObject *self, PyObject *args, PyObject *kwargs)
 
 static PyObject *xxh64_intdigest(PyObject *self, PyObject *args, PyObject *kwargs)
 {
-    unsigned long long seed = 0, intdigest = 0;
+    XXH64_hash_t seed = 0;
+    XXH64_hash_t intdigest;
     char *keywords[] = {"input", "seed", NULL};
     Py_buffer buf;
 
@@ -161,7 +166,8 @@ static PyObject *xxh64_intdigest(PyObject *self, PyObject *args, PyObject *kwarg
 
 static PyObject *xxh64_hexdigest(PyObject *self, PyObject *args, PyObject *kwargs)
 {
-    unsigned long long seed = 0, intdigest = 0;
+    XXH64_hash_t seed = 0;
+    XXH64_hash_t intdigest;
     char digest[XXH64_DIGESTSIZE];
     char *keywords[] = {"input", "seed", NULL};
     Py_buffer buf;
@@ -200,7 +206,7 @@ typedef struct {
     PyObject_HEAD
     /* Type-specific fields go here. */
     XXH32_state_t *xxhash_state;
-    unsigned int seed;
+    XXH32_hash_t seed;
 } PYXXH32Object;
 
 static PyTypeObject PYXXH32Type;
@@ -243,7 +249,7 @@ static PyObject *PYXXH32_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
 
 static int PYXXH32_init(PYXXH32Object *self, PyObject *args, PyObject *kwargs)
 {
-    unsigned int seed = 0;
+    XXH32_hash_t seed = 0;
     char *keywords[] = {"input", "seed", NULL};
     Py_buffer buf = {NULL, NULL};
 
@@ -506,7 +512,7 @@ typedef struct {
     PyObject_HEAD
     /* Type-specific fields go here. */
     XXH64_state_t *xxhash_state;
-    unsigned long long seed;
+    XXH64_hash_t seed;
 } PYXXH64Object;
 
 static PyTypeObject PYXXH64Type;
@@ -547,7 +553,7 @@ static PyObject *PYXXH64_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
 
 static int PYXXH64_init(PYXXH64Object *self, PyObject *args, PyObject *kwargs)
 {
-    unsigned long long seed = 0;
+    XXH64_hash_t seed = 0;
     char *keywords[] = {"input", "seed", NULL};
     Py_buffer buf = {NULL, NULL};
 
