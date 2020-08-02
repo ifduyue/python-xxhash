@@ -238,7 +238,12 @@ Oneshot functions:
     | xxh3_128_intdigest(bytes, seed=0)
     | xxh3_128_hexdigest(bytes, seed=0)
 
+And aliases:
 
+    | xxh128 = xxh3_128
+    | xxh128_digest = xxh3_128_digest
+    | xxh128_intdigest = xxh3_128_intdigest
+    | xxh128_hexdigest = xxh3_128_hexdigest
 
 Caveats
 -------
