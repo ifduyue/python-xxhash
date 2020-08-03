@@ -1,9 +1,11 @@
 CHANGELOG
 -----------
 
-UNRELEASED
+v2.0.0 2020-08-03
 ~~~~~~~~~~~~~~~~~
 
+- **Require xxHash version >= v0.8.0**
+- Upgrade xxHash to v0.8.0
 - XXH3 hashes: `xxh3_64`, `xxh3_128`, and their oneshot functions
 
 v1.4.4 2020-06-20
