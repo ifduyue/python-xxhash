@@ -38,6 +38,10 @@ matrix:
       arch: amd64
     - python: 3.8
       arch: arm64
+    - python: 3.9
+      arch: amd64
+    - python: 3.9
+      arch: arm64
     - python: nightly
       arch: amd64
     - python: pypy
