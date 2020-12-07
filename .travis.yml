@@ -77,7 +77,7 @@ install:
   - gcc --version
   - |
     if [ -n "${XXHASH_BUILDWHEELS:-}" ]; then
-      pip install cibuildwheel==1.7.0
+      pip3 install cibuildwheel==1.7.0
     fi
 
 script:
