@@ -8,24 +8,6 @@ matrix:
     - python: pypy3
     - python: nightly
   include:
-    - python: 2.6
-      arch: amd64
-      dist: trusty
-    - python: 2.7
-      arch: amd64
-    - python: 2.7
-      arch: arm64
-    - python: 3.3
-      arch: amd64
-      dist: trusty
-    - python: 3.4
-      arch: amd64
-    - python: 3.4
-      arch: arm64
-    - python: 3.5
-      arch: amd64
-    - python: 3.5
-      arch: arm64
     - python: 3.6
       arch: amd64
     - python: 3.6
@@ -81,7 +63,7 @@ install:
   - gcc --version
   - |
     if [ -n "${XXHASH_BUILDWHEELS:-}" ]; then
-      pip3 install cibuildwheel==1.7.0
+      pip3 install cibuildwheel
     fi
 
 script:
