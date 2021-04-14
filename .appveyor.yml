@@ -82,7 +82,9 @@ install:
   - set
 
 test_script:
-  - python setup.py test
+  - python setup.py build_ext --inplace
+  - pip install pytest
+  - python -m pytest
   #- cibuildwheel --output-dir wheels
   #- ls wheels
   - ps: |

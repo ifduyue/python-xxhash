@@ -90,7 +90,9 @@ script:
       cibuildwheel --output-dir dist
       ls dist/
     else
-      python setup.py test
+      python setup.py build_ext --inplace
+      pip install pytest
+      python -m pytest
       ./bench.sh
     fi
 
