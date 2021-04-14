@@ -1,6 +1,12 @@
 CHANGELOG
 -----------
 
+
+v2.0.1 2021-04-15
+~~~~~~~~~~~~~~~~~
+
+- Only to trigger Python 3.9 wheels building.
+
 v2.0.0 2020-08-03
 ~~~~~~~~~~~~~~~~~
 

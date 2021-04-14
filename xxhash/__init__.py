@@ -18,7 +18,7 @@ from ._xxhash import (
     XXHASH_VERSION,
 )
 
-VERSION = "2.0.0"
+VERSION = "2.0.1"
 
 
 xxh128 = xxh3_128
