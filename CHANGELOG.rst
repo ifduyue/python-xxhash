@@ -1,6 +1,10 @@
 CHANGELOG
 -----------
 
+v2.0.2 2021-04-15
+~~~~~~~~~~~~~~~~~
+
+- Fix Travis CI OSX dpl python2.7 get-pip.py error
 
 v2.0.1 2021-04-15
 ~~~~~~~~~~~~~~~~~

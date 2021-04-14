@@ -94,6 +94,13 @@ script:
       ./bench.sh
     fi
 
+before_deploy:
+  - ls dist/
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+      python3 -m venv ~/venv;
+      source ~/venv/bin/activate;
+    fi
+
 deploy:
   # deploy master non-tags to Test PyPI
   - provider: pypi
