@@ -43,6 +43,12 @@ environment:
 build: off
 
 install:
+  - ECHO "Filesystem root:"
+  - ps: "ls \"C:/\""
+
+  - ECHO "Installed SDKs:"
+  - ps: "ls \"C:/Program Files/Microsoft SDKs/Windows\""
+
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
   - git --version
   - python --version
