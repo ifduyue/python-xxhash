@@ -4,7 +4,7 @@ dist: focal
 
 matrix:
   allow_failures:
-    - python: pypy
+    - python: pypy2
     - python: pypy3
     - python: nightly
   include:
@@ -26,14 +26,10 @@ matrix:
       arch: arm64
     - python: nightly
       arch: amd64
-    - python: pypy
-      arch: amd64
-    - python: pypy
-      arch: arm64
-    - python: pypy3
+    - python: pypy2
       arch: amd64
     - python: pypy3
-      arch: arm64
+      arch: amd64
     # linux wheels
     - arch: amd64
       python: 3.7
