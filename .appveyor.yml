@@ -1,7 +1,7 @@
 max_jobs: 2
+image: Visual Studio 2019
 
 environment:
-  os: Visual Studio 2019
   global:
     PYPI_USER: ifduyue
     PYPI_TEST_PASSWORD:
@@ -45,9 +45,6 @@ build: off
 install:
   - ECHO "Filesystem root:"
   - ps: "ls \"C:/\""
-
-  - ECHO "Installed SDKs:"
-  - ps: "ls \"C:/Program Files/Microsoft SDKs/Windows\""
 
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
   - git --version
