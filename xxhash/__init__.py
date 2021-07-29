@@ -26,6 +26,14 @@ xxh128_hexdigest = xxh3_128_hexdigest
 xxh128_intdigest = xxh3_128_intdigest
 xxh128_digest = xxh3_128_digest
 
+algorithms_available = set([
+    "xxh32",
+    "xxh64",
+    "xxh3_64",
+    "xxh128",
+    "xxh3_128",
+])
+
 
 __all__ = [
     "xxh32",
@@ -50,4 +58,5 @@ __all__ = [
     "xxh128_hexdigest",
     "VERSION",
     "XXHASH_VERSION",
+    "algorithms_available",
 ]

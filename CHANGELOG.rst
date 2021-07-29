@@ -1,6 +1,12 @@
 CHANGELOG
 -----------
 
+vUnreleased
+~~~~~~~~~~~
+
+- New set `algorithms_available` lists all implemented algorithms in `xxhash`
+  package.
+
 v2.0.2 2021-04-15
 ~~~~~~~~~~~~~~~~~
 
