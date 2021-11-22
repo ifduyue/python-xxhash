@@ -4,7 +4,13 @@ import unittest
 import random
 import struct
 import sys
+from typing import Union, List, TYPE_CHECKING
 import xxhash
+
+if TYPE_CHECKING:
+    InputType = Union[str, bytes, bytearray, memoryview, array.ArrayType[int]]
+else:
+    InputType = None
 
 
 def getrefcount(obj):
@@ -22,7 +28,11 @@ class TestXXH(unittest.TestCase):
 
     def test_buffer_types(self):
         # Various buffer-like objects are accepted, and they give similar values
-        args = [b'ab\x00c', bytearray(b'ab\x00c'), array.array('b', b'ab\x00c')]
+        args: List[InputType] = [
+            b'ab\x00c',
+            bytearray(b'ab\x00c'),
+            array.array('b', b'ab\x00c'),
+        ]
         # An array object with non-1 itemsize
         a = array.array('i', struct.unpack('i', b'ab\x00c'))
         assert a.itemsize == 4
