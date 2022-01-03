@@ -1,13 +1,9 @@
 python-xxhash
 =============
 
-.. image:: https://travis-ci.org/ifduyue/python-xxhash.svg?branch=master
-    :target: https://travis-ci.org/ifduyue/python-xxhash
-    :alt: Travis CI Build Status
-
-.. image:: https://ci.appveyor.com/api/projects/status/f9wv1dhgnoiyuhtd/branch/master?svg=true
-    :target: https://ci.appveyor.com/project/duyue/python-xxhash
-    :alt: Appveyor Build Status
+.. image:: https://github.com/ifduyue/python-xxhash/actions/workflows/test.yml/badge.svg
+    :target: https://github.com/ifduyue/python-xxhash/actions/workflows/test.yml
+    :alt: Github Actions Status
 
 .. image:: https://img.shields.io/pypi/v/xxhash.svg
     :target: https://pypi.org/project/xxhash/
