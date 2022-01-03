@@ -44,9 +44,6 @@
 #define XXH128_DIGESTSIZE 16
 #define XXH128_BLOCKSIZE 64
 
-/* Release the GIL if taking more than ~10 µs */
-#define GIL_MINSIZE 100 * 1000
-
 /* Use byte string on PY2 */
 #if PY_MAJOR_VERSION < 3
 #define MyPyUnicode_FromStringAndSize PyString_FromStringAndSize
@@ -401,14 +398,10 @@ static void PYXXH32_dealloc(PYXXH32Object *self)
 
 static void PYXXH32_do_update(PYXXH32Object *self, Py_buffer *buf)
 {
-    if (buf->len >= GIL_MINSIZE) {
-        Py_BEGIN_ALLOW_THREADS
-        XXH32_update(self->xxhash_state, buf->buf, buf->len);
-        Py_END_ALLOW_THREADS
-    }
-    else {
-        XXH32_update(self->xxhash_state, buf->buf, buf->len);
-    }
+    Py_BEGIN_ALLOW_THREADS
+    XXH32_update(self->xxhash_state, buf->buf, buf->len);
+    Py_END_ALLOW_THREADS
+
     PyBuffer_Release(buf);
 }
 
@@ -711,14 +704,10 @@ static void PYXXH64_dealloc(PYXXH64Object *self)
 
 static void PYXXH64_do_update(PYXXH64Object *self, Py_buffer *buf)
 {
-    if (buf->len >= GIL_MINSIZE) {
-        Py_BEGIN_ALLOW_THREADS
-        XXH64_update(self->xxhash_state, buf->buf, buf->len);
-        Py_END_ALLOW_THREADS
-    }
-    else {
-        XXH64_update(self->xxhash_state, buf->buf, buf->len);
-    }
+    Py_BEGIN_ALLOW_THREADS
+    XXH64_update(self->xxhash_state, buf->buf, buf->len);
+    Py_END_ALLOW_THREADS
+
     PyBuffer_Release(buf);
 }
 
@@ -1018,14 +1007,10 @@ static void PYXXH3_64_dealloc(PYXXH3_64Object *self)
 
 static void PYXXH3_64_do_update(PYXXH3_64Object *self, Py_buffer *buf)
 {
-    if (buf->len >= GIL_MINSIZE) {
-        Py_BEGIN_ALLOW_THREADS
-        XXH3_64bits_update(self->xxhash_state, buf->buf, buf->len);
-        Py_END_ALLOW_THREADS
-    }
-    else {
-        XXH3_64bits_update(self->xxhash_state, buf->buf, buf->len);
-    }
+    Py_BEGIN_ALLOW_THREADS
+    XXH3_64bits_update(self->xxhash_state, buf->buf, buf->len);
+    Py_END_ALLOW_THREADS
+
     PyBuffer_Release(buf);
 }
 
@@ -1335,14 +1320,10 @@ static void PYXXH3_128_dealloc(PYXXH3_128Object *self)
 
 static void PYXXH3_128_do_update(PYXXH3_128Object *self, Py_buffer *buf)
 {
-    if (buf->len >= GIL_MINSIZE) {
-        Py_BEGIN_ALLOW_THREADS
-        XXH3_128bits_update(self->xxhash_state, buf->buf, buf->len);
-        Py_END_ALLOW_THREADS
-    }
-    else {
-        XXH3_128bits_update(self->xxhash_state, buf->buf, buf->len);
-    }
+    Py_BEGIN_ALLOW_THREADS
+    XXH3_128bits_update(self->xxhash_state, buf->buf, buf->len);
+    Py_END_ALLOW_THREADS
+
     PyBuffer_Release(buf);
 }
 
