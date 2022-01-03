@@ -25,6 +25,11 @@ jobs:
             archs: "x86_64, arm64"
 
     steps:
+      - name: Disable git autocrlf
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+
       - uses: actions/checkout@v2
         with:
           submodules: recursive
