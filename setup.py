@@ -38,7 +38,6 @@ long_description = readfile('README.rst') + '\n' + readfile('CHANGELOG.rst')
 
 setup(
     name='xxhash',
-    version=VERSION,
     description="Python binding for xxHash",
     long_description=long_description,
     long_description_content_type="text/x-rst",
@@ -55,6 +54,7 @@ setup(
         'Intended Audience :: Developers',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3 :: Only',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',

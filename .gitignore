@@ -4,4 +4,5 @@
 __pycache__/
 build
 /xxhash.egg-info/
+/xxhash/version.py
 .dmypy.json

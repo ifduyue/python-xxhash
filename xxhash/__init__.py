@@ -18,7 +18,7 @@ from ._xxhash import (
     XXHASH_VERSION,
 )
 
-VERSION = "2.0.2"
+from .version import VERSION, VERSION_TUPLE
 
 
 xxh128 = xxh3_128
@@ -57,6 +57,7 @@ __all__ = [
     "xxh128_intdigest",
     "xxh128_hexdigest",
     "VERSION",
+    "VERSION_TUPLE",
     "XXHASH_VERSION",
     "algorithms_available",
 ]
