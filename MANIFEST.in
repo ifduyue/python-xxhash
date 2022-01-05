@@ -8,3 +8,5 @@ include deps/xxhash/LICENSE
 graft tests
 global-exclude __pycache__
 global-exclude *.py[co]
+prune .github
+exclude .gitignore .gitmodules
