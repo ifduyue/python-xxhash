@@ -44,13 +44,6 @@
 #define XXH128_DIGESTSIZE 16
 #define XXH128_BLOCKSIZE 64
 
-/* Use byte string on PY2 */
-#if PY_MAJOR_VERSION < 3
-#define MyPyUnicode_FromStringAndSize PyString_FromStringAndSize
-#define PyBytes_FromStringAndSize   PyString_FromStringAndSize
-#else
-#define MyPyUnicode_FromStringAndSize PyUnicode_FromStringAndSize
-#endif
 
 /*****************************************************************************
  * Module Functions ***********************************************************
@@ -127,7 +120,7 @@ static PyObject *xxh32_hexdigest(PyObject *self, PyObject *args, PyObject *kwarg
         retbuf[j++] = c;
     }
 
-    return MyPyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
+    return PyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
 }
 
 /* XXH64 */
@@ -204,7 +197,7 @@ static PyObject *xxh64_hexdigest(PyObject *self, PyObject *args, PyObject *kwarg
         retbuf[j++] = c;
     }
 
-    return MyPyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
+    return PyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
 }
 
 /* XXH3_64 */
@@ -282,7 +275,7 @@ static PyObject *xxh3_64_hexdigest(PyObject *self, PyObject *args, PyObject *kwa
         retbuf[j++] = c;
     }
 
-    return MyPyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
+    return PyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
 }
 
 /* XXH3_128 */
@@ -372,7 +365,7 @@ static PyObject *xxh3_128_hexdigest(PyObject *self, PyObject *args, PyObject *kw
         retbuf[j++] = c;
     }
 
-    return MyPyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
+    return PyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
 }
 
 /*****************************************************************************
@@ -509,7 +502,7 @@ static PyObject *PYXXH32_hexdigest(PYXXH32Object *self)
         retbuf[j++] = c;
     }
 
-    return MyPyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
+    return PyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
 }
 
 PyDoc_STRVAR(
@@ -582,7 +575,7 @@ PYXXH32_get_digest_size(PYXXH32Object *self, void *closure)
 static PyObject *
 PYXXH32_get_name(PYXXH32Object *self, void *closure)
 {
-    return MyPyUnicode_FromStringAndSize("XXH32", strlen("XXH32"));
+    return PyUnicode_FromStringAndSize("XXH32", strlen("XXH32"));
 }
 
 static PyObject *
@@ -639,12 +632,7 @@ PyDoc_STRVAR(
     "copy() -- return a copy of the current xxh32 object");
 
 static PyTypeObject PYXXH32Type = {
-#if PY_MAJOR_VERSION >= 3
     PyVarObject_HEAD_INIT(NULL, 0)
-#else
-    PyObject_HEAD_INIT(NULL)
-    0,                             /* ob_size */
-#endif
     "xxhash.xxh32",                /* tp_name */
     sizeof(PYXXH32Object),         /* tp_basicsize */
     0,                             /* tp_itemsize */
@@ -812,7 +800,7 @@ static PyObject *PYXXH64_hexdigest(PYXXH64Object *self)
         retbuf[j++] = c;
     }
 
-    return MyPyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
+    return PyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
 }
 
 
@@ -886,7 +874,7 @@ PYXXH64_get_digest_size(PYXXH64Object *self, void *closure)
 static PyObject *
 PYXXH64_get_name(PYXXH64Object *self, void *closure)
 {
-    return MyPyUnicode_FromStringAndSize("XXH64", strlen("XXH64"));
+    return PyUnicode_FromStringAndSize("XXH64", strlen("XXH64"));
 }
 
 static PyObject *
@@ -943,12 +931,7 @@ PyDoc_STRVAR(
     "copy() -- return a copy of the current xxh64 object");
 
 static PyTypeObject PYXXH64Type = {
-#if PY_MAJOR_VERSION >= 3
     PyVarObject_HEAD_INIT(NULL, 0)
-#else
-    PyObject_HEAD_INIT(NULL)
-    0,                             /* ob_size */
-#endif
     "xxhash.xxh64",                /* tp_name */
     sizeof(PYXXH64Object),         /* tp_basicsize */
     0,                             /* tp_itemsize */
@@ -1117,7 +1100,7 @@ static PyObject *PYXXH3_64_hexdigest(PYXXH3_64Object *self)
         retbuf[j++] = c;
     }
 
-    return MyPyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
+    return PyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
 }
 
 
@@ -1198,7 +1181,7 @@ PYXXH3_64_get_digest_size(PYXXH3_64Object *self, void *closure)
 static PyObject *
 PYXXH3_64_get_name(PYXXH3_64Object *self, void *closure)
 {
-    return MyPyUnicode_FromStringAndSize("XXH3_64", strlen("XXH3_64"));
+    return PyUnicode_FromStringAndSize("XXH3_64", strlen("XXH3_64"));
 }
 
 static PyObject *
@@ -1255,12 +1238,7 @@ PyDoc_STRVAR(
     "copy() -- return a copy of the current xxh64 object");
 
 static PyTypeObject PYXXH3_64Type = {
-#if PY_MAJOR_VERSION >= 3
     PyVarObject_HEAD_INIT(NULL, 0)
-#else
-    PyObject_HEAD_INIT(NULL)
-    0,                             /* ob_size */
-#endif
     "xxhash.xxh3_64",                /* tp_name */
     sizeof(PYXXH3_64Object),         /* tp_basicsize */
     0,                             /* tp_itemsize */
@@ -1430,7 +1408,7 @@ static PyObject *PYXXH3_128_hexdigest(PYXXH3_128Object *self)
         retbuf[j++] = c;
     }
 
-    return MyPyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
+    return PyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
 }
 
 
@@ -1444,7 +1422,7 @@ static PyObject *PYXXH3_128_intdigest(PYXXH3_128Object *self)
 {
     XXH128_hash_t intdigest;
     PyObject *result, *high, *low, *sixtyfour;
-    
+
     intdigest = XXH3_128bits_digest(self->xxhash_state);
 
     sixtyfour = PyLong_FromLong(64);
@@ -1526,7 +1504,7 @@ PYXXH3_128_get_digest_size(PYXXH3_128Object *self, void *closure)
 static PyObject *
 PYXXH3_128_get_name(PYXXH3_128Object *self, void *closure)
 {
-    return MyPyUnicode_FromStringAndSize("XXH3_128", strlen("XXH3_128"));
+    return PyUnicode_FromStringAndSize("XXH3_128", strlen("XXH3_128"));
 }
 
 static PyObject *
@@ -1583,12 +1561,7 @@ PyDoc_STRVAR(
     "copy() -- return a copy of the current xxh3_128 object");
 
 static PyTypeObject PYXXH3_128Type = {
-#if PY_MAJOR_VERSION >= 3
     PyVarObject_HEAD_INIT(NULL, 0)
-#else
-    PyObject_HEAD_INIT(NULL)
-    0,                             /* ob_size */
-#endif
     "xxhash.xxh3_128",                /* tp_name */
     sizeof(PYXXH3_128Object),         /* tp_basicsize */
     0,                             /* tp_itemsize */
@@ -1650,7 +1623,6 @@ static PyMethodDef methods[] = {
     {NULL, NULL, 0, NULL}
 };
 
-#if PY_MAJOR_VERSION >= 3
 
 static struct PyModuleDef moduledef = {
     PyModuleDef_HEAD_INIT,
@@ -1667,20 +1639,10 @@ static struct PyModuleDef moduledef = {
 #define INITERROR return NULL
 
 PyObject *PyInit__xxhash(void)
-
-#else
-#define INITERROR return
-
-void init_xxhash(void)
-#endif
 {
     PyObject *module;
 
-#if PY_MAJOR_VERSION >= 3
     module = PyModule_Create(&moduledef);
-#else
-    module = Py_InitModule("_xxhash", methods);
-#endif
 
     if (module == NULL) {
         INITERROR;
@@ -1722,7 +1684,5 @@ void init_xxhash(void)
     /* version */
     PyModule_AddStringConstant(module, "XXHASH_VERSION", VALUE_TO_STRING(XXHASH_VERSION));
 
-#if PY_MAJOR_VERSION >= 3
     return module;
-#endif
 }
