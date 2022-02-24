@@ -1,11 +1,16 @@
 CHANGELOG
 -----------
 
-vUnreleased
-~~~~~~~~~~~
+v3.0.0 2022-02-25
+~~~~~~~~~~~~~~~~~
 
 - New set `algorithms_available` lists all implemented algorithms in `xxhash`
   package.
+- Upgrade xxHash to v0.8.1.
+- Drop support for EOL Python versions, require python >= 3.6 from now on.
+- Migrate to github actions and build arm64 wheels for macOS.
+- Always release GIL.
+
 
 v2.0.2 2021-04-15
 ~~~~~~~~~~~~~~~~~
@@ -28,7 +33,7 @@ v1.4.4 2020-06-20
 ~~~~~~~~~~~~~~~~~
 
 - Upgrade xxHash to v0.7.3
-- Stop using PEP393 deprecated APIs 
+- Stop using PEP393 deprecated APIs
 - Use XXH(32|64)_canonicalFromHash to replace u2bytes and ull2bytes
 
 v1.4.3 2019-11-12
