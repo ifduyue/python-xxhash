@@ -1,7 +1,14 @@
 import array
 from typing import Union
+from typing_extensions import final
 
 _InputType = Union[str, bytes, bytearray, memoryview, array.ArrayType[int]]
+
+VERSION: str
+XXHASH_VERSION: str
+VERSION_TUPLE: tuple[int, ...]
+
+algorithms_available: set[str]
 
 class _Hasher:
     def __init__(self, input: _InputType = ..., seed: int = ...) -> None: ...
@@ -22,8 +29,13 @@ class _Hasher:
     @property
     def seed(self) -> int: ...
 
+@final
 class xxh32(_Hasher): ...
+
+@final
 class xxh3_64(_Hasher): ...
+
+@final
 class xxh3_128(_Hasher): ...
 
 xxh64 = xxh3_64
@@ -48,7 +60,3 @@ xxh64_intdigest = xxh3_64_intdigest
 xxh128_digest = xxh3_128_digest
 xxh128_hexdigest = xxh3_128_hexdigest
 xxh128_intdigest = xxh3_128_intdigest
-
-VERSION: str = ...
-
-XXHASH_VERSION: str = ...
