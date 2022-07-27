@@ -6,12 +6,6 @@ import os
 import codecs
 
 
-with open('xxhash/__init__.py') as f:
-    for line in f:
-        if line.startswith('VERSION = '):
-            VERSION = eval(line.rsplit(None, 1)[-1])
-            break
-
 if os.getenv('XXHASH_LINK_SO'):
     libraries = ['xxhash']
     source = ['src/_xxhash.c']
