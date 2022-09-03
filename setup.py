@@ -58,5 +58,5 @@ setup(
     ],
     python_requires=">=3.6",
     ext_modules=ext_modules,
-    package_data={"xxhash": ["py.typed"]},
+    package_data={"xxhash": ["py.typed", "**.pyi"]},
 )
