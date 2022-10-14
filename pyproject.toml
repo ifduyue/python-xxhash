@@ -1,9 +1,6 @@
 [build-system]
 requires = ["setuptools>=45", "wheel", "setuptools_scm>=6.2"]
 
-[tool.cibuildwheel]
-skip = "*-musllinux*"
-
 [tool.setuptools_scm]
 write_to = "xxhash/version.py"
 local_scheme = "no-local-version"

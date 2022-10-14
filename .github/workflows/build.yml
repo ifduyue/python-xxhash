@@ -4,19 +4,14 @@ on: [push]
 
 jobs:
   build_wheels:
-    name: Build ${{ matrix.archs }} wheels on ${{ matrix.os }}
+    name: Build ${{ matrix.archs }} ${{ matrix.build }} wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        os: [ubuntu-20.04]
+        archs: ["x86_64, i686", "aarch64", "ppc64le", "s390x"]
+        build: ["manylinux", "musllinux"]
         include:
-          - os: ubuntu-20.04
-            archs: "x86_64, i686"
-          - os: ubuntu-20.04
-            archs: "aarch64"
-          - os: ubuntu-20.04
-            archs: "ppc64le"
-          - os: ubuntu-20.04
-            archs: "s390x"
           - os: windows-2019
             archs: "AMD64"
           - os: windows-2019
@@ -43,6 +38,7 @@ jobs:
         uses: pypa/cibuildwheel@v2.3.0
         env:
           CIBW_ARCHS: "${{ matrix.archs }}"
+          CIBW_BUILD: "${{ matrix.build && '*-' || ''}}${{ matrix.build }}*"
           CIBW_PRERELEASE_PYTHONS: "${{ !startsWith(github.ref, 'refs/tags/v') }}"
 
       - uses: actions/upload-artifact@v2
