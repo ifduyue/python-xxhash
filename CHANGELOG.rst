@@ -1,6 +1,12 @@
 CHANGELOG
 -----------
 
+v3.1.0 2022-10-19
+~~~~~~~~~~~~~~~~~
+
+- Type annotations.
+- Enabled muslinux wheels building.
+
 v3.0.0 2022-02-25
 ~~~~~~~~~~~~~~~~~
 
