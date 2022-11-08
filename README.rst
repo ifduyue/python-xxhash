@@ -33,6 +33,12 @@ Installation
 .. code-block:: bash
 
    $ pip install xxhash
+   
+You can also install using conda:
+
+.. code-block:: bash
+
+   $ conda install -c conda-forge python-xxhash
 
 
 Installing From Source
