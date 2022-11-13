@@ -41,7 +41,6 @@ setup(
     license='BSD',
     packages=['xxhash'],
     ext_package='xxhash',
-    test_suite='tests',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: BSD License',
