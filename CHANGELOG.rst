@@ -1,6 +1,14 @@
 CHANGELOG
 -----------
 
+v3.2.0 2022-12-28
+~~~~~~~~~~~~~~~~~
+
+This is the last version to support Python 3.6
+
+- Build Python 3.11 wheels.
+- Remove setup.py test_suites, call unittest directly
+
 v3.1.0 2022-10-19
 ~~~~~~~~~~~~~~~~~
 
