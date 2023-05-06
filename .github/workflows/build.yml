@@ -1,4 +1,4 @@
-name: Build and upload to PyPI
+name: build
 
 on: [push]
 
