@@ -16,6 +16,8 @@ jobs:
             archs: "AMD64"
           - os: windows-2019
             archs: "x86"
+          - os: windows-2019
+            archs: "ARM64"
           - os: macos-11
             archs: "x86_64, arm64"
 
