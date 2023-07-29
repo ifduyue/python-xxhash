@@ -1,6 +1,12 @@
 CHANGELOG
 -----------
 
+v3.3.0 2023-07-29
+~~~~~~~~~~~~~~~~~
+
+- Upgrade xxHash to v0.8.2
+- Drop support for Python 3.6
+
 v3.2.0 2022-12-28
 ~~~~~~~~~~~~~~~~~
 
