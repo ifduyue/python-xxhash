@@ -30,6 +30,16 @@ def readfile(filename):
 
 long_description = readfile('README.rst') + '\n' + readfile('CHANGELOG.rst')
 
+setup_kwargs = {}
+if os.getenv("CI"):
+    # for compatibility, see https://pypi.org/project/setuptools-scm/7.1.0/#setup-py-usage-deprecated
+    setup_kwargs["use_scm_version"] = {
+        "write_to": "xxhash/version.py",
+        "local_scheme": "no-local-version",
+        "write_to_template": "VERSION = \"{version}\"\nVERSION_TUPLE = {version_tuple}\n",
+    }
+    setup_kwargs["setup_requires"] = ["setuptools_scm"]
+
 setup(
     name='xxhash',
     description="Python binding for xxHash",
@@ -58,11 +68,5 @@ setup(
     python_requires=">=3.7",
     ext_modules=ext_modules,
     package_data={"xxhash": ["py.typed", "**.pyi"]},
-    # for compatibility, see https://pypi.org/project/setuptools-scm/7.1.0/#setup-py-usage-deprecated
-    use_scm_version={
-        "write_to": "xxhash/version.py",
-        "local_scheme": "no-local-version",
-        "write_to_template": "VERSION = \"{version}\"\nVERSION_TUPLE = {version_tuple}\n",
-    },
-    setup_requires=["setuptools_scm"],
+    **setup_kwargs,
 )
