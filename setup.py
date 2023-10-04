@@ -4,6 +4,7 @@
 from setuptools import setup, Extension
 import os
 import codecs
+from pathlib import Path
 
 
 if os.getenv('XXHASH_LINK_SO'):
@@ -30,6 +31,10 @@ def readfile(filename):
 
 long_description = readfile('README.rst') + '\n' + readfile('CHANGELOG.rst')
 
+version_dict = {}
+exec(Path(__file__).parent.joinpath("xxhash", "version.py").read_text(), {}, version_dict)
+version = version_dict["VERSION"]
+
 setup_kwargs = {}
 if os.getenv("CI"):
     # for compatibility, see https://pypi.org/project/setuptools-scm/7.1.0/#setup-py-usage-deprecated
@@ -39,6 +44,8 @@ if os.getenv("CI"):
         "write_to_template": "VERSION = \"{version}\"\nVERSION_TUPLE = {version_tuple}\n",
     }
     setup_kwargs["setup_requires"] = ["setuptools_scm"]
+else:
+    setup_kwargs["version"] = version
 
 setup(
     name='xxhash',
