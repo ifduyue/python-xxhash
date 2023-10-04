@@ -42,7 +42,6 @@ jobs:
           CIBW_ARCHS: "${{ matrix.archs }}"
           CIBW_BUILD: "${{ matrix.build && '*-' || ''}}${{ matrix.build }}*"
           CIBW_PRERELEASE_PYTHONS: "${{ !startsWith(github.ref, 'refs/tags/v') }}"
-          CIBW_BEFORE_BUILD: python -m pip install setuptools_scm && python setup.py --version
 
       - uses: actions/upload-artifact@v3
         with:

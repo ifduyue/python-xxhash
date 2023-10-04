@@ -1,7 +1,2 @@
 [build-system]
 requires = ["setuptools>=45", "wheel"]
-
-[tool.setuptools_scm]
-write_to = "xxhash/version.py"
-local_scheme = "no-local-version"
-write_to_template = "VERSION = \"{version}\"\nVERSION_TUPLE = {version_tuple}\n"
