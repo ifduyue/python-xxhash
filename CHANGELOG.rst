@@ -4,13 +4,13 @@ CHANGELOG
 v3.4.1 2023-10-05
 ~~~~~~~~~~~~~~~~~
 
+- Build wheels for Python 3.12
 - Remove setuptools_scm
-
 
 v3.4.0 2023-10-05
 ~~~~~~~~~~~~~~~~~
 
-- Build wheels for Python 3.12
+*Yanked* due to wheels building problem.
 
 v3.3.0 2023-07-29
 ~~~~~~~~~~~~~~~~~
