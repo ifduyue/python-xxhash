@@ -3,7 +3,6 @@
 
 from setuptools import setup, Extension
 import os
-import codecs
 from pathlib import Path
 
 
@@ -25,11 +24,7 @@ ext_modules = [
     )
 ]
 
-def readfile(filename):
-    with codecs.open(filename, encoding='utf-8', mode='r') as f:
-        return f.read()
-
-long_description = readfile('README.rst') + '\n' + readfile('CHANGELOG.rst')
+long_description = '\n'.join(Path('README.rst').read_text(), Path('CHANGELOG.rst').read_text())
 
 version_dict = {}
 exec(Path(__file__).parent.joinpath("xxhash", "version.py").read_text(), {}, version_dict)
