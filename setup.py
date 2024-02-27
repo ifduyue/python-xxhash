@@ -24,10 +24,11 @@ ext_modules = [
     )
 ]
 
-long_description = Path('README.rst').read_text() + '\n' + Path('CHANGELOG.rst').read_text()
+d = Path(__file__).parent
+long_description = d.joinpath('README.rst').read_text() + '\n' + d.joinpath('CHANGELOG.rst').read_text()
 
 version_dict = {}
-exec(Path(__file__).parent.joinpath("xxhash", "version.py").read_text(), {}, version_dict)
+exec(d.joinpath("xxhash", "version.py").read_text(), {}, version_dict)
 version = version_dict["VERSION"]
 
 setup(
