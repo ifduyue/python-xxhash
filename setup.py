@@ -24,7 +24,7 @@ ext_modules = [
     )
 ]
 
-long_description = '\n'.join(Path('README.rst').read_text(), Path('CHANGELOG.rst').read_text())
+long_description = Path('README.rst').read_text() + '\n' + Path('CHANGELOG.rst').read_text()
 
 version_dict = {}
 exec(Path(__file__).parent.joinpath("xxhash", "version.py").read_text(), {}, version_dict)
