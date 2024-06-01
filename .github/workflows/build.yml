@@ -43,7 +43,7 @@ jobs:
           CIBW_BUILD: "${{ matrix.build && '*-' || ''}}${{ matrix.build }}*"
           CIBW_PRERELEASE_PYTHONS: "${{ !startsWith(github.ref, 'refs/tags/v') }}"
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           path: ./wheelhouse/*.whl
 
@@ -71,7 +71,7 @@ jobs:
       - name: Build sdist
         run: python setup.py build sdist
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           path: dist/*.tar.gz
 
