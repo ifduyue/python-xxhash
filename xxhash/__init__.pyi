@@ -6,7 +6,7 @@ _InputType = Union[str, bytes, bytearray, memoryview, array.ArrayType[int]]
 
 VERSION: str
 XXHASH_VERSION: str
-VERSION_TUPLE: tuple[int, ...]
+VERSION_TUPLE: tuple[int, int, int] | tuple[int, int, int, str]
 
 algorithms_available: set[str]
 
