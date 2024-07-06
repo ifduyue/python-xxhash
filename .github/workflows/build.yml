@@ -100,8 +100,8 @@ jobs:
         with:
           user: __token__
           password: ${{ secrets.PYPI_TEST_TOKEN }}
-          skip_existing: true
-          repository_url: https://test.pypi.org/legacy/
+          skip-existing: true
+          repository-url: https://test.pypi.org/legacy/
 
   upload_pypi:
     name: Upload to PyPI
@@ -126,4 +126,4 @@ jobs:
         with:
           user: __token__
           password: ${{ secrets.PYPI_TOKEN }}
-          skip_existing: true
+          skip-existing: true
