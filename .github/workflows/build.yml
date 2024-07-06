@@ -78,13 +78,16 @@ jobs:
           path: dist/*.tar.gz
 
 
-  upload_pypi:
-    name: Upload to (Test) PyPI
+  upload_test_pypi:
+    name: Upload to Test PyPI
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-20.04
-    if: github.event_name == 'push' && github.repository == 'ifduyue/python-xxhash'
+    if: github.event_name == 'push' && github.repository == 'ifduyue/python-xxhash' && !startsWith(github.ref, 'refs/tags/v')
     permissions:
       id-token: write
+    environment:
+      name: test-pypi
+      url: https://test.pypi.org/project/xxhash/
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -99,6 +102,23 @@ jobs:
           password: ${{ secrets.PYPI_TEST_TOKEN }}
           skip_existing: true
           repository_url: https://test.pypi.org/legacy/
+
+  upload_pypi:
+    name: Upload to PyPI
+    needs: [build_wheels, build_sdist]
+    runs-on: ubuntu-20.04
+    if: github.event_name == 'push' && github.repository == 'ifduyue/python-xxhash' && startsWith(github.ref, 'refs/tags/v')
+    environment:
+      name: pypi
+      url: https://pypi.org/project/xxhash/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          path: dist
+          merge-multiple: true
 
       - name: Upload to PyPI
         if: startsWith(github.ref, 'refs/tags/v')
