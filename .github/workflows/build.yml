@@ -83,6 +83,8 @@ jobs:
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-20.04
     if: github.event_name == 'push' && github.repository == 'ifduyue/python-xxhash'
+    permissions:
+      id-token: write
     steps:
       - uses: actions/download-artifact@v4
         with:
