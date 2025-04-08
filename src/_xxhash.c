@@ -1638,7 +1638,7 @@ static struct PyModuleDef moduledef = {
 
 #define INITERROR return NULL
 
-PyObject *PyInit__xxhash(void)
+PyMODINIT_FUNC PyInit__xxhash(void)
 {
     PyObject *module;
 
