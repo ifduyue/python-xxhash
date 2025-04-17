@@ -1684,5 +1684,9 @@ PyMODINIT_FUNC PyInit__xxhash(void)
     /* version */
     PyModule_AddStringConstant(module, "XXHASH_VERSION", VALUE_TO_STRING(XXHASH_VERSION));
 
+#ifdef Py_GIL_DISABLED
+    PyUnstable_Module_SetGIL(module, Py_MOD_GIL_NOT_USED);
+#endif
+
     return module;
 }
