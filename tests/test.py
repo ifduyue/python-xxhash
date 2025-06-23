@@ -8,10 +8,9 @@ from typing import Union, List, TYPE_CHECKING
 import xxhash
 
 if TYPE_CHECKING:
-    InputType = Union[str, bytes, bytearray, memoryview, array.ArrayType[int]]
-else:
-    InputType = None
-
+    from typing_extensions import Buffer
+    Buffer.register(array.ArrayType)
+    InputType = Union[str, Buffer]
 
 def getrefcount(obj):
     if hasattr(sys, "getrefcount"):
