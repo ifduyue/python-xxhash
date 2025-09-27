@@ -12,11 +12,11 @@ jobs:
         archs: ["x86_64, i686", "aarch64", "ppc64le", "s390x"]
         build: ["manylinux", "musllinux"]
         include:
-          - os: windows-2019
+          - os: windows-2022
             archs: "AMD64"
-          - os: windows-2019
+          - os: windows-2022
             archs: "x86"
-          - os: windows-2019
+          - os: windows-2022
             archs: "ARM64"
           - os: macos-13
             archs: "x86_64, arm64"
