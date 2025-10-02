@@ -8,6 +8,7 @@ _InputType = Union[str, Buffer]
 
 VERSION: str
 XXHASH_VERSION: str
+#: Deprecated, will be removed in the next major release
 VERSION_TUPLE: tuple[int, ...]
 
 algorithms_available: set[str]
