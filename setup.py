@@ -59,6 +59,7 @@ setup(
         'Programming Language :: Python :: 3.13',
         'Programming Language :: Python :: 3.14',
         'Programming Language :: Python :: Implementation :: CPython',
+        'Programming Language :: Python :: Free Threading :: 1 - Unstable',
     ],
     python_requires=">=3.7",
     ext_modules=ext_modules,
