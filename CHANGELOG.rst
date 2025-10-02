@@ -1,6 +1,14 @@
 CHANGELOG
 -----------
 
+v3.6.0 2025-10-02
+~~~~~~~~~~~~~~~~~
+
+- Build wheels for Python 3.14
+- Python free-threading support
+- Typing: Use Buffer type stubs
+- Deprecate xxhash.VERSION_TUPLE, it will be removed in the next major release
+
 v3.5.0 2024-08-17
 ~~~~~~~~~~~~~~~~~
 
