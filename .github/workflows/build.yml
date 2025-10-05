@@ -77,7 +77,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: python -m pip install -U pip 'setuptools>=45' 'setuptools-scm>=6.2'
+        run: python -m pip install -U pip 'setuptools>=45'
 
       - name: Build sdist
         run: python setup.py build sdist
