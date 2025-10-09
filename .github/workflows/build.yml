@@ -62,7 +62,7 @@ jobs:
         env:
           CIBW_ARCHS: "${{ matrix.archs }}"
           CIBW_BUILD: "${{ matrix.build && '*-' || ''}}${{ matrix.build }}*"
-          CWBW_PLATFORM: "${{ matrix.platform }}"
+          CIBW_PLATFORM: "${{ matrix.platform }}"
 
       - uses: actions/upload-artifact@v4
         with:
