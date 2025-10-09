@@ -11,6 +11,7 @@ jobs:
         os: [ubuntu-22.04]
         archs: ["x86_64, i686", "aarch64", "ppc64le", "s390x"]
         build: ["manylinux", "musllinux"]
+        platform: ["auto"]
         include:
           - os: windows-2022
             archs: "AMD64"
@@ -20,6 +21,15 @@ jobs:
             archs: "ARM64"
           - os: macos-13
             archs: "x86_64, arm64"
+          - os: macos-13
+            archs: "arm64_v8a, x86_64"
+            platform: "android"
+          - os: macos-14
+            archs: "arm64_iphoneos,arm64_iphonesimulator"
+            platform: "ios"
+          - os: macos-13
+            archs: "x86_64_iphonesimulator"
+            platform: "ios"
 
     steps:
       - name: Disable git autocrlf
@@ -52,6 +62,7 @@ jobs:
         env:
           CIBW_ARCHS: "${{ matrix.archs }}"
           CIBW_BUILD: "${{ matrix.build && '*-' || ''}}${{ matrix.build }}*"
+          CWBW_PLATFORM: "${{ matrix.platform }}"
 
       - uses: actions/upload-artifact@v4
         with:
