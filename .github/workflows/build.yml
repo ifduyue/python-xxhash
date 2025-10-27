@@ -64,7 +64,7 @@ jobs:
           CIBW_BUILD: "${{ matrix.build && '*-' || ''}}${{ matrix.build }}*"
           CIBW_PLATFORM: "${{ matrix.platform }}"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: wheels-${{ matrix.os }}-${{ matrix.build }}-${{ matrix.archs }}
           path: ./wheelhouse/*.whl
@@ -93,7 +93,7 @@ jobs:
       - name: Build sdist
         run: python setup.py build sdist
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: wheels-dist
           path: dist/*.tar.gz
