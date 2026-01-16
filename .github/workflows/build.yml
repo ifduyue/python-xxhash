@@ -19,15 +19,17 @@ jobs:
             archs: "x86"
           - os: windows-2022
             archs: "ARM64"
-          - os: macos-13
-            archs: "x86_64, arm64"
-          - os: macos-13
+          - os: macos-15-intel
+            archs: "x86_64"
+          - os: macos-14
+            archs: "arm64"
+          - os: ubuntu-24.04
             archs: "arm64_v8a, x86_64"
             platform: "android"
           - os: macos-14
             archs: "arm64_iphoneos,arm64_iphonesimulator"
             platform: "ios"
-          - os: macos-13
+          - os: macos-15-intel
             archs: "x86_64_iphonesimulator"
             platform: "ios"
 
