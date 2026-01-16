@@ -112,7 +112,7 @@ jobs:
       name: test-pypi
       url: https://test.pypi.org/project/xxhash/
     steps:
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v7
         with:
           pattern: wheels-*
           path: dist
@@ -135,7 +135,7 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v7
         with:
           pattern: wheels-*
           path: dist
