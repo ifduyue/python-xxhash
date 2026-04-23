@@ -1605,7 +1605,54 @@ static PyTypeObject PYXXH3_128Type = {
  * Module Init ****************************************************************
  ****************************************************************************/
 
-/* ref: https://docs.python.org/2/howto/cporting.html */
+static int _exec(PyObject *module)
+{
+    /* xxh32 */
+    if (PyType_Ready(&PYXXH32Type) < 0)
+        return -1;
+    Py_INCREF(&PYXXH32Type);
+    if (PyModule_AddObject(module, "xxh32", (PyObject *)&PYXXH32Type) < 0)
+        return -1;
+
+    /* xxh64 */
+    if (PyType_Ready(&PYXXH64Type) < 0)
+        return -1;
+    Py_INCREF(&PYXXH64Type);
+    if (PyModule_AddObject(module, "xxh64", (PyObject *)&PYXXH64Type) < 0)
+        return -1;
+
+    /* xxh3_64 */
+    if (PyType_Ready(&PYXXH3_64Type) < 0)
+        return -1;
+    Py_INCREF(&PYXXH3_64Type);
+    if (PyModule_AddObject(module, "xxh3_64", (PyObject *)&PYXXH3_64Type) < 0)
+        return -1;
+
+    /* xxh3_128 */
+    if (PyType_Ready(&PYXXH3_128Type) < 0)
+        return -1;
+    Py_INCREF(&PYXXH3_128Type);
+    if (PyModule_AddObject(module, "xxh3_128", (PyObject *)&PYXXH3_128Type) < 0)
+        return -1;
+
+    /* version constant */
+    if (PyModule_AddStringConstant(module, "XXHASH_VERSION", VALUE_TO_STRING(XXHASH_VERSION)) < 0)
+        return -1;
+
+#ifdef Py_GIL_DISABLED
+    PyUnstable_Module_SetGIL(module, Py_MOD_GIL_NOT_USED);
+#endif
+
+    return 0;
+}
+
+static PyModuleDef_Slot slots[] = {
+    {Py_mod_exec, _exec},
+#ifdef Py_GIL_DISABLED
+    {Py_mod_gil, Py_MOD_GIL_NOT_USED},
+#endif
+    {0, NULL}
+};
 
 static PyMethodDef methods[] = {
     {"xxh32_digest",       (PyCFunction)xxh32_digest,       METH_VARARGS | METH_KEYWORDS, "xxh32_digest"},
@@ -1628,65 +1675,17 @@ static struct PyModuleDef moduledef = {
     PyModuleDef_HEAD_INIT,
     "_xxhash",
     NULL,
-    -1,
+    0,
     methods,
-    NULL,
+    slots,
     NULL,
     NULL,
     NULL
 };
 
-#define INITERROR return NULL
 
-PyMODINIT_FUNC PyInit__xxhash(void)
+PyMODINIT_FUNC
+PyInit__xxhash(void)
 {
-    PyObject *module;
-
-    module = PyModule_Create(&moduledef);
-
-    if (module == NULL) {
-        INITERROR;
-    }
-
-    /* xxh32 */
-    if (PyType_Ready(&PYXXH32Type) < 0) {
-        INITERROR;
-    }
-
-    Py_INCREF(&PYXXH32Type);
-    PyModule_AddObject(module, "xxh32", (PyObject *)&PYXXH32Type);
-
-
-    /* xxh64 */
-    if (PyType_Ready(&PYXXH64Type) < 0) {
-        INITERROR;
-    }
-
-    Py_INCREF(&PYXXH64Type);
-    PyModule_AddObject(module, "xxh64", (PyObject *)&PYXXH64Type);
-
-    /* xxh3_64 */
-    if (PyType_Ready(&PYXXH3_64Type) < 0) {
-        INITERROR;
-    }
-
-    Py_INCREF(&PYXXH3_64Type);
-    PyModule_AddObject(module, "xxh3_64", (PyObject *)&PYXXH3_64Type);
-
-    /* xxh3_128 */
-    if (PyType_Ready(&PYXXH3_128Type) < 0) {
-        INITERROR;
-    }
-
-    Py_INCREF(&PYXXH3_128Type);
-    PyModule_AddObject(module, "xxh3_128", (PyObject *)&PYXXH3_128Type);
-
-    /* version */
-    PyModule_AddStringConstant(module, "XXHASH_VERSION", VALUE_TO_STRING(XXHASH_VERSION));
-
-#ifdef Py_GIL_DISABLED
-    PyUnstable_Module_SetGIL(module, Py_MOD_GIL_NOT_USED);
-#endif
-
-    return module;
+    return PyModuleDef_Init(&moduledef);
 }
