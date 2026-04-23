@@ -1605,7 +1605,30 @@ static PyTypeObject PYXXH3_128Type = {
  * Module Init ****************************************************************
  ****************************************************************************/
 
-/* ref: https://docs.python.org/2/howto/cporting.html */
+static int _exec(PyObject *module)
+{
+    if (
+        PyModule_AddType(module, &PYXXH32Type) < 0 ||
+        PyModule_AddType(module, &PYXXH64Type) < 0 ||
+        PyModule_AddType(module, &PYXXH3_64Type) < 0 ||
+        PyModule_AddType(module, &PYXXH3_128Type) < 0
+    ) {
+        return -1;
+    }
+
+    if (PyModule_AddStringConstant(module, "XXHASH_VERSION", VALUE_TO_STRING(XXHASH_VERSION)) < 0)
+        return -1;
+
+    return 0;
+}
+
+static const PyModuleDef_Slot slots[] = {
+    {Py_mod_exec, _exec},
+#ifdef Py_GIL_DISABLED
+    {Py_mod_gil, Py_MOD_GIL_NOT_USED},
+#endif
+    {0, NULL}
+};
 
 static PyMethodDef methods[] = {
     {"xxh32_digest",       (PyCFunction)xxh32_digest,       METH_VARARGS | METH_KEYWORDS, "xxh32_digest"},
@@ -1628,42 +1651,17 @@ static struct PyModuleDef moduledef = {
     PyModuleDef_HEAD_INIT,
     "_xxhash",
     NULL,
-    -1,
+    0,
     methods,
-    NULL,
+    slots,
     NULL,
     NULL,
     NULL
 };
 
-#define INITERROR return NULL
 
-PyMODINIT_FUNC PyInit__xxhash(void)
+PyMODINIT_FUNC
+PyInit__xxhash(void)
 {
-    PyObject *module;
-
-    module = PyModule_Create(&moduledef);
-
-    if (module == NULL) {
-        INITERROR;
-    }
-
-    if (
-        PyModule_AddType(module, &PYXXH32Type) < 0 ||
-        PyModule_AddType(module, &PYXXH64Type) < 0 ||
-        PyModule_AddType(module, &PYXXH3_64Type) < 0 ||
-        PyModule_AddType(module, &PYXXH3_128Type) < 0
-    ) {
-        Py_DECREF(module);
-        INITERROR;
-    }
-
-    /* version */
-    PyModule_AddStringConstant(module, "XXHASH_VERSION", VALUE_TO_STRING(XXHASH_VERSION));
-
-#ifdef Py_GIL_DISABLED
-    PyUnstable_Module_SetGIL(module, Py_MOD_GIL_NOT_USED);
-#endif
-
-    return module;
+    return PyModuleDef_Init(&moduledef);
 }
