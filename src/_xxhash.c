@@ -1648,38 +1648,15 @@ PyMODINIT_FUNC PyInit__xxhash(void)
         INITERROR;
     }
 
-    /* xxh32 */
-    if (PyType_Ready(&PYXXH32Type) < 0) {
+    if (
+        PyModule_AddType(module, &PYXXH32Type) < 0 ||
+        PyModule_AddType(module, &PYXXH64Type) < 0 ||
+        PyModule_AddType(module, &PYXXH3_64Type) < 0 ||
+        PyModule_AddType(module, &PYXXH3_128Type) < 0
+    ) {
+        Py_DECREF(module);
         INITERROR;
     }
-
-    Py_INCREF(&PYXXH32Type);
-    PyModule_AddObject(module, "xxh32", (PyObject *)&PYXXH32Type);
-
-
-    /* xxh64 */
-    if (PyType_Ready(&PYXXH64Type) < 0) {
-        INITERROR;
-    }
-
-    Py_INCREF(&PYXXH64Type);
-    PyModule_AddObject(module, "xxh64", (PyObject *)&PYXXH64Type);
-
-    /* xxh3_64 */
-    if (PyType_Ready(&PYXXH3_64Type) < 0) {
-        INITERROR;
-    }
-
-    Py_INCREF(&PYXXH3_64Type);
-    PyModule_AddObject(module, "xxh3_64", (PyObject *)&PYXXH3_64Type);
-
-    /* xxh3_128 */
-    if (PyType_Ready(&PYXXH3_128Type) < 0) {
-        INITERROR;
-    }
-
-    Py_INCREF(&PYXXH3_128Type);
-    PyModule_AddObject(module, "xxh3_128", (PyObject *)&PYXXH3_128Type);
 
     /* version */
     PyModule_AddStringConstant(module, "XXHASH_VERSION", VALUE_TO_STRING(XXHASH_VERSION));
