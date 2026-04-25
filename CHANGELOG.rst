@@ -1,6 +1,14 @@
 CHANGELOG
 -----------
 
+v3.7.0 2025-04-25
+~~~~~~~~~~~~~~~~~
+
+- Drop support for Python 3.7
+- Build armv7l manylinux/musllinux wheels
+- Build riscv64 manylinux/musllinux wheels
+- Build android and ios wheels
+
 v3.6.0 2025-10-02
 ~~~~~~~~~~~~~~~~~
 
