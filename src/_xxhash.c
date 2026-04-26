@@ -415,6 +415,9 @@ static PyObject *PYXXH32_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
         return NULL;
     }
 
+    self->seed = 0;
+    XXH32_reset(self->xxhash_state, 0);
+
     return (PyObject *)self;
 }
 
@@ -718,6 +721,9 @@ static PyObject *PYXXH64_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
         PyErr_NoMemory();
         return NULL;
     }
+
+    self->seed = 0;
+    XXH64_reset(self->xxhash_state, 0);
 
     return (PyObject *)self;
 }
