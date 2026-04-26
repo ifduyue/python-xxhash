@@ -45,71 +45,157 @@
 #define XXH128_BLOCKSIZE 64
 
 
+/* Get a buffer from an object, or UTF-8 encode if it's a str.
+ * On success, *owner is set to the object that owns the buffer
+ * (NULL if the arg itself supports the buffer protocol).
+ * Caller must PyBuffer_Release(buf) and Py_XDECREF(*owner). */
+static int
+_get_buffer_or_str(PyObject *obj, Py_buffer *buf, PyObject **owner)
+{
+    if (PyObject_GetBuffer(obj, buf, PyBUF_SIMPLE) == 0) {
+        *owner = NULL;
+        return 0;
+    }
+    PyErr_Clear();
+    if (!PyUnicode_Check(obj))
+        return -1;
+    *owner = PyUnicode_AsUTF8String(obj);
+    if (*owner == NULL)
+        return -1;
+    if (PyObject_GetBuffer(*owner, buf, PyBUF_SIMPLE) < 0) {
+        Py_DECREF(*owner);
+        return -1;
+    }
+    return 0;
+}
+
 /*****************************************************************************
  * Module Functions ***********************************************************
  ****************************************************************************/
 
 /* XXH32 */
-
-static PyObject *xxh32_digest(PyObject *self, PyObject *args, PyObject *kwargs)
+static PyObject *xxh32_digest(PyObject *self, PyObject *const *args,
+                               Py_ssize_t nargs, PyObject *kwnames)
 {
     XXH32_hash_t seed = 0;
-    XXH32_hash_t intdigest;
-    char *keywords[] = {"input", "seed", NULL};
     Py_buffer buf;
-    char retbuf[XXH32_DIGESTSIZE];
+    PyObject *buf_owner;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s*|I:xxh32_digest", keywords, &buf, &seed)) {
+    if (nargs < 1) {
+        PyErr_SetString(PyExc_TypeError, "xxh32_digest() missing required argument 'input'");
         return NULL;
     }
+    if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
+        return NULL;
 
-    intdigest = XXH32(buf.buf, buf.len, seed);
+    if (nargs > 1) {
+        unsigned long raw = PyLong_AsUnsignedLong(args[1]);
+        if (raw == (unsigned long)-1 && PyErr_Occurred())
+            PyErr_Clear();
+        seed = (XXH32_hash_t)raw;
+    }
+    if (kwnames) {
+        for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
+            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "seed") == 0) {
+                PyObject *val = args[nargs + i];
+                unsigned long raw = PyLong_AsUnsignedLong(val);
+                if (raw == (unsigned long)-1 && PyErr_Occurred())
+                    PyErr_Clear();
+                seed = (XXH32_hash_t)raw;
+                break;
+            }
+        }
+    }
+
+    XXH32_hash_t intdigest = XXH32(buf.buf, buf.len, seed);
     PyBuffer_Release(&buf);
+    Py_XDECREF(buf_owner);
 
+    char retbuf[XXH32_DIGESTSIZE];
     XXH32_canonicalFromHash((XXH32_canonical_t *)retbuf, intdigest);
-
     return PyBytes_FromStringAndSize(retbuf, sizeof(retbuf));
 }
-
-static PyObject *xxh32_intdigest(PyObject *self, PyObject *args, PyObject *kwargs)
+static PyObject *xxh32_intdigest(PyObject *self, PyObject *const *args,
+                                  Py_ssize_t nargs, PyObject *kwnames)
 {
     XXH32_hash_t seed = 0;
-    XXH32_hash_t intdigest;
-    char *keywords[] = {"input", "seed", NULL};
     Py_buffer buf;
-    buf.buf = buf.obj = NULL;
+    PyObject *buf_owner;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s*|I:xxh32_intdigest", keywords, &buf, &seed)) {
+    if (nargs < 1) {
+        PyErr_SetString(PyExc_TypeError, "xxh32_intdigest() missing required argument 'input'");
         return NULL;
     }
+    if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
+        return NULL;
 
-    intdigest = XXH32(buf.buf, buf.len, seed);
+    if (nargs > 1) {
+        unsigned long raw = PyLong_AsUnsignedLong(args[1]);
+        if (raw == (unsigned long)-1 && PyErr_Occurred())
+            PyErr_Clear();
+        seed = (XXH32_hash_t)raw;
+    }
+    if (kwnames) {
+        for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
+            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "seed") == 0) {
+                PyObject *val = args[nargs + i];
+                unsigned long raw = PyLong_AsUnsignedLong(val);
+                if (raw == (unsigned long)-1 && PyErr_Occurred())
+                    PyErr_Clear();
+                seed = (XXH32_hash_t)raw;
+                break;
+            }
+        }
+    }
+
+    XXH32_hash_t intdigest = XXH32(buf.buf, buf.len, seed);
     PyBuffer_Release(&buf);
+    Py_XDECREF(buf_owner);
 
     return Py_BuildValue("I", intdigest);
 }
-
-static PyObject *xxh32_hexdigest(PyObject *self, PyObject *args, PyObject *kwargs)
+static PyObject *xxh32_hexdigest(PyObject *self, PyObject *const *args,
+                                  Py_ssize_t nargs, PyObject *kwnames)
 {
     XXH32_hash_t seed = 0;
-    XXH32_hash_t intdigest;
-    char digest[XXH32_DIGESTSIZE];
-    char *keywords[] = {"input", "seed", NULL};
     Py_buffer buf;
-    char retbuf[XXH32_DIGESTSIZE * 2];
-    int i, j;
+    PyObject *buf_owner;
 
-    buf.buf = buf.obj = NULL;
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s*|I:xxh32_hexdigest", keywords, &buf, &seed)) {
+    if (nargs < 1) {
+        PyErr_SetString(PyExc_TypeError, "xxh32_hexdigest() missing required argument 'input'");
         return NULL;
     }
+    if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
+        return NULL;
 
-    intdigest = XXH32(buf.buf, buf.len, seed);
+    if (nargs > 1) {
+        unsigned long raw = PyLong_AsUnsignedLong(args[1]);
+        if (raw == (unsigned long)-1 && PyErr_Occurred())
+            PyErr_Clear();
+        seed = (XXH32_hash_t)raw;
+    }
+    if (kwnames) {
+        for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
+            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "seed") == 0) {
+                PyObject *val = args[nargs + i];
+                unsigned long raw = PyLong_AsUnsignedLong(val);
+                if (raw == (unsigned long)-1 && PyErr_Occurred())
+                    PyErr_Clear();
+                seed = (XXH32_hash_t)raw;
+                break;
+            }
+        }
+    }
+
+    XXH32_hash_t intdigest = XXH32(buf.buf, buf.len, seed);
     PyBuffer_Release(&buf);
+    Py_XDECREF(buf_owner);
 
+    char digest[XXH32_DIGESTSIZE];
     XXH32_canonicalFromHash((XXH32_canonical_t *)digest, intdigest);
 
+    char retbuf[XXH32_DIGESTSIZE * 2];
+    int i, j;
     for (i = j = 0; i < XXH32_DIGESTSIZE; i++) {
         unsigned char c;
         c = (digest[i] >> 4) & 0xf;
@@ -124,69 +210,110 @@ static PyObject *xxh32_hexdigest(PyObject *self, PyObject *args, PyObject *kwarg
 }
 
 /* XXH64 */
-
-static PyObject *xxh64_digest(PyObject *self, PyObject *args, PyObject *kwargs)
+static PyObject *xxh64_digest(PyObject *self, PyObject *const *args,
+                               Py_ssize_t nargs, PyObject *kwnames)
 {
     XXH64_hash_t seed = 0;
-    XXH64_hash_t intdigest;
-    char *keywords[] = {"input", "seed", NULL};
     Py_buffer buf;
-    char retbuf[XXH64_DIGESTSIZE];
+    PyObject *buf_owner;
 
-    buf.buf = buf.obj = NULL;
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s*|K:xxh64_digest", keywords, &buf, &seed)) {
+    if (nargs < 1) {
+        PyErr_SetString(PyExc_TypeError, "xxh64_digest() missing required argument 'input'");
         return NULL;
     }
+    if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
+        return NULL;
 
-    intdigest = XXH64(buf.buf, buf.len, seed);
+    if (nargs > 1) {
+        seed = PyLong_AsUnsignedLongLongMask(args[1]);
+    }
+    if (kwnames) {
+        for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
+            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "seed") == 0) {
+                PyObject *val = args[nargs + i];
+                seed = PyLong_AsUnsignedLongLongMask(val);
+                break;
+            }
+        }
+    }
+
+    XXH64_hash_t intdigest = XXH64(buf.buf, buf.len, seed);
     PyBuffer_Release(&buf);
+    Py_XDECREF(buf_owner);
 
+    char retbuf[XXH64_DIGESTSIZE];
     XXH64_canonicalFromHash((XXH64_canonical_t *)retbuf, intdigest);
-
     return PyBytes_FromStringAndSize(retbuf, sizeof(retbuf));
 }
-
-static PyObject *xxh64_intdigest(PyObject *self, PyObject *args, PyObject *kwargs)
+static PyObject *xxh64_intdigest(PyObject *self, PyObject *const *args,
+                                  Py_ssize_t nargs, PyObject *kwnames)
 {
     XXH64_hash_t seed = 0;
-    XXH64_hash_t intdigest;
-    char *keywords[] = {"input", "seed", NULL};
     Py_buffer buf;
+    PyObject *buf_owner;
 
-    buf.buf = buf.obj = NULL;
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s*|K:xxh64_intdigest", keywords, &buf, &seed)) {
+    if (nargs < 1) {
+        PyErr_SetString(PyExc_TypeError, "xxh64_intdigest() missing required argument 'input'");
         return NULL;
     }
+    if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
+        return NULL;
 
-    intdigest = XXH64(buf.buf, buf.len, seed);
+    if (nargs > 1) {
+        seed = PyLong_AsUnsignedLongLongMask(args[1]);
+    }
+    if (kwnames) {
+        for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
+            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "seed") == 0) {
+                PyObject *val = args[nargs + i];
+                seed = PyLong_AsUnsignedLongLongMask(val);
+                break;
+            }
+        }
+    }
+
+    XXH64_hash_t intdigest = XXH64(buf.buf, buf.len, seed);
     PyBuffer_Release(&buf);
+    Py_XDECREF(buf_owner);
 
     return Py_BuildValue("K", intdigest);
 }
-
-static PyObject *xxh64_hexdigest(PyObject *self, PyObject *args, PyObject *kwargs)
+static PyObject *xxh64_hexdigest(PyObject *self, PyObject *const *args,
+                                  Py_ssize_t nargs, PyObject *kwnames)
 {
     XXH64_hash_t seed = 0;
-    XXH64_hash_t intdigest;
-    char digest[XXH64_DIGESTSIZE];
-    char *keywords[] = {"input", "seed", NULL};
     Py_buffer buf;
-    char retbuf[XXH64_DIGESTSIZE * 2];
-    int i, j;
+    PyObject *buf_owner;
 
-    buf.buf = buf.obj = NULL;
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s*|K:xxh64_hexdigest", keywords, &buf, &seed)) {
+    if (nargs < 1) {
+        PyErr_SetString(PyExc_TypeError, "xxh64_hexdigest() missing required argument 'input'");
         return NULL;
     }
+    if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
+        return NULL;
 
-    intdigest = XXH64(buf.buf, buf.len, seed);
+    if (nargs > 1) {
+        seed = PyLong_AsUnsignedLongLongMask(args[1]);
+    }
+    if (kwnames) {
+        for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
+            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "seed") == 0) {
+                PyObject *val = args[nargs + i];
+                seed = PyLong_AsUnsignedLongLongMask(val);
+                break;
+            }
+        }
+    }
+
+    XXH64_hash_t intdigest = XXH64(buf.buf, buf.len, seed);
     PyBuffer_Release(&buf);
+    Py_XDECREF(buf_owner);
 
+    char digest[XXH64_DIGESTSIZE];
     XXH64_canonicalFromHash((XXH64_canonical_t *)digest, intdigest);
 
+    char retbuf[XXH64_DIGESTSIZE * 2];
+    int i, j;
     for (i = j = 0; i < XXH64_DIGESTSIZE; i++) {
         unsigned char c;
         c = (digest[i] >> 4) & 0xf;
@@ -201,70 +328,110 @@ static PyObject *xxh64_hexdigest(PyObject *self, PyObject *args, PyObject *kwarg
 }
 
 /* XXH3_64 */
-
-static PyObject *xxh3_64_digest(PyObject *self, PyObject *args, PyObject *kwargs)
+static PyObject *xxh3_64_digest(PyObject *self, PyObject *const *args,
+                               Py_ssize_t nargs, PyObject *kwnames)
 {
     XXH64_hash_t seed = 0;
-    XXH64_hash_t intdigest = 0;
-    char *keywords[] = {"input", "seed", NULL};
     Py_buffer buf;
-    char retbuf[XXH64_DIGESTSIZE];
+    PyObject *buf_owner;
 
-    buf.buf = buf.obj = NULL;
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s*|K:xxh3_64_digest", keywords, &buf, &seed)) {
+    if (nargs < 1) {
+        PyErr_SetString(PyExc_TypeError, "xxh3_64_digest() missing required argument 'input'");
         return NULL;
     }
+    if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
+        return NULL;
 
-    intdigest = XXH3_64bits_withSeed(buf.buf, buf.len, seed);
+    if (nargs > 1) {
+        seed = PyLong_AsUnsignedLongLongMask(args[1]);
+    }
+    if (kwnames) {
+        for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
+            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "seed") == 0) {
+                PyObject *val = args[nargs + i];
+                seed = PyLong_AsUnsignedLongLongMask(val);
+                break;
+            }
+        }
+    }
+
+    XXH64_hash_t intdigest = XXH3_64bits_withSeed(buf.buf, buf.len, seed);
     PyBuffer_Release(&buf);
+    Py_XDECREF(buf_owner);
 
+    char retbuf[XXH64_DIGESTSIZE];
     XXH64_canonicalFromHash((XXH64_canonical_t *)retbuf, intdigest);
-
     return PyBytes_FromStringAndSize(retbuf, sizeof(retbuf));
 }
-
-static PyObject *xxh3_64_intdigest(PyObject *self, PyObject *args, PyObject *kwargs)
+static PyObject *xxh3_64_intdigest(PyObject *self, PyObject *const *args,
+                                  Py_ssize_t nargs, PyObject *kwnames)
 {
     XXH64_hash_t seed = 0;
-    XXH64_hash_t intdigest = 0;
-    char *keywords[] = {"input", "seed", NULL};
     Py_buffer buf;
+    PyObject *buf_owner;
 
-    buf.buf = buf.obj = NULL;
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s*|K:xxh3_64_intdigest", keywords, &buf, &seed)) {
+    if (nargs < 1) {
+        PyErr_SetString(PyExc_TypeError, "xxh3_64_intdigest() missing required argument 'input'");
         return NULL;
     }
+    if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
+        return NULL;
 
-    intdigest = XXH3_64bits_withSeed(buf.buf, buf.len, seed);
+    if (nargs > 1) {
+        seed = PyLong_AsUnsignedLongLongMask(args[1]);
+    }
+    if (kwnames) {
+        for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
+            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "seed") == 0) {
+                PyObject *val = args[nargs + i];
+                seed = PyLong_AsUnsignedLongLongMask(val);
+                break;
+            }
+        }
+    }
+
+    XXH64_hash_t intdigest = XXH3_64bits_withSeed(buf.buf, buf.len, seed);
     PyBuffer_Release(&buf);
+    Py_XDECREF(buf_owner);
 
     return Py_BuildValue("K", intdigest);
 }
-
-static PyObject *xxh3_64_hexdigest(PyObject *self, PyObject *args, PyObject *kwargs)
+static PyObject *xxh3_64_hexdigest(PyObject *self, PyObject *const *args,
+                                  Py_ssize_t nargs, PyObject *kwnames)
 {
     XXH64_hash_t seed = 0;
-    XXH64_hash_t intdigest;
-    char digest[XXH64_DIGESTSIZE];
-    char *keywords[] = {"input", "seed", NULL};
     Py_buffer buf;
-    char retbuf[XXH64_DIGESTSIZE * 2];
-    int i, j;
+    PyObject *buf_owner;
 
-    buf.buf = buf.obj = NULL;
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s*|K:xxh3_64_hexdigest", keywords, &buf, &seed)) {
+    if (nargs < 1) {
+        PyErr_SetString(PyExc_TypeError, "xxh3_64_hexdigest() missing required argument 'input'");
         return NULL;
     }
+    if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
+        return NULL;
 
-    intdigest = XXH3_64bits_withSeed(buf.buf, buf.len, seed);
+    if (nargs > 1) {
+        seed = PyLong_AsUnsignedLongLongMask(args[1]);
+    }
+    if (kwnames) {
+        for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
+            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "seed") == 0) {
+                PyObject *val = args[nargs + i];
+                seed = PyLong_AsUnsignedLongLongMask(val);
+                break;
+            }
+        }
+    }
+
+    XXH64_hash_t intdigest = XXH3_64bits_withSeed(buf.buf, buf.len, seed);
     PyBuffer_Release(&buf);
+    Py_XDECREF(buf_owner);
 
-
+    char digest[XXH64_DIGESTSIZE];
     XXH64_canonicalFromHash((XXH64_canonical_t *)digest, intdigest);
 
+    char retbuf[XXH64_DIGESTSIZE * 2];
+    int i, j;
     for (i = j = 0; i < XXH64_DIGESTSIZE; i++) {
         unsigned char c;
         c = (digest[i] >> 4) & 0xf;
@@ -279,82 +446,120 @@ static PyObject *xxh3_64_hexdigest(PyObject *self, PyObject *args, PyObject *kwa
 }
 
 /* XXH3_128 */
-
-static PyObject *xxh3_128_digest(PyObject *self, PyObject *args, PyObject *kwargs)
+static PyObject *xxh3_128_digest(PyObject *self, PyObject *const *args,
+                               Py_ssize_t nargs, PyObject *kwnames)
 {
     XXH64_hash_t seed = 0;
-    XXH128_hash_t intdigest;
-    char *keywords[] = {"input", "seed", NULL};
     Py_buffer buf;
-    char retbuf[XXH128_DIGESTSIZE];
+    PyObject *buf_owner;
 
-    buf.buf = buf.obj = NULL;
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s*|K:xxh3_128_digest", keywords, &buf, &seed)) {
+    if (nargs < 1) {
+        PyErr_SetString(PyExc_TypeError, "xxh3_128_digest() missing required argument 'input'");
         return NULL;
     }
+    if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
+        return NULL;
 
-    intdigest = XXH3_128bits_withSeed(buf.buf, buf.len, seed);
+    if (nargs > 1) {
+        seed = PyLong_AsUnsignedLongLongMask(args[1]);
+    }
+    if (kwnames) {
+        for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
+            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "seed") == 0) {
+                PyObject *val = args[nargs + i];
+                seed = PyLong_AsUnsignedLongLongMask(val);
+                break;
+            }
+        }
+    }
+
+    XXH128_hash_t intdigest = XXH3_128bits_withSeed(buf.buf, buf.len, seed);
     PyBuffer_Release(&buf);
+    Py_XDECREF(buf_owner);
 
+    char retbuf[XXH128_DIGESTSIZE];
     XXH128_canonicalFromHash((XXH128_canonical_t *)retbuf, intdigest);
-
     return PyBytes_FromStringAndSize(retbuf, sizeof(retbuf));
 }
-
-static PyObject *xxh3_128_intdigest(PyObject *self, PyObject *args, PyObject *kwargs)
+static PyObject *xxh3_128_intdigest(PyObject *self, PyObject *const *args,
+                                     Py_ssize_t nargs, PyObject *kwnames)
 {
     XXH64_hash_t seed = 0;
-    XXH128_hash_t intdigest;
-    char *keywords[] = {"input", "seed", NULL};
     Py_buffer buf;
-    PyObject *result, *low, *high, *sixtyfour;
+    PyObject *buf_owner;
 
-    buf.buf = buf.obj = NULL;
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s*|K:xxh3_128_intdigest", keywords, &buf, &seed)) {
+    if (nargs < 1) {
+        PyErr_SetString(PyExc_TypeError, "xxh3_128_intdigest() missing required argument 'input'");
         return NULL;
     }
+    if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
+        return NULL;
 
-    intdigest = XXH3_128bits_withSeed(buf.buf, buf.len, seed);
+    if (nargs > 1) {
+        seed = PyLong_AsUnsignedLongLongMask(args[1]);
+    }
+    if (kwnames) {
+        for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
+            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "seed") == 0) {
+                PyObject *val = args[nargs + i];
+                seed = PyLong_AsUnsignedLongLongMask(val);
+                break;
+            }
+        }
+    }
+
+    XXH128_hash_t intdigest = XXH3_128bits_withSeed(buf.buf, buf.len, seed);
     PyBuffer_Release(&buf);
+    Py_XDECREF(buf_owner);
 
-    sixtyfour = PyLong_FromLong(64);
-    low = PyLong_FromUnsignedLongLong(intdigest.low64);
-    high = PyLong_FromUnsignedLongLong(intdigest.high64);
-
-    result = PyNumber_Lshift(high, sixtyfour);
+    PyObject *sixtyfour = PyLong_FromLong(64);
+    PyObject *low = PyLong_FromUnsignedLongLong(intdigest.low64);
+    PyObject *high = PyLong_FromUnsignedLongLong(intdigest.high64);
+    PyObject *result = PyNumber_Lshift(high, sixtyfour);
     Py_DECREF(high);
     high = result;
     result = PyNumber_Add(high, low);
     Py_DECREF(high);
     Py_DECREF(low);
     Py_DECREF(sixtyfour);
-
     return result;
 }
-
-static PyObject *xxh3_128_hexdigest(PyObject *self, PyObject *args, PyObject *kwargs)
+static PyObject *xxh3_128_hexdigest(PyObject *self, PyObject *const *args,
+                                  Py_ssize_t nargs, PyObject *kwnames)
 {
     XXH64_hash_t seed = 0;
-    XXH128_hash_t intdigest;
-    char digest[XXH128_DIGESTSIZE];
-    char *keywords[] = {"input", "seed", NULL};
     Py_buffer buf;
-    char retbuf[XXH128_DIGESTSIZE * 2];
-    int i, j;
+    PyObject *buf_owner;
 
-    buf.buf = buf.obj = NULL;
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s*|K:xxh3_128_hexdigest", keywords, &buf, &seed)) {
+    if (nargs < 1) {
+        PyErr_SetString(PyExc_TypeError, "xxh3_128_hexdigest() missing required argument 'input'");
         return NULL;
     }
+    if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
+        return NULL;
 
-    intdigest = XXH3_128bits_withSeed(buf.buf, buf.len, seed);
+    if (nargs > 1) {
+        seed = PyLong_AsUnsignedLongLongMask(args[1]);
+    }
+    if (kwnames) {
+        for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
+            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "seed") == 0) {
+                PyObject *val = args[nargs + i];
+                seed = PyLong_AsUnsignedLongLongMask(val);
+                break;
+            }
+        }
+    }
+
+    XXH128_hash_t intdigest = XXH3_128bits_withSeed(buf.buf, buf.len, seed);
     PyBuffer_Release(&buf);
+    Py_XDECREF(buf_owner);
 
+    char digest[XXH128_DIGESTSIZE];
     XXH128_canonicalFromHash((XXH128_canonical_t *)digest, intdigest);
 
+    char retbuf[XXH128_DIGESTSIZE * 2];
+    int i, j;
     for (i = j = 0; i < XXH128_DIGESTSIZE; i++) {
         unsigned char c;
         c = (digest[i] >> 4) & 0xf;
@@ -1659,18 +1864,18 @@ static PyModuleDef_Slot slots[] = {
 };
 
 static PyMethodDef methods[] = {
-    {"xxh32_digest",       (PyCFunction)xxh32_digest,       METH_VARARGS | METH_KEYWORDS, "xxh32_digest"},
-    {"xxh32_intdigest",    (PyCFunction)xxh32_intdigest,    METH_VARARGS | METH_KEYWORDS, "xxh32_intdigest"},
-    {"xxh32_hexdigest",    (PyCFunction)xxh32_hexdigest,    METH_VARARGS | METH_KEYWORDS, "xxh32_hexdigest"},
-    {"xxh64_digest",       (PyCFunction)xxh64_digest,       METH_VARARGS | METH_KEYWORDS, "xxh64_digest"},
-    {"xxh64_intdigest",    (PyCFunction)xxh64_intdigest,    METH_VARARGS | METH_KEYWORDS, "xxh64_intdigest"},
-    {"xxh64_hexdigest",    (PyCFunction)xxh64_hexdigest,    METH_VARARGS | METH_KEYWORDS, "xxh64_hexdigest"},
-    {"xxh3_64_digest",     (PyCFunction)xxh3_64_digest,     METH_VARARGS | METH_KEYWORDS, "xxh3_64_digest"},
-    {"xxh3_64_intdigest",  (PyCFunction)xxh3_64_intdigest,  METH_VARARGS | METH_KEYWORDS, "xxh3_64_intdigest"},
-    {"xxh3_64_hexdigest",  (PyCFunction)xxh3_64_hexdigest,  METH_VARARGS | METH_KEYWORDS, "xxh3_64_hexdigest"},
-    {"xxh3_128_digest",    (PyCFunction)xxh3_128_digest,    METH_VARARGS | METH_KEYWORDS, "xxh3_128_digest"},
-    {"xxh3_128_intdigest", (PyCFunction)xxh3_128_intdigest, METH_VARARGS | METH_KEYWORDS, "xxh3_128_intdigest"},
-    {"xxh3_128_hexdigest", (PyCFunction)xxh3_128_hexdigest, METH_VARARGS | METH_KEYWORDS, "xxh3_128_hexdigest"},
+    {"xxh32_digest",       (PyCFunction)xxh32_digest,       METH_FASTCALL | METH_KEYWORDS, "xxh32_digest"},
+    {"xxh32_intdigest",    (PyCFunction)xxh32_intdigest,    METH_FASTCALL | METH_KEYWORDS, "xxh32_intdigest"},
+    {"xxh32_hexdigest",    (PyCFunction)xxh32_hexdigest,    METH_FASTCALL | METH_KEYWORDS, "xxh32_hexdigest"},
+    {"xxh64_digest",       (PyCFunction)xxh64_digest,       METH_FASTCALL | METH_KEYWORDS, "xxh64_digest"},
+    {"xxh64_intdigest",    (PyCFunction)xxh64_intdigest,    METH_FASTCALL | METH_KEYWORDS, "xxh64_intdigest"},
+    {"xxh64_hexdigest",    (PyCFunction)xxh64_hexdigest,    METH_FASTCALL | METH_KEYWORDS, "xxh64_hexdigest"},
+    {"xxh3_64_digest",     (PyCFunction)xxh3_64_digest,     METH_FASTCALL | METH_KEYWORDS, "xxh3_64_digest"},
+    {"xxh3_64_intdigest",  (PyCFunction)xxh3_64_intdigest,  METH_FASTCALL | METH_KEYWORDS, "xxh3_64_intdigest"},
+    {"xxh3_64_hexdigest",  (PyCFunction)xxh3_64_hexdigest,  METH_FASTCALL | METH_KEYWORDS, "xxh3_64_hexdigest"},
+    {"xxh3_128_digest",    (PyCFunction)xxh3_128_digest,    METH_FASTCALL | METH_KEYWORDS, "xxh3_128_digest"},
+    {"xxh3_128_intdigest", (PyCFunction)xxh3_128_intdigest, METH_FASTCALL | METH_KEYWORDS, "xxh3_128_intdigest"},
+    {"xxh3_128_hexdigest", (PyCFunction)xxh3_128_hexdigest, METH_FASTCALL | METH_KEYWORDS, "xxh3_128_hexdigest"},
     {NULL, NULL, 0, NULL}
 };
 
