@@ -1594,7 +1594,9 @@ static int _clear(PyObject *module)
 
 static PyModuleDef_Slot slots[] = {
     {Py_mod_exec, _exec},
+#if PY_VERSION_HEX >= 0x030c0000
     {Py_mod_multiple_interpreters, Py_MOD_MULTIPLE_INTERPRETERS_SUPPORTED},
+#endif
 #ifdef Py_GIL_DISABLED
     {Py_mod_gil, Py_MOD_GIL_NOT_USED},
 #endif
