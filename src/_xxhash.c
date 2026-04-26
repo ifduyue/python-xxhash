@@ -532,6 +532,7 @@ static PyObject *PYXXH32_copy(PYXXH32Object *self)
     }
 
     if ((p->xxhash_state = XXH32_createState()) == NULL) {
+        PyObject_Del(p);
         return NULL;
     }
 
