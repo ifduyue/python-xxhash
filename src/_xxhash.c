@@ -1378,7 +1378,7 @@ PyDoc_STRVAR(
     PYXXH3_128_digest_doc,
     "digest() -> string\n\n"
     "Return the digest of the strings passed to the update() method so\n"
-    "far. This is a 8-byte string which may contain non-ASCII characters,\n"
+    "far. This is a 16-byte string which may contain non-ASCII characters,\n"
     "including null bytes.");
 
 static PyObject *PYXXH3_128_digest(PYXXH3_128Object *self)
