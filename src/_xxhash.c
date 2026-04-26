@@ -1008,8 +1008,11 @@ static PyObject *PYXXH3_64_new(PyTypeObject *type, PyObject *args, PyObject *kwa
     }
 
     if ((self->xxhash_state = XXH3_createState()) == NULL) {
+        PyObject_Del(self);
         return NULL;
     }
+
+    self->seed = 0;
     XXH3_64bits_reset_withSeed(self->xxhash_state, 0);
 
     return (PyObject *)self;
