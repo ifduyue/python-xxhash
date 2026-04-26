@@ -1319,6 +1319,7 @@ static PyObject *PYXXH3_128_new(PyTypeObject *type, PyObject *args, PyObject *kw
     }
 
     if ((self->xxhash_state = XXH3_createState()) == NULL) {
+        PyObject_Del(self);
         return NULL;
     }
 
