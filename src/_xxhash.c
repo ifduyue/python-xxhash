@@ -709,6 +709,7 @@ static PyObject *PYXXH64_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
     }
 
     if ((self->xxhash_state = XXH64_createState()) == NULL) {
+        PyObject_Del(self);
         return NULL;
     }
 
