@@ -17,6 +17,10 @@ python-xxhash
     :target: https://pypi.org/project/xxhash/
     :alt: License
 
+.. image:: https://img.shields.io/endpoint?url=https://codspeed.io/badge.json
+    :target: https://codspeed.io/ifduyue/python-xxhash?utm_source=badge
+    :alt: CodSpeed
+
 
 .. _HMAC: http://en.wikipedia.org/wiki/Hash-based_message_authentication_code
 .. _xxHash: https://github.com/Cyan4973/xxHash
