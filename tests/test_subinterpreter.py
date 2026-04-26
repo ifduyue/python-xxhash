@@ -146,6 +146,120 @@ class TestSubInterpreter(unittest.TestCase):
             self._destroy_interpreter(interp)
 
 
+class TestPerInterpreterGIL(unittest.TestCase):
+    """Test that the extension works correctly in sub-interpreters with own GIL.
+
+    This validates the Py_MOD_PER_INTERPRETER_GIL_SUPPORTED flag.
+    """
+
+    def _create_interpreter_with_own_gil(self):
+        _skip_if_no_interpreters()
+        import _interpreters
+        cfg = _interpreters.new_config("isolated", gil="own")
+        return _interpreters.create(cfg)
+
+    def _destroy_interpreter(self, interp_id):
+        import _interpreters
+        _interpreters.destroy(interp_id)
+
+    def test_import_in_per_gil_interpreter(self):
+        """The C extension can be imported in a sub-interpreter with its own GIL."""
+        interp = self._create_interpreter_with_own_gil()
+        try:
+            import _interpreters
+            _interpreters.exec(interp, "import xxhash")
+        finally:
+            self._destroy_interpreter(interp)
+
+    def test_xxh32_in_per_gil_interpreter(self):
+        """xxh32 produces correct results in a sub-interpreter with its own GIL."""
+        interp = self._create_interpreter_with_own_gil()
+        try:
+            import _interpreters
+            _interpreters.exec(
+                interp,
+                "import xxhash; "
+                "assert xxhash.xxh32('a').intdigest() == 1426945110, 'wrong hash'",
+            )
+        finally:
+            self._destroy_interpreter(interp)
+
+    def test_xxh64_in_per_gil_interpreter(self):
+        """xxh64 produces correct results in a sub-interpreter with its own GIL."""
+        interp = self._create_interpreter_with_own_gil()
+        try:
+            import _interpreters
+            _interpreters.exec(
+                interp,
+                "import xxhash; "
+                "assert xxhash.xxh64('a').intdigest() == 932445443, 'wrong hash'",
+            )
+        finally:
+            self._destroy_interpreter(interp)
+
+    def test_xxh3_64_in_per_gil_interpreter(self):
+        """xxh3_64 produces correct results in a sub-interpreter with its own GIL."""
+        interp = self._create_interpreter_with_own_gil()
+        try:
+            import _interpreters
+            _interpreters.exec(
+                interp,
+                "import xxhash; "
+                "h = xxhash.xxh3_64('a').hexdigest(); "
+                "assert h == xxhash.xxh3_64_hexdigest('a'), 'mismatch'",
+            )
+        finally:
+            self._destroy_interpreter(interp)
+
+    def test_xxh3_128_in_per_gil_interpreter(self):
+        """xxh3_128 produces correct results in a sub-interpreter with its own GIL."""
+        interp = self._create_interpreter_with_own_gil()
+        try:
+            import _interpreters
+            _interpreters.exec(
+                interp,
+                "import xxhash; "
+                "h = xxhash.xxh3_128('a').hexdigest(); "
+                "assert h == xxhash.xxh3_128_hexdigest('a'), 'mismatch'",
+            )
+        finally:
+            self._destroy_interpreter(interp)
+
+    def test_update_copy_reset_in_per_gil_interpreter(self):
+        """update(), copy(), reset() work in a sub-interpreter with its own GIL."""
+        interp = self._create_interpreter_with_own_gil()
+        try:
+            import _interpreters
+            _interpreters.exec(
+                interp,
+                "import xxhash\n"
+                "x = xxhash.xxh32()\n"
+                "x.update('abc')\n"
+                "y = x.copy()\n"
+                "assert x.digest() == y.digest(), 'copy mismatch'\n"
+                "y.update('d')\n"
+                "assert x.digest() != y.digest(), 'copy not independent'\n"
+                "x.reset()\n"
+                "assert x.intdigest() == xxhash.xxh32().intdigest(), 'reset failed'\n",
+            )
+        finally:
+            self._destroy_interpreter(interp)
+
+    def test_multiple_per_gil_interpreters(self):
+        """Multiple sub-interpreters with own GIL can use xxhash independently."""
+        interp1 = self._create_interpreter_with_own_gil()
+        interp2 = self._create_interpreter_with_own_gil()
+        try:
+            import _interpreters
+            _interpreters.exec(interp1, "import xxhash; val = xxhash.xxh32('hello').intdigest()")
+            _interpreters.exec(interp2, "import xxhash; val = xxhash.xxh64('hello').intdigest()")
+            _interpreters.exec(interp1, "assert xxhash.xxh32('hello').intdigest() == val")
+            _interpreters.exec(interp2, "assert xxhash.xxh64('hello').intdigest() == val")
+        finally:
+            self._destroy_interpreter(interp1)
+            self._destroy_interpreter(interp2)
+
+
 class TestPerModuleState(unittest.TestCase):
     """Test that per-module state is properly isolated (heap types)."""
 
