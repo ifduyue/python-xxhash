@@ -1632,7 +1632,7 @@ static int _exec(PyObject *module)
     return 0;
 }
 
-static const PyModuleDef_Slot slots[] = {
+static PyModuleDef_Slot slots[] = {
     {Py_mod_exec, _exec},
 #ifdef Py_GIL_DISABLED
     {Py_mod_gil, Py_MOD_GIL_NOT_USED},
