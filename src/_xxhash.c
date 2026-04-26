@@ -1462,6 +1462,7 @@ static PyObject *PYXXH3_128_copy(PYXXH3_128Object *self)
     }
 
     if ((p->xxhash_state = XXH3_createState()) == NULL) {
+        PyObject_Del(p);
         return NULL;
     }
 
