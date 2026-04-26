@@ -46,6 +46,18 @@
 
 
 /*****************************************************************************
+ * Module State ***************************************************************
+ ****************************************************************************/
+
+typedef struct {
+    PyTypeObject *xxh32_type;
+    PyTypeObject *xxh64_type;
+    PyTypeObject *xxh3_64_type;
+    PyTypeObject *xxh3_128_type;
+} module_state;
+
+
+/*****************************************************************************
  * Module Functions ***********************************************************
  ****************************************************************************/
 
@@ -381,12 +393,10 @@ typedef struct {
     XXH32_hash_t seed;
 } PYXXH32Object;
 
-static PyTypeObject PYXXH32Type;
-
 static void PYXXH32_dealloc(PYXXH32Object *self)
 {
     XXH32_freeState(self->xxhash_state);
-    PyObject_Del(self);
+    Py_TYPE(self)->tp_free((PyObject *)self);
 }
 
 static void PYXXH32_do_update(PYXXH32Object *self, Py_buffer *buf)
@@ -404,12 +414,13 @@ static PyObject *PYXXH32_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
 {
     PYXXH32Object *self;
 
-    if ((self = PyObject_New(PYXXH32Object, &PYXXH32Type)) == NULL) {
+    if ((self = PyObject_New(PYXXH32Object, type)) == NULL) {
         return NULL;
     }
 
     if ((self->xxhash_state = XXH32_createState()) == NULL) {
-        return NULL;
+        Py_TYPE(self)->tp_free((PyObject *)self);
+        return PyErr_NoMemory();
     }
 
     return (PyObject *)self;
@@ -526,12 +537,13 @@ static PyObject *PYXXH32_copy(PYXXH32Object *self)
 {
     PYXXH32Object *p;
 
-    if ((p = PyObject_New(PYXXH32Object, &PYXXH32Type)) == NULL) {
+    if ((p = PyObject_New(PYXXH32Object, Py_TYPE(self))) == NULL) {
         return NULL;
     }
 
     if ((p->xxhash_state = XXH32_createState()) == NULL) {
-        return NULL;
+        Py_TYPE(p)->tp_free((PyObject *)p);
+        return PyErr_NoMemory();
     }
 
     p->seed = self->seed;
@@ -631,45 +643,21 @@ PyDoc_STRVAR(
     "intdigest() -- return the current digest as an integer\n"
     "copy() -- return a copy of the current xxh32 object");
 
-static PyTypeObject PYXXH32Type = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    "xxhash.xxh32",                /* tp_name */
-    sizeof(PYXXH32Object),         /* tp_basicsize */
-    0,                             /* tp_itemsize */
-    (destructor)PYXXH32_dealloc,   /* tp_dealloc */
-    0,                             /* tp_print */
-    0,                             /* tp_getattr */
-    0,                             /* tp_setattr */
-    0,                             /* tp_compare */
-    0,                             /* tp_repr */
-    0,                             /* tp_as_number */
-    0,                             /* tp_as_sequence */
-    0,                             /* tp_as_mapping */
-    0,                             /* tp_hash */
-    0,                             /* tp_call */
-    0,                             /* tp_str */
-    0,                             /* tp_getattro */
-    0,                             /* tp_setattro */
-    0,                             /* tp_as_buffer */
-    Py_TPFLAGS_DEFAULT,            /* tp_flags */
-    PYXXH32Type_doc,               /* tp_doc */
-    0,                             /* tp_traverse */
-    0,                             /* tp_clear */
-    0,                             /* tp_richcompare */
-    0,                             /* tp_weaklistoffset */
-    0,                             /* tp_iter */
-    0,                             /* tp_iternext */
-    PYXXH32_methods,               /* tp_methods */
-    0,                             /* tp_members */
-    PYXXH32_getseters,             /* tp_getset */
-    0,                             /* tp_base */
-    0,                             /* tp_dict */
-    0,                             /* tp_descr_get */
-    0,                             /* tp_descr_set */
-    0,                             /* tp_dictoffset */
-    (initproc)PYXXH32_init,        /* tp_init */
-    0,                             /* tp_alloc */
-    PYXXH32_new,                   /* tp_new */
+static PyType_Slot xxh32_slots[] = {
+    {Py_tp_dealloc, (void *)PYXXH32_dealloc},
+    {Py_tp_doc, (void *)PYXXH32Type_doc},
+    {Py_tp_methods, PYXXH32_methods},
+    {Py_tp_getset, PYXXH32_getseters},
+    {Py_tp_init, (void *)PYXXH32_init},
+    {Py_tp_new, (void *)PYXXH32_new},
+    {0, NULL},
+};
+
+static PyType_Spec xxh32_spec = {
+    .name = "xxhash.xxh32",
+    .basicsize = sizeof(PYXXH32Object),
+    .flags = Py_TPFLAGS_DEFAULT,
+    .slots = xxh32_slots,
 };
 
 
@@ -682,12 +670,10 @@ typedef struct {
     XXH64_hash_t seed;
 } PYXXH64Object;
 
-static PyTypeObject PYXXH64Type;
-
 static void PYXXH64_dealloc(PYXXH64Object *self)
 {
     XXH64_freeState(self->xxhash_state);
-    PyObject_Del(self);
+    Py_TYPE(self)->tp_free((PyObject *)self);
 }
 
 static void PYXXH64_do_update(PYXXH64Object *self, Py_buffer *buf)
@@ -703,12 +689,13 @@ static PyObject *PYXXH64_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
 {
     PYXXH64Object *self;
 
-    if ((self = PyObject_New(PYXXH64Object, &PYXXH64Type)) == NULL) {
+    if ((self = PyObject_New(PYXXH64Object, type)) == NULL) {
         return NULL;
     }
 
     if ((self->xxhash_state = XXH64_createState()) == NULL) {
-        return NULL;
+        Py_TYPE(self)->tp_free((PyObject *)self);
+        return PyErr_NoMemory();
     }
 
     return (PyObject *)self;
@@ -825,12 +812,13 @@ static PyObject *PYXXH64_copy(PYXXH64Object *self)
 {
     PYXXH64Object *p;
 
-    if ((p = PyObject_New(PYXXH64Object, &PYXXH64Type)) == NULL) {
+    if ((p = PyObject_New(PYXXH64Object, Py_TYPE(self))) == NULL) {
         return NULL;
     }
 
     if ((p->xxhash_state = XXH64_createState()) == NULL) {
-        return NULL;
+        Py_TYPE(p)->tp_free((PyObject *)p);
+        return PyErr_NoMemory();
     }
 
     p->seed = self->seed;
@@ -930,45 +918,21 @@ PyDoc_STRVAR(
     "intdigest() -- return the current digest as an integer\n"
     "copy() -- return a copy of the current xxh64 object");
 
-static PyTypeObject PYXXH64Type = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    "xxhash.xxh64",                /* tp_name */
-    sizeof(PYXXH64Object),         /* tp_basicsize */
-    0,                             /* tp_itemsize */
-    (destructor)PYXXH64_dealloc,   /* tp_dealloc */
-    0,                             /* tp_print */
-    0,                             /* tp_getattr */
-    0,                             /* tp_setattr */
-    0,                             /* tp_compare */
-    0,                             /* tp_repr */
-    0,                             /* tp_as_number */
-    0,                             /* tp_as_sequence */
-    0,                             /* tp_as_mapping */
-    0,                             /* tp_hash */
-    0,                             /* tp_call */
-    0,                             /* tp_str */
-    0,                             /* tp_getattro */
-    0,                             /* tp_setattro */
-    0,                             /* tp_as_buffer */
-    Py_TPFLAGS_DEFAULT,            /* tp_flags */
-    PYXXH64Type_doc,               /* tp_doc */
-    0,                             /* tp_traverse */
-    0,                             /* tp_clear */
-    0,                             /* tp_richcompare */
-    0,                             /* tp_weaklistoffset */
-    0,                             /* tp_iter */
-    0,                             /* tp_iternext */
-    PYXXH64_methods,               /* tp_methods */
-    0,                             /* tp_members */
-    PYXXH64_getseters,             /* tp_getset */
-    0,                             /* tp_base */
-    0,                             /* tp_dict */
-    0,                             /* tp_descr_get */
-    0,                             /* tp_descr_set */
-    0,                             /* tp_dictoffset */
-    (initproc)PYXXH64_init,        /* tp_init */
-    0,                             /* tp_alloc */
-    PYXXH64_new,                   /* tp_new */
+static PyType_Slot xxh64_slots[] = {
+    {Py_tp_dealloc, (void *)PYXXH64_dealloc},
+    {Py_tp_doc, (void *)PYXXH64Type_doc},
+    {Py_tp_methods, PYXXH64_methods},
+    {Py_tp_getset, PYXXH64_getseters},
+    {Py_tp_init, (void *)PYXXH64_init},
+    {Py_tp_new, (void *)PYXXH64_new},
+    {0, NULL},
+};
+
+static PyType_Spec xxh64_spec = {
+    .name = "xxhash.xxh64",
+    .basicsize = sizeof(PYXXH64Object),
+    .flags = Py_TPFLAGS_DEFAULT,
+    .slots = xxh64_slots,
 };
 
 /* XXH3_64 */
@@ -980,12 +944,10 @@ typedef struct {
     XXH64_hash_t seed;
 } PYXXH3_64Object;
 
-static PyTypeObject PYXXH3_64Type;
-
 static void PYXXH3_64_dealloc(PYXXH3_64Object *self)
 {
     XXH3_freeState(self->xxhash_state);
-    PyObject_Del(self);
+    Py_TYPE(self)->tp_free((PyObject *)self);
 }
 
 static void PYXXH3_64_do_update(PYXXH3_64Object *self, Py_buffer *buf)
@@ -1001,12 +963,13 @@ static PyObject *PYXXH3_64_new(PyTypeObject *type, PyObject *args, PyObject *kwa
 {
     PYXXH3_64Object *self;
 
-    if ((self = PyObject_New(PYXXH3_64Object, &PYXXH3_64Type)) == NULL) {
+    if ((self = PyObject_New(PYXXH3_64Object, type)) == NULL) {
         return NULL;
     }
 
     if ((self->xxhash_state = XXH3_createState()) == NULL) {
-        return NULL;
+        Py_TYPE(self)->tp_free((PyObject *)self);
+        return PyErr_NoMemory();
     }
     XXH3_64bits_reset_withSeed(self->xxhash_state, 0);
 
@@ -1125,12 +1088,13 @@ static PyObject *PYXXH3_64_copy(PYXXH3_64Object *self)
 {
     PYXXH3_64Object *p;
 
-    if ((p = PyObject_New(PYXXH3_64Object, &PYXXH3_64Type)) == NULL) {
+    if ((p = PyObject_New(PYXXH3_64Object, Py_TYPE(self))) == NULL) {
         return NULL;
     }
 
     if ((p->xxhash_state = XXH3_createState()) == NULL) {
-        return NULL;
+        Py_TYPE(p)->tp_free((PyObject *)p);
+        return PyErr_NoMemory();
     }
 
     p->seed = self->seed;
@@ -1237,45 +1201,21 @@ PyDoc_STRVAR(
     "intdigest() -- return the current digest as an integer\n"
     "copy() -- return a copy of the current xxh64 object");
 
-static PyTypeObject PYXXH3_64Type = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    "xxhash.xxh3_64",                /* tp_name */
-    sizeof(PYXXH3_64Object),         /* tp_basicsize */
-    0,                             /* tp_itemsize */
-    (destructor)PYXXH3_64_dealloc,   /* tp_dealloc */
-    0,                             /* tp_print */
-    0,                             /* tp_getattr */
-    0,                             /* tp_setattr */
-    0,                             /* tp_compare */
-    0,                             /* tp_repr */
-    0,                             /* tp_as_number */
-    0,                             /* tp_as_sequence */
-    0,                             /* tp_as_mapping */
-    0,                             /* tp_hash */
-    0,                             /* tp_call */
-    0,                             /* tp_str */
-    0,                             /* tp_getattro */
-    0,                             /* tp_setattro */
-    0,                             /* tp_as_buffer */
-    Py_TPFLAGS_DEFAULT,            /* tp_flags */
-    PYXXH3_64Type_doc,               /* tp_doc */
-    0,                             /* tp_traverse */
-    0,                             /* tp_clear */
-    0,                             /* tp_richcompare */
-    0,                             /* tp_weaklistoffset */
-    0,                             /* tp_iter */
-    0,                             /* tp_iternext */
-    PYXXH3_64_methods,               /* tp_methods */
-    0,                             /* tp_members */
-    PYXXH3_64_getseters,             /* tp_getset */
-    0,                             /* tp_base */
-    0,                             /* tp_dict */
-    0,                             /* tp_descr_get */
-    0,                             /* tp_descr_set */
-    0,                             /* tp_dictoffset */
-    (initproc)PYXXH3_64_init,        /* tp_init */
-    0,                             /* tp_alloc */
-    PYXXH3_64_new,                   /* tp_new */
+static PyType_Slot xxh3_64_slots[] = {
+    {Py_tp_dealloc, (void *)PYXXH3_64_dealloc},
+    {Py_tp_doc, (void *)PYXXH3_64Type_doc},
+    {Py_tp_methods, PYXXH3_64_methods},
+    {Py_tp_getset, PYXXH3_64_getseters},
+    {Py_tp_init, (void *)PYXXH3_64_init},
+    {Py_tp_new, (void *)PYXXH3_64_new},
+    {0, NULL},
+};
+
+static PyType_Spec xxh3_64_spec = {
+    .name = "xxhash.xxh3_64",
+    .basicsize = sizeof(PYXXH3_64Object),
+    .flags = Py_TPFLAGS_DEFAULT,
+    .slots = xxh3_64_slots,
 };
 
 
@@ -1288,12 +1228,10 @@ typedef struct {
     XXH64_hash_t seed;
 } PYXXH3_128Object;
 
-static PyTypeObject PYXXH3_128Type;
-
 static void PYXXH3_128_dealloc(PYXXH3_128Object *self)
 {
     XXH3_freeState(self->xxhash_state);
-    PyObject_Del(self);
+    Py_TYPE(self)->tp_free((PyObject *)self);
 }
 
 static void PYXXH3_128_do_update(PYXXH3_128Object *self, Py_buffer *buf)
@@ -1309,12 +1247,13 @@ static PyObject *PYXXH3_128_new(PyTypeObject *type, PyObject *args, PyObject *kw
 {
     PYXXH3_128Object *self;
 
-    if ((self = PyObject_New(PYXXH3_128Object, &PYXXH3_128Type)) == NULL) {
+    if ((self = PyObject_New(PYXXH3_128Object, type)) == NULL) {
         return NULL;
     }
 
     if ((self->xxhash_state = XXH3_createState()) == NULL) {
-        return NULL;
+        Py_TYPE(self)->tp_free((PyObject *)self);
+        return PyErr_NoMemory();
     }
 
     self->seed = 0;
@@ -1448,12 +1387,13 @@ static PyObject *PYXXH3_128_copy(PYXXH3_128Object *self)
 {
     PYXXH3_128Object *p;
 
-    if ((p = PyObject_New(PYXXH3_128Object, &PYXXH3_128Type)) == NULL) {
+    if ((p = PyObject_New(PYXXH3_128Object, Py_TYPE(self))) == NULL) {
         return NULL;
     }
 
     if ((p->xxhash_state = XXH3_createState()) == NULL) {
-        return NULL;
+        Py_TYPE(p)->tp_free((PyObject *)p);
+        return PyErr_NoMemory();
     }
 
     p->seed = self->seed;
@@ -1560,45 +1500,21 @@ PyDoc_STRVAR(
     "intdigest() -- return the current digest as an integer\n"
     "copy() -- return a copy of the current xxh3_128 object");
 
-static PyTypeObject PYXXH3_128Type = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    "xxhash.xxh3_128",                /* tp_name */
-    sizeof(PYXXH3_128Object),         /* tp_basicsize */
-    0,                             /* tp_itemsize */
-    (destructor)PYXXH3_128_dealloc,   /* tp_dealloc */
-    0,                             /* tp_print */
-    0,                             /* tp_getattr */
-    0,                             /* tp_setattr */
-    0,                             /* tp_compare */
-    0,                             /* tp_repr */
-    0,                             /* tp_as_number */
-    0,                             /* tp_as_sequence */
-    0,                             /* tp_as_mapping */
-    0,                             /* tp_hash */
-    0,                             /* tp_call */
-    0,                             /* tp_str */
-    0,                             /* tp_getattro */
-    0,                             /* tp_setattro */
-    0,                             /* tp_as_buffer */
-    Py_TPFLAGS_DEFAULT,            /* tp_flags */
-    PYXXH3_128Type_doc,               /* tp_doc */
-    0,                             /* tp_traverse */
-    0,                             /* tp_clear */
-    0,                             /* tp_richcompare */
-    0,                             /* tp_weaklistoffset */
-    0,                             /* tp_iter */
-    0,                             /* tp_iternext */
-    PYXXH3_128_methods,               /* tp_methods */
-    0,                             /* tp_members */
-    PYXXH3_128_getseters,             /* tp_getset */
-    0,                             /* tp_base */
-    0,                             /* tp_dict */
-    0,                             /* tp_descr_get */
-    0,                             /* tp_descr_set */
-    0,                             /* tp_dictoffset */
-    (initproc)PYXXH3_128_init,        /* tp_init */
-    0,                             /* tp_alloc */
-    PYXXH3_128_new,                   /* tp_new */
+static PyType_Slot xxh3_128_slots[] = {
+    {Py_tp_dealloc, (void *)PYXXH3_128_dealloc},
+    {Py_tp_doc, (void *)PYXXH3_128Type_doc},
+    {Py_tp_methods, PYXXH3_128_methods},
+    {Py_tp_getset, PYXXH3_128_getseters},
+    {Py_tp_init, (void *)PYXXH3_128_init},
+    {Py_tp_new, (void *)PYXXH3_128_new},
+    {0, NULL},
+};
+
+static PyType_Spec xxh3_128_spec = {
+    .name = "xxhash.xxh3_128",
+    .basicsize = sizeof(PYXXH3_128Object),
+    .flags = Py_TPFLAGS_DEFAULT,
+    .slots = xxh3_128_slots,
 };
 
 /*****************************************************************************
@@ -1607,12 +1523,40 @@ static PyTypeObject PYXXH3_128Type = {
 
 static int _exec(PyObject *module)
 {
-    if (
-        PyModule_AddType(module, &PYXXH32Type) < 0 ||
-        PyModule_AddType(module, &PYXXH64Type) < 0 ||
-        PyModule_AddType(module, &PYXXH3_64Type) < 0 ||
-        PyModule_AddType(module, &PYXXH3_128Type) < 0
-    ) {
+    module_state *state = (module_state *)PyModule_GetState(module);
+    if (state == NULL) {
+        return -1;
+    }
+
+    state->xxh32_type = (PyTypeObject *)PyType_FromSpec(&xxh32_spec);
+    if (state->xxh32_type == NULL) {
+        return -1;
+    }
+    if (PyModule_AddType(module, state->xxh32_type) < 0) {
+        return -1;
+    }
+
+    state->xxh64_type = (PyTypeObject *)PyType_FromSpec(&xxh64_spec);
+    if (state->xxh64_type == NULL) {
+        return -1;
+    }
+    if (PyModule_AddType(module, state->xxh64_type) < 0) {
+        return -1;
+    }
+
+    state->xxh3_64_type = (PyTypeObject *)PyType_FromSpec(&xxh3_64_spec);
+    if (state->xxh3_64_type == NULL) {
+        return -1;
+    }
+    if (PyModule_AddType(module, state->xxh3_64_type) < 0) {
+        return -1;
+    }
+
+    state->xxh3_128_type = (PyTypeObject *)PyType_FromSpec(&xxh3_128_spec);
+    if (state->xxh3_128_type == NULL) {
+        return -1;
+    }
+    if (PyModule_AddType(module, state->xxh3_128_type) < 0) {
         return -1;
     }
 
@@ -1622,8 +1566,37 @@ static int _exec(PyObject *module)
     return 0;
 }
 
-static const PyModuleDef_Slot slots[] = {
+static int _traverse(PyObject *module, visitproc visit, void *arg)
+{
+    module_state *state = (module_state *)PyModule_GetState(module);
+    if (!state) {
+        return 0;
+    }
+    Py_VISIT(state->xxh32_type);
+    Py_VISIT(state->xxh64_type);
+    Py_VISIT(state->xxh3_64_type);
+    Py_VISIT(state->xxh3_128_type);
+    return 0;
+}
+
+static int _clear(PyObject *module)
+{
+    module_state *state = (module_state *)PyModule_GetState(module);
+    if (!state) {
+        return 0;
+    }
+    Py_CLEAR(state->xxh32_type);
+    Py_CLEAR(state->xxh64_type);
+    Py_CLEAR(state->xxh3_64_type);
+    Py_CLEAR(state->xxh3_128_type);
+    return 0;
+}
+
+static PyModuleDef_Slot slots[] = {
     {Py_mod_exec, _exec},
+#if PY_VERSION_HEX >= 0x030c0000
+    {Py_mod_multiple_interpreters, Py_MOD_PER_INTERPRETER_GIL_SUPPORTED},
+#endif
 #ifdef Py_GIL_DISABLED
     {Py_mod_gil, Py_MOD_GIL_NOT_USED},
 #endif
@@ -1651,11 +1624,11 @@ static struct PyModuleDef moduledef = {
     PyModuleDef_HEAD_INIT,
     "_xxhash",
     NULL,
-    0,
+    sizeof(module_state),
     methods,
     slots,
-    NULL,
-    NULL,
+    _traverse,
+    _clear,
     NULL
 };
 
