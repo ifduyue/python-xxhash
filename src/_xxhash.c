@@ -410,6 +410,7 @@ static PyObject *PYXXH32_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
 
     if ((self->xxhash_state = XXH32_createState()) == NULL) {
         PyObject_Del(self);
+        PyErr_NoMemory();
         return NULL;
     }
 
@@ -533,6 +534,7 @@ static PyObject *PYXXH32_copy(PYXXH32Object *self)
 
     if ((p->xxhash_state = XXH32_createState()) == NULL) {
         PyObject_Del(p);
+        PyErr_NoMemory();
         return NULL;
     }
 
@@ -711,6 +713,7 @@ static PyObject *PYXXH64_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
 
     if ((self->xxhash_state = XXH64_createState()) == NULL) {
         PyObject_Del(self);
+        PyErr_NoMemory();
         return NULL;
     }
 
@@ -834,6 +837,7 @@ static PyObject *PYXXH64_copy(PYXXH64Object *self)
 
     if ((p->xxhash_state = XXH64_createState()) == NULL) {
         PyObject_Del(p);
+        PyErr_NoMemory();
         return NULL;
     }
 
@@ -1011,6 +1015,7 @@ static PyObject *PYXXH3_64_new(PyTypeObject *type, PyObject *args, PyObject *kwa
 
     if ((self->xxhash_state = XXH3_createState()) == NULL) {
         PyObject_Del(self);
+        PyErr_NoMemory();
         return NULL;
     }
 
@@ -1138,6 +1143,7 @@ static PyObject *PYXXH3_64_copy(PYXXH3_64Object *self)
 
     if ((p->xxhash_state = XXH3_createState()) == NULL) {
         PyObject_Del(p);
+        PyErr_NoMemory();
         return NULL;
     }
 
@@ -1323,6 +1329,7 @@ static PyObject *PYXXH3_128_new(PyTypeObject *type, PyObject *args, PyObject *kw
 
     if ((self->xxhash_state = XXH3_createState()) == NULL) {
         PyObject_Del(self);
+        PyErr_NoMemory();
         return NULL;
     }
 
@@ -1463,6 +1470,7 @@ static PyObject *PYXXH3_128_copy(PYXXH3_128Object *self)
 
     if ((p->xxhash_state = XXH3_createState()) == NULL) {
         PyObject_Del(p);
+        PyErr_NoMemory();
         return NULL;
     }
 
