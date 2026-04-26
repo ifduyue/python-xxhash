@@ -396,7 +396,7 @@ typedef struct {
 static void PYXXH32_dealloc(PYXXH32Object *self)
 {
     XXH32_freeState(self->xxhash_state);
-    PyObject_Del(self);
+    Py_TYPE(self)->tp_free((PyObject *)self);
 }
 
 static void PYXXH32_do_update(PYXXH32Object *self, Py_buffer *buf)
@@ -419,7 +419,8 @@ static PyObject *PYXXH32_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
     }
 
     if ((self->xxhash_state = XXH32_createState()) == NULL) {
-        return NULL;
+        Py_TYPE(self)->tp_free((PyObject *)self);
+        return PyErr_NoMemory();
     }
 
     return (PyObject *)self;
@@ -541,7 +542,8 @@ static PyObject *PYXXH32_copy(PYXXH32Object *self)
     }
 
     if ((p->xxhash_state = XXH32_createState()) == NULL) {
-        return NULL;
+        Py_TYPE(p)->tp_free((PyObject *)p);
+        return PyErr_NoMemory();
     }
 
     p->seed = self->seed;
@@ -671,7 +673,7 @@ typedef struct {
 static void PYXXH64_dealloc(PYXXH64Object *self)
 {
     XXH64_freeState(self->xxhash_state);
-    PyObject_Del(self);
+    Py_TYPE(self)->tp_free((PyObject *)self);
 }
 
 static void PYXXH64_do_update(PYXXH64Object *self, Py_buffer *buf)
@@ -692,7 +694,8 @@ static PyObject *PYXXH64_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
     }
 
     if ((self->xxhash_state = XXH64_createState()) == NULL) {
-        return NULL;
+        Py_TYPE(self)->tp_free((PyObject *)self);
+        return PyErr_NoMemory();
     }
 
     return (PyObject *)self;
@@ -814,7 +817,8 @@ static PyObject *PYXXH64_copy(PYXXH64Object *self)
     }
 
     if ((p->xxhash_state = XXH64_createState()) == NULL) {
-        return NULL;
+        Py_TYPE(p)->tp_free((PyObject *)p);
+        return PyErr_NoMemory();
     }
 
     p->seed = self->seed;
@@ -943,7 +947,7 @@ typedef struct {
 static void PYXXH3_64_dealloc(PYXXH3_64Object *self)
 {
     XXH3_freeState(self->xxhash_state);
-    PyObject_Del(self);
+    Py_TYPE(self)->tp_free((PyObject *)self);
 }
 
 static void PYXXH3_64_do_update(PYXXH3_64Object *self, Py_buffer *buf)
@@ -964,7 +968,8 @@ static PyObject *PYXXH3_64_new(PyTypeObject *type, PyObject *args, PyObject *kwa
     }
 
     if ((self->xxhash_state = XXH3_createState()) == NULL) {
-        return NULL;
+        Py_TYPE(self)->tp_free((PyObject *)self);
+        return PyErr_NoMemory();
     }
     XXH3_64bits_reset_withSeed(self->xxhash_state, 0);
 
@@ -1088,7 +1093,8 @@ static PyObject *PYXXH3_64_copy(PYXXH3_64Object *self)
     }
 
     if ((p->xxhash_state = XXH3_createState()) == NULL) {
-        return NULL;
+        Py_TYPE(p)->tp_free((PyObject *)p);
+        return PyErr_NoMemory();
     }
 
     p->seed = self->seed;
@@ -1225,7 +1231,7 @@ typedef struct {
 static void PYXXH3_128_dealloc(PYXXH3_128Object *self)
 {
     XXH3_freeState(self->xxhash_state);
-    PyObject_Del(self);
+    Py_TYPE(self)->tp_free((PyObject *)self);
 }
 
 static void PYXXH3_128_do_update(PYXXH3_128Object *self, Py_buffer *buf)
@@ -1246,7 +1252,8 @@ static PyObject *PYXXH3_128_new(PyTypeObject *type, PyObject *args, PyObject *kw
     }
 
     if ((self->xxhash_state = XXH3_createState()) == NULL) {
-        return NULL;
+        Py_TYPE(self)->tp_free((PyObject *)self);
+        return PyErr_NoMemory();
     }
 
     self->seed = 0;
@@ -1385,7 +1392,8 @@ static PyObject *PYXXH3_128_copy(PYXXH3_128Object *self)
     }
 
     if ((p->xxhash_state = XXH3_createState()) == NULL) {
-        return NULL;
+        Py_TYPE(p)->tp_free((PyObject *)p);
+        return PyErr_NoMemory();
     }
 
     p->seed = self->seed;
@@ -1584,8 +1592,9 @@ static int _clear(PyObject *module)
     return 0;
 }
 
-static const PyModuleDef_Slot slots[] = {
+static PyModuleDef_Slot slots[] = {
     {Py_mod_exec, _exec},
+    {Py_mod_multiple_interpreters, Py_MOD_MULTIPLE_INTERPRETERS_SUPPORTED},
 #ifdef Py_GIL_DISABLED
     {Py_mod_gil, Py_MOD_GIL_NOT_USED},
 #endif
