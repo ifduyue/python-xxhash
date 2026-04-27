@@ -1,4 +1,3 @@
-import hashlib
 import os
 import random
 
@@ -12,6 +11,7 @@ SEED_64 = random.randint(0, 0xFFFFFFFFFFFFFFFF)
 DATA_5B = os.urandom(5)
 DATA_1KB = os.urandom(1000)
 DATA_10KB = os.urandom(10000)
+DATA_2MB = os.urandom(2 * 1024 * 1024)
 
 
 # ── macro bench: larger inputs where hashing dominates ───────────────
@@ -146,3 +146,60 @@ def test_xxh3_64_ctor():
 @pytest.mark.benchmark
 def test_xxh3_128_ctor():
     xxhash.xxh3_128(DATA_STR, seed=SEED_64)
+
+
+# ── 2MB throughput: hashing dominates, call overhead negligible ─────
+
+
+@pytest.mark.benchmark
+def test_xxh32_intdigest_2mb():
+    xxhash.xxh32_intdigest(DATA_2MB, seed=SEED_32)
+
+
+@pytest.mark.benchmark
+def test_xxh64_intdigest_2mb():
+    xxhash.xxh64_intdigest(DATA_2MB, seed=SEED_64)
+
+
+@pytest.mark.benchmark
+def test_xxh3_64_intdigest_2mb():
+    xxhash.xxh3_64_intdigest(DATA_2MB, seed=SEED_64)
+
+
+@pytest.mark.benchmark
+def test_xxh3_128_intdigest_2mb():
+    xxhash.xxh3_128_intdigest(DATA_2MB, seed=SEED_64)
+
+
+@pytest.mark.benchmark
+def test_xxh32_hexdigest_2mb():
+    xxhash.xxh32_hexdigest(DATA_2MB, seed=SEED_32)
+
+
+@pytest.mark.benchmark
+def test_xxh3_64_hexdigest_2mb():
+    xxhash.xxh3_64_hexdigest(DATA_2MB, seed=SEED_64)
+
+
+@pytest.mark.benchmark
+def test_xxh32_stream_intdigest_2mb():
+    h = xxhash.xxh32(DATA_2MB, seed=SEED_32)
+    h.intdigest()
+
+
+@pytest.mark.benchmark
+def test_xxh64_stream_intdigest_2mb():
+    h = xxhash.xxh64(DATA_2MB, seed=SEED_64)
+    h.intdigest()
+
+
+@pytest.mark.benchmark
+def test_xxh3_64_stream_intdigest_2mb():
+    h = xxhash.xxh3_64(DATA_2MB, seed=SEED_64)
+    h.intdigest()
+
+
+@pytest.mark.benchmark
+def test_xxh3_128_stream_intdigest_2mb():
+    h = xxhash.xxh3_128(DATA_2MB, seed=SEED_64)
+    h.intdigest()
