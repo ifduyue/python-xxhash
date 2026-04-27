@@ -402,13 +402,18 @@ static PyObject *xxh3_128_intdigest(PyObject *self, PyObject *const *args,
     PyObject *sixtyfour = PyLong_FromLong(64);
     PyObject *low = PyLong_FromUnsignedLongLong(intdigest.low64);
     PyObject *high = PyLong_FromUnsignedLongLong(intdigest.high64);
-    PyObject *result = PyNumber_Lshift(high, sixtyfour);
-    Py_DECREF(high);
-    high = result;
-    result = PyNumber_Add(high, low);
-    Py_DECREF(high);
-    Py_DECREF(low);
-    Py_DECREF(sixtyfour);
+    PyObject *result = NULL;
+
+    if (sixtyfour && low && high) {
+        PyObject *shifted = PyNumber_Lshift(high, sixtyfour);
+        if (shifted) {
+            result = PyNumber_Add(shifted, low);
+            Py_DECREF(shifted);
+        }
+    }
+    Py_XDECREF(high);
+    Py_XDECREF(low);
+    Py_XDECREF(sixtyfour);
     return result;
 }
 static PyObject *xxh3_128_hexdigest(PyObject *self, PyObject *const *args,
@@ -1530,14 +1535,18 @@ static PyObject *PYXXH3_128_intdigest(PYXXH3_128Object *self)
     sixtyfour = PyLong_FromLong(64);
     low = PyLong_FromUnsignedLongLong(intdigest.low64);
     high = PyLong_FromUnsignedLongLong(intdigest.high64);
+    result = NULL;
 
-    result = PyNumber_Lshift(high, sixtyfour);
-    Py_DECREF(high);
-    high = result;
-    result = PyNumber_Add(high, low);
-    Py_DECREF(high);
-    Py_DECREF(low);
-    Py_DECREF(sixtyfour);
+    if (sixtyfour && low && high) {
+        PyObject *shifted = PyNumber_Lshift(high, sixtyfour);
+        if (shifted) {
+            result = PyNumber_Add(shifted, low);
+            Py_DECREF(shifted);
+        }
+    }
+    Py_XDECREF(high);
+    Py_XDECREF(low);
+    Py_XDECREF(sixtyfour);
     return result;
 }
 
