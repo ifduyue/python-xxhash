@@ -49,7 +49,7 @@
  * On success, *owner is set to the object that owns the buffer
  * (NULL if the arg itself supports the buffer protocol).
  * Caller must PyBuffer_Release(buf) and Py_XDECREF(*owner). */
-static int
+static Py_ALWAYS_INLINE int
 _get_buffer_or_str(PyObject *obj, Py_buffer *buf, PyObject **owner)
 {
     /* Check str first to avoid a guaranteed-failing PyObject_GetBuffer call
@@ -75,7 +75,7 @@ _get_buffer_or_str(PyObject *obj, Py_buffer *buf, PyObject **owner)
  * keyword 'seed', with proper error reporting for unknown keywords,
  * duplicate arguments, and too many positional args.
  * Returns 0 on success, -1 on error with exception set. */
-static int
+static Py_ALWAYS_INLINE int
 _parse_fastcall_args(PyObject *const *args, Py_ssize_t nargs,
                      PyObject *kwnames, const char *funcname,
                      Py_buffer *buf, PyObject **buf_owner,
