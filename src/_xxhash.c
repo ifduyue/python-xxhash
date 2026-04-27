@@ -91,6 +91,7 @@ _parse_fastcall_args(PyObject *const *args, Py_ssize_t nargs,
 
     *seed = 0;
     buf->buf = NULL;
+    buf->obj = NULL;
     *buf_owner = NULL;
 
     /* positional args */
@@ -527,7 +528,7 @@ PYXXH32_vectorcall(PyObject *type, PyObject *const *args,
     self->seed = seed;
     XXH32_reset(self->xxhash_state, seed);
 
-    if (buf.buf)
+    if (buf.obj)
         PYXXH32_do_update(self, &buf);
     Py_XDECREF(buf_owner);
     return (PyObject *)self;
@@ -570,7 +571,7 @@ static int PYXXH32_init(PYXXH32Object *self, PyObject *args, PyObject *kwargs)
     self->seed = seed;
     XXH32_reset(self->xxhash_state, seed);
 
-    if (buf.buf) {
+    if (buf.obj) {
         PYXXH32_do_update(self, &buf);
     }
 
@@ -886,7 +887,7 @@ PYXXH64_vectorcall(PyObject *type, PyObject *const *args,
     self->seed = seed;
     XXH64_reset(self->xxhash_state, seed);
 
-    if (buf.buf)
+    if (buf.obj)
         PYXXH64_do_update(self, &buf);
     Py_XDECREF(buf_owner);
     return (PyObject *)self;
@@ -926,7 +927,7 @@ static int PYXXH64_init(PYXXH64Object *self, PyObject *args, PyObject *kwargs)
     self->seed = seed;
     XXH64_reset(self->xxhash_state, seed);
 
-    if (buf.buf) {
+    if (buf.obj) {
         PYXXH64_do_update(self, &buf);
     }
 
@@ -1241,7 +1242,7 @@ PYXXH3_64_vectorcall(PyObject *type, PyObject *const *args,
     self->seed = seed;
     XXH3_64bits_reset_withSeed(self->xxhash_state, seed);
 
-    if (buf.buf)
+    if (buf.obj)
         PYXXH3_64_do_update(self, &buf);
     Py_XDECREF(buf_owner);
     return (PyObject *)self;
@@ -1281,7 +1282,7 @@ static int PYXXH3_64_init(PYXXH3_64Object *self, PyObject *args, PyObject *kwarg
     self->seed = seed;
     XXH3_64bits_reset_withSeed(self->xxhash_state, seed);
 
-    if (buf.buf) {
+    if (buf.obj) {
         PYXXH3_64_do_update(self, &buf);
     }
 
@@ -1605,7 +1606,7 @@ PYXXH3_128_vectorcall(PyObject *type, PyObject *const *args,
     self->seed = seed;
     XXH3_128bits_reset_withSeed(self->xxhash_state, seed);
 
-    if (buf.buf)
+    if (buf.obj)
         PYXXH3_128_do_update(self, &buf);
     Py_XDECREF(buf_owner);
     return (PyObject *)self;
@@ -1645,7 +1646,7 @@ static int PYXXH3_128_init(PYXXH3_128Object *self, PyObject *args, PyObject *kwa
     self->seed = seed;
     XXH3_128bits_reset_withSeed(self->xxhash_state, seed);
 
-    if (buf.buf) {
+    if (buf.obj) {
         PYXXH3_128_do_update(self, &buf);
     }
 
