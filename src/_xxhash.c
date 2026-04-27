@@ -107,12 +107,22 @@ static PyObject *xxh32_digest(PyObject *self, PyObject *const *args,
 
     if (nargs > 1) {
         seed = (XXH32_hash_t)PyLong_AsUnsignedLongMask(args[1]);
+        if (PyErr_Occurred()) {
+            PyBuffer_Release(&buf);
+            Py_XDECREF(buf_owner);
+            return NULL;
+        }
     }
     if (kwnames) {
         for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
             PyObject *key = PyTuple_GET_ITEM(kwnames, i);
             if (PyUnicode_CompareWithASCIIString(key, "seed") == 0) {
                 seed = (XXH32_hash_t)PyLong_AsUnsignedLongMask(args[nargs + i]);
+                if (PyErr_Occurred()) {
+                    PyBuffer_Release(&buf);
+                    Py_XDECREF(buf_owner);
+                    return NULL;
+                }
             }
         }
     }
@@ -157,12 +167,22 @@ static PyObject *xxh32_intdigest(PyObject *self, PyObject *const *args,
 
     if (nargs > 1) {
         seed = (XXH32_hash_t)PyLong_AsUnsignedLongMask(args[1]);
+        if (PyErr_Occurred()) {
+            PyBuffer_Release(&buf);
+            Py_XDECREF(buf_owner);
+            return NULL;
+        }
     }
     if (kwnames) {
         for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
             PyObject *key = PyTuple_GET_ITEM(kwnames, i);
             if (PyUnicode_CompareWithASCIIString(key, "seed") == 0) {
                 seed = (XXH32_hash_t)PyLong_AsUnsignedLongMask(args[nargs + i]);
+                if (PyErr_Occurred()) {
+                    PyBuffer_Release(&buf);
+                    Py_XDECREF(buf_owner);
+                    return NULL;
+                }
             }
         }
     }
@@ -205,12 +225,22 @@ static PyObject *xxh32_hexdigest(PyObject *self, PyObject *const *args,
 
     if (nargs > 1) {
         seed = (XXH32_hash_t)PyLong_AsUnsignedLongMask(args[1]);
+        if (PyErr_Occurred()) {
+            PyBuffer_Release(&buf);
+            Py_XDECREF(buf_owner);
+            return NULL;
+        }
     }
     if (kwnames) {
         for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
             PyObject *key = PyTuple_GET_ITEM(kwnames, i);
             if (PyUnicode_CompareWithASCIIString(key, "seed") == 0) {
                 seed = (XXH32_hash_t)PyLong_AsUnsignedLongMask(args[nargs + i]);
+                if (PyErr_Occurred()) {
+                    PyBuffer_Release(&buf);
+                    Py_XDECREF(buf_owner);
+                    return NULL;
+                }
             }
         }
     }
@@ -270,12 +300,22 @@ static PyObject *xxh64_digest(PyObject *self, PyObject *const *args,
 
     if (nargs > 1) {
         seed = PyLong_AsUnsignedLongLongMask(args[1]);
+        if (PyErr_Occurred()) {
+            PyBuffer_Release(&buf);
+            Py_XDECREF(buf_owner);
+            return NULL;
+        }
     }
     if (kwnames) {
         for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
             PyObject *key = PyTuple_GET_ITEM(kwnames, i);
             if (PyUnicode_CompareWithASCIIString(key, "seed") == 0) {
                 seed = PyLong_AsUnsignedLongLongMask(args[nargs + i]);
+                if (PyErr_Occurred()) {
+                    PyBuffer_Release(&buf);
+                    Py_XDECREF(buf_owner);
+                    return NULL;
+                }
             }
         }
     }
@@ -320,12 +360,22 @@ static PyObject *xxh64_intdigest(PyObject *self, PyObject *const *args,
 
     if (nargs > 1) {
         seed = PyLong_AsUnsignedLongLongMask(args[1]);
+        if (PyErr_Occurred()) {
+            PyBuffer_Release(&buf);
+            Py_XDECREF(buf_owner);
+            return NULL;
+        }
     }
     if (kwnames) {
         for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
             PyObject *key = PyTuple_GET_ITEM(kwnames, i);
             if (PyUnicode_CompareWithASCIIString(key, "seed") == 0) {
                 seed = PyLong_AsUnsignedLongLongMask(args[nargs + i]);
+                if (PyErr_Occurred()) {
+                    PyBuffer_Release(&buf);
+                    Py_XDECREF(buf_owner);
+                    return NULL;
+                }
             }
         }
     }
@@ -368,12 +418,22 @@ static PyObject *xxh64_hexdigest(PyObject *self, PyObject *const *args,
 
     if (nargs > 1) {
         seed = PyLong_AsUnsignedLongLongMask(args[1]);
+        if (PyErr_Occurred()) {
+            PyBuffer_Release(&buf);
+            Py_XDECREF(buf_owner);
+            return NULL;
+        }
     }
     if (kwnames) {
         for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
             PyObject *key = PyTuple_GET_ITEM(kwnames, i);
             if (PyUnicode_CompareWithASCIIString(key, "seed") == 0) {
                 seed = PyLong_AsUnsignedLongLongMask(args[nargs + i]);
+                if (PyErr_Occurred()) {
+                    PyBuffer_Release(&buf);
+                    Py_XDECREF(buf_owner);
+                    return NULL;
+                }
             }
         }
     }
@@ -433,12 +493,22 @@ static PyObject *xxh3_64_digest(PyObject *self, PyObject *const *args,
 
     if (nargs > 1) {
         seed = PyLong_AsUnsignedLongLongMask(args[1]);
+        if (PyErr_Occurred()) {
+            PyBuffer_Release(&buf);
+            Py_XDECREF(buf_owner);
+            return NULL;
+        }
     }
     if (kwnames) {
         for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
             PyObject *key = PyTuple_GET_ITEM(kwnames, i);
             if (PyUnicode_CompareWithASCIIString(key, "seed") == 0) {
                 seed = PyLong_AsUnsignedLongLongMask(args[nargs + i]);
+                if (PyErr_Occurred()) {
+                    PyBuffer_Release(&buf);
+                    Py_XDECREF(buf_owner);
+                    return NULL;
+                }
             }
         }
     }
@@ -483,12 +553,22 @@ static PyObject *xxh3_64_intdigest(PyObject *self, PyObject *const *args,
 
     if (nargs > 1) {
         seed = PyLong_AsUnsignedLongLongMask(args[1]);
+        if (PyErr_Occurred()) {
+            PyBuffer_Release(&buf);
+            Py_XDECREF(buf_owner);
+            return NULL;
+        }
     }
     if (kwnames) {
         for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
             PyObject *key = PyTuple_GET_ITEM(kwnames, i);
             if (PyUnicode_CompareWithASCIIString(key, "seed") == 0) {
                 seed = PyLong_AsUnsignedLongLongMask(args[nargs + i]);
+                if (PyErr_Occurred()) {
+                    PyBuffer_Release(&buf);
+                    Py_XDECREF(buf_owner);
+                    return NULL;
+                }
             }
         }
     }
@@ -531,12 +611,22 @@ static PyObject *xxh3_64_hexdigest(PyObject *self, PyObject *const *args,
 
     if (nargs > 1) {
         seed = PyLong_AsUnsignedLongLongMask(args[1]);
+        if (PyErr_Occurred()) {
+            PyBuffer_Release(&buf);
+            Py_XDECREF(buf_owner);
+            return NULL;
+        }
     }
     if (kwnames) {
         for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
             PyObject *key = PyTuple_GET_ITEM(kwnames, i);
             if (PyUnicode_CompareWithASCIIString(key, "seed") == 0) {
                 seed = PyLong_AsUnsignedLongLongMask(args[nargs + i]);
+                if (PyErr_Occurred()) {
+                    PyBuffer_Release(&buf);
+                    Py_XDECREF(buf_owner);
+                    return NULL;
+                }
             }
         }
     }
@@ -596,12 +686,22 @@ static PyObject *xxh3_128_digest(PyObject *self, PyObject *const *args,
 
     if (nargs > 1) {
         seed = PyLong_AsUnsignedLongLongMask(args[1]);
+        if (PyErr_Occurred()) {
+            PyBuffer_Release(&buf);
+            Py_XDECREF(buf_owner);
+            return NULL;
+        }
     }
     if (kwnames) {
         for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
             PyObject *key = PyTuple_GET_ITEM(kwnames, i);
             if (PyUnicode_CompareWithASCIIString(key, "seed") == 0) {
                 seed = PyLong_AsUnsignedLongLongMask(args[nargs + i]);
+                if (PyErr_Occurred()) {
+                    PyBuffer_Release(&buf);
+                    Py_XDECREF(buf_owner);
+                    return NULL;
+                }
             }
         }
     }
@@ -646,12 +746,22 @@ static PyObject *xxh3_128_intdigest(PyObject *self, PyObject *const *args,
 
     if (nargs > 1) {
         seed = PyLong_AsUnsignedLongLongMask(args[1]);
+        if (PyErr_Occurred()) {
+            PyBuffer_Release(&buf);
+            Py_XDECREF(buf_owner);
+            return NULL;
+        }
     }
     if (kwnames) {
         for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
             PyObject *key = PyTuple_GET_ITEM(kwnames, i);
             if (PyUnicode_CompareWithASCIIString(key, "seed") == 0) {
                 seed = PyLong_AsUnsignedLongLongMask(args[nargs + i]);
+                if (PyErr_Occurred()) {
+                    PyBuffer_Release(&buf);
+                    Py_XDECREF(buf_owner);
+                    return NULL;
+                }
             }
         }
     }
@@ -704,12 +814,22 @@ static PyObject *xxh3_128_hexdigest(PyObject *self, PyObject *const *args,
 
     if (nargs > 1) {
         seed = PyLong_AsUnsignedLongLongMask(args[1]);
+        if (PyErr_Occurred()) {
+            PyBuffer_Release(&buf);
+            Py_XDECREF(buf_owner);
+            return NULL;
+        }
     }
     if (kwnames) {
         for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
             PyObject *key = PyTuple_GET_ITEM(kwnames, i);
             if (PyUnicode_CompareWithASCIIString(key, "seed") == 0) {
                 seed = PyLong_AsUnsignedLongLongMask(args[nargs + i]);
+                if (PyErr_Occurred()) {
+                    PyBuffer_Release(&buf);
+                    Py_XDECREF(buf_owner);
+                    return NULL;
+                }
             }
         }
     }
