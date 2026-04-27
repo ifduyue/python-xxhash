@@ -111,3 +111,27 @@ class TestFastcall(unittest.TestCase):
             for fn in self._funcs(a):
                 with self.assertRaises(TypeError):
                     fn()
+
+    def test_unknown_keyword(self):
+        for a in ('xxh32', 'xxh64', 'xxh3_64', 'xxh3_128'):
+            for fn in self._funcs(a):
+                with self.assertRaises(TypeError):
+                    fn(self.data, bad=1)
+
+    def test_duplicate_argument(self):
+        for a in ('xxh32', 'xxh64', 'xxh3_64', 'xxh3_128'):
+            for fn in self._funcs(a):
+                with self.assertRaises(TypeError):
+                    fn(self.data, input=self.data)
+
+    def test_too_many_positional(self):
+        for a in ('xxh32', 'xxh64', 'xxh3_64', 'xxh3_128'):
+            for fn in self._funcs(a):
+                with self.assertRaises(TypeError):
+                    fn(self.data, 0, 1)
+
+    def test_invalid_seed_type(self):
+        for a in ('xxh32', 'xxh64', 'xxh3_64', 'xxh3_128'):
+            for fn in self._funcs(a):
+                with self.assertRaises(TypeError):
+                    fn(self.data, seed='bad')
