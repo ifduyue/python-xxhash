@@ -45,37 +45,32 @@
 #define XXH128_BLOCKSIZE 64
 
 
-/* Get a buffer from an object, or UTF-8 encode if it's a str.
- * On success, *owner is set to the object that owns the buffer
- * (NULL if the arg itself supports the buffer protocol).
- * Caller must PyBuffer_Release(buf) and Py_XDECREF(*owner). */
+
 #ifndef Py_ALWAYS_INLINE
 #  define Py_ALWAYS_INLINE
 #endif
 
+/* Get a buffer from an object. Rejects str with hashlib-compatible error. */
 static Py_ALWAYS_INLINE int
-_get_buffer_or_str(PyObject *obj, Py_buffer *buf, PyObject **owner)
+_get_buffer_or_str(PyObject *obj, Py_buffer *buf)
 {
-    /* Check str first to avoid a guaranteed-failing PyObject_GetBuffer call
-     * and the resulting set/clear of a TypeError. */
+    if (obj == Py_None) {
+        PyErr_SetString(PyExc_TypeError,
+            "object supporting the buffer API required");
+        return -1;
+    }
     if (PyUnicode_Check(obj)) {
-        *owner = PyUnicode_AsUTF8String(obj);
-        if (*owner == NULL)
-            return -1;
-        if (PyObject_GetBuffer(*owner, buf, PyBUF_SIMPLE) < 0) {
-            Py_DECREF(*owner);
-            return -1;
-        }
-        return 0;
+        PyErr_SetString(PyExc_TypeError,
+            "Strings must be encoded before hashing");
+        return -1;
     }
     if (PyObject_GetBuffer(obj, buf, PyBUF_SIMPLE) < 0)
         return -1;
-    *owner = NULL;
     return 0;
 }
 
 /* Parse input buffer and optional seed from fastcall arguments.
- * Handles: positional 'input', positional 'seed', keyword 'input',
+ * Handles: positional 'data', positional 'seed', keyword 'data',
  * keyword 'seed', with proper error reporting for unknown keywords,
  * duplicate arguments, and too many positional args.
  * Returns 0 on success, -1 on error with exception set. */
@@ -83,7 +78,7 @@ static Py_ALWAYS_INLINE int
 _parse_fastcall_args(PyObject *const *args, Py_ssize_t nargs,
                      PyObject *kwnames, const char *funcname,
                      int input_required,
-                     Py_buffer *buf, PyObject **buf_owner,
+                     Py_buffer *buf,
                      unsigned long long *seed)
 {
     int input_found = 0;
@@ -92,11 +87,10 @@ _parse_fastcall_args(PyObject *const *args, Py_ssize_t nargs,
     *seed = 0;
     buf->buf = NULL;
     buf->obj = NULL;
-    *buf_owner = NULL;
 
     /* positional args */
     if (nargs >= 1) {
-        if (_get_buffer_or_str(args[0], buf, buf_owner) < 0)
+        if (_get_buffer_or_str(args[0], buf) < 0)
             return -1;
         input_found = 1;
     }
@@ -120,14 +114,14 @@ _parse_fastcall_args(PyObject *const *args, Py_ssize_t nargs,
             PyObject *key = PyTuple_GET_ITEM(kwnames, i);
             PyObject *val = args[nargs + i];
 
-            if (PyUnicode_CompareWithASCIIString(key, "input") == 0) {
+            if (PyUnicode_CompareWithASCIIString(key, "data") == 0) {
                 if (input_found) {
                     PyErr_Format(PyExc_TypeError,
-                        "%s() got multiple values for argument 'input'",
+                        "%s() got multiple values for argument 'data'",
                         funcname);
                     goto error;
                 }
-                if (_get_buffer_or_str(val, buf, buf_owner) < 0)
+                if (_get_buffer_or_str(val, buf) < 0)
                     return -1;
                 input_found = 1;
             } else if (PyUnicode_CompareWithASCIIString(key, "seed") == 0) {
@@ -152,7 +146,7 @@ _parse_fastcall_args(PyObject *const *args, Py_ssize_t nargs,
 
     if (!input_found && input_required) {
         PyErr_Format(PyExc_TypeError,
-            "%s() missing required argument 'input'", funcname);
+            "%s() missing required argument 'data'", funcname);
         return -1;
     }
     return 0;
@@ -160,7 +154,6 @@ _parse_fastcall_args(PyObject *const *args, Py_ssize_t nargs,
 error:
     if (input_found) {
         PyBuffer_Release(buf);
-        Py_XDECREF(*buf_owner);
     }
     return -1;
 }
@@ -175,15 +168,13 @@ static PyObject *xxh32_digest(PyObject *self, PyObject *const *args,
 {
     XXH32_hash_t seed = 0;
     Py_buffer buf;
-    PyObject *buf_owner;
     unsigned long long raw_seed;
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxh32_digest", 1, &buf, &buf_owner, &raw_seed) < 0)
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxh32_digest", 1, &buf, &raw_seed) < 0)
         return NULL;
     seed = (XXH32_hash_t)raw_seed;
 
     XXH32_hash_t intdigest = XXH32(buf.buf, buf.len, seed);
     PyBuffer_Release(&buf);
-    Py_XDECREF(buf_owner);
 
     char retbuf[XXH32_DIGESTSIZE];
     XXH32_canonicalFromHash((XXH32_canonical_t *)retbuf, intdigest);
@@ -194,15 +185,13 @@ static PyObject *xxh32_intdigest(PyObject *self, PyObject *const *args,
 {
     XXH32_hash_t seed = 0;
     Py_buffer buf;
-    PyObject *buf_owner;
     unsigned long long raw_seed;
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxh32_intdigest", 1, &buf, &buf_owner, &raw_seed) < 0)
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxh32_intdigest", 1, &buf, &raw_seed) < 0)
         return NULL;
     seed = (XXH32_hash_t)raw_seed;
 
     XXH32_hash_t intdigest = XXH32(buf.buf, buf.len, seed);
     PyBuffer_Release(&buf);
-    Py_XDECREF(buf_owner);
 
     return PyLong_FromUnsignedLong(intdigest);
 }
@@ -211,15 +200,13 @@ static PyObject *xxh32_hexdigest(PyObject *self, PyObject *const *args,
 {
     XXH32_hash_t seed = 0;
     Py_buffer buf;
-    PyObject *buf_owner;
     unsigned long long raw_seed;
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxh32_hexdigest", 1, &buf, &buf_owner, &raw_seed) < 0)
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxh32_hexdigest", 1, &buf, &raw_seed) < 0)
         return NULL;
     seed = (XXH32_hash_t)raw_seed;
 
     XXH32_hash_t intdigest = XXH32(buf.buf, buf.len, seed);
     PyBuffer_Release(&buf);
-    Py_XDECREF(buf_owner);
 
     char digest[XXH32_DIGESTSIZE];
     XXH32_canonicalFromHash((XXH32_canonical_t *)digest, intdigest);
@@ -245,15 +232,13 @@ static PyObject *xxh64_digest(PyObject *self, PyObject *const *args,
 {
     XXH64_hash_t seed = 0;
     Py_buffer buf;
-    PyObject *buf_owner;
     unsigned long long raw_seed;
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxh64_digest", 1, &buf, &buf_owner, &raw_seed) < 0)
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxh64_digest", 1, &buf, &raw_seed) < 0)
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
 
     XXH64_hash_t intdigest = XXH64(buf.buf, buf.len, seed);
     PyBuffer_Release(&buf);
-    Py_XDECREF(buf_owner);
 
     char retbuf[XXH64_DIGESTSIZE];
     XXH64_canonicalFromHash((XXH64_canonical_t *)retbuf, intdigest);
@@ -264,15 +249,13 @@ static PyObject *xxh64_intdigest(PyObject *self, PyObject *const *args,
 {
     XXH64_hash_t seed = 0;
     Py_buffer buf;
-    PyObject *buf_owner;
     unsigned long long raw_seed;
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxh64_intdigest", 1, &buf, &buf_owner, &raw_seed) < 0)
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxh64_intdigest", 1, &buf, &raw_seed) < 0)
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
 
     XXH64_hash_t intdigest = XXH64(buf.buf, buf.len, seed);
     PyBuffer_Release(&buf);
-    Py_XDECREF(buf_owner);
 
     return PyLong_FromUnsignedLongLong(intdigest);
 }
@@ -281,15 +264,13 @@ static PyObject *xxh64_hexdigest(PyObject *self, PyObject *const *args,
 {
     XXH64_hash_t seed = 0;
     Py_buffer buf;
-    PyObject *buf_owner;
     unsigned long long raw_seed;
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxh64_hexdigest", 1, &buf, &buf_owner, &raw_seed) < 0)
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxh64_hexdigest", 1, &buf, &raw_seed) < 0)
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
 
     XXH64_hash_t intdigest = XXH64(buf.buf, buf.len, seed);
     PyBuffer_Release(&buf);
-    Py_XDECREF(buf_owner);
 
     char digest[XXH64_DIGESTSIZE];
     XXH64_canonicalFromHash((XXH64_canonical_t *)digest, intdigest);
@@ -315,15 +296,13 @@ static PyObject *xxh3_64_digest(PyObject *self, PyObject *const *args,
 {
     XXH64_hash_t seed = 0;
     Py_buffer buf;
-    PyObject *buf_owner;
     unsigned long long raw_seed;
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxh3_64_digest", 1, &buf, &buf_owner, &raw_seed) < 0)
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxh3_64_digest", 1, &buf, &raw_seed) < 0)
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
 
     XXH64_hash_t intdigest = XXH3_64bits_withSeed(buf.buf, buf.len, seed);
     PyBuffer_Release(&buf);
-    Py_XDECREF(buf_owner);
 
     char retbuf[XXH64_DIGESTSIZE];
     XXH64_canonicalFromHash((XXH64_canonical_t *)retbuf, intdigest);
@@ -334,15 +313,13 @@ static PyObject *xxh3_64_intdigest(PyObject *self, PyObject *const *args,
 {
     XXH64_hash_t seed = 0;
     Py_buffer buf;
-    PyObject *buf_owner;
     unsigned long long raw_seed;
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxh3_64_intdigest", 1, &buf, &buf_owner, &raw_seed) < 0)
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxh3_64_intdigest", 1, &buf, &raw_seed) < 0)
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
 
     XXH64_hash_t intdigest = XXH3_64bits_withSeed(buf.buf, buf.len, seed);
     PyBuffer_Release(&buf);
-    Py_XDECREF(buf_owner);
 
     return PyLong_FromUnsignedLongLong(intdigest);
 }
@@ -351,15 +328,13 @@ static PyObject *xxh3_64_hexdigest(PyObject *self, PyObject *const *args,
 {
     XXH64_hash_t seed = 0;
     Py_buffer buf;
-    PyObject *buf_owner;
     unsigned long long raw_seed;
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxh3_64_hexdigest", 1, &buf, &buf_owner, &raw_seed) < 0)
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxh3_64_hexdigest", 1, &buf, &raw_seed) < 0)
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
 
     XXH64_hash_t intdigest = XXH3_64bits_withSeed(buf.buf, buf.len, seed);
     PyBuffer_Release(&buf);
-    Py_XDECREF(buf_owner);
 
     char digest[XXH64_DIGESTSIZE];
     XXH64_canonicalFromHash((XXH64_canonical_t *)digest, intdigest);
@@ -385,15 +360,13 @@ static PyObject *xxh3_128_digest(PyObject *self, PyObject *const *args,
 {
     XXH64_hash_t seed = 0;
     Py_buffer buf;
-    PyObject *buf_owner;
     unsigned long long raw_seed;
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxh3_128_digest", 1, &buf, &buf_owner, &raw_seed) < 0)
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxh3_128_digest", 1, &buf, &raw_seed) < 0)
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
 
     XXH128_hash_t intdigest = XXH3_128bits_withSeed(buf.buf, buf.len, seed);
     PyBuffer_Release(&buf);
-    Py_XDECREF(buf_owner);
 
     char retbuf[XXH128_DIGESTSIZE];
     XXH128_canonicalFromHash((XXH128_canonical_t *)retbuf, intdigest);
@@ -404,15 +377,13 @@ static PyObject *xxh3_128_intdigest(PyObject *self, PyObject *const *args,
 {
     XXH64_hash_t seed = 0;
     Py_buffer buf;
-    PyObject *buf_owner;
     unsigned long long raw_seed;
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxh3_128_intdigest", 1, &buf, &buf_owner, &raw_seed) < 0)
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxh3_128_intdigest", 1, &buf, &raw_seed) < 0)
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
 
     XXH128_hash_t intdigest = XXH3_128bits_withSeed(buf.buf, buf.len, seed);
     PyBuffer_Release(&buf);
-    Py_XDECREF(buf_owner);
 
     PyObject *sixtyfour = PyLong_FromLong(64);
     PyObject *low = PyLong_FromUnsignedLongLong(intdigest.low64);
@@ -436,15 +407,13 @@ static PyObject *xxh3_128_hexdigest(PyObject *self, PyObject *const *args,
 {
     XXH64_hash_t seed = 0;
     Py_buffer buf;
-    PyObject *buf_owner;
     unsigned long long raw_seed;
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxh3_128_hexdigest", 1, &buf, &buf_owner, &raw_seed) < 0)
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxh3_128_hexdigest", 1, &buf, &raw_seed) < 0)
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
 
     XXH128_hash_t intdigest = XXH3_128bits_withSeed(buf.buf, buf.len, seed);
     PyBuffer_Release(&buf);
-    Py_XDECREF(buf_owner);
 
     char digest[XXH128_DIGESTSIZE];
     XXH128_canonicalFromHash((XXH128_canonical_t *)digest, intdigest);
@@ -502,11 +471,10 @@ PYXXH32_vectorcall(PyObject *type, PyObject *const *args,
     Py_ssize_t nargs = PyVectorcall_NARGS(nargsf);
     XXH32_hash_t seed = 0;
     Py_buffer buf;
-    PyObject *buf_owner;
     unsigned long long raw_seed;
 
     if (_parse_fastcall_args(args, nargs, kwnames, "xxhash.xxh32()", 0,
-                             &buf, &buf_owner, &raw_seed) < 0)
+                             &buf, &raw_seed) < 0)
         return NULL;
     seed = (XXH32_hash_t)raw_seed;
 
@@ -514,23 +482,20 @@ PYXXH32_vectorcall(PyObject *type, PyObject *const *args,
         ((PyTypeObject *)type)->tp_alloc((PyTypeObject *)type, 0);
     if (self == NULL) {
         PyBuffer_Release(&buf);
-        Py_XDECREF(buf_owner);
-        return NULL;
+            return NULL;
     }
 
     self->xxhash_state = XXH32_createState();
     if (self->xxhash_state == NULL) {
         Py_DECREF(self);
         PyBuffer_Release(&buf);
-        Py_XDECREF(buf_owner);
-        return PyErr_NoMemory();
+            return PyErr_NoMemory();
     }
     self->seed = seed;
     XXH32_reset(self->xxhash_state, seed);
 
     if (buf.obj)
         PYXXH32_do_update(self, &buf);
-    Py_XDECREF(buf_owner);
     return (PyObject *)self;
 }
 
@@ -556,46 +521,135 @@ static PyObject *PYXXH32_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
     return (PyObject *)self;
 }
 
+
+/* Check kwargs for unknown keys. Returns 0 if all known, -1 with TypeError. */
+static Py_ALWAYS_INLINE int
+_check_kwargs(PyObject *kwargs)
+{
+    if (!kwargs)
+        return 0;
+    Py_ssize_t pos = 0;
+    PyObject *key, *val;
+    while (PyDict_Next(kwargs, &pos, &key, &val)) {
+        if (PyUnicode_CompareWithASCIIString(key, "data") == 0 ||
+            PyUnicode_CompareWithASCIIString(key, "seed") == 0)
+            continue;
+        PyErr_Format(PyExc_TypeError,
+            "'%U' is an invalid keyword argument for this function",
+            key);
+        return -1;
+    }
+    return 0;
+}
 static int PYXXH32_init(PYXXH32Object *self, PyObject *args, PyObject *kwargs)
 {
     XXH32_hash_t seed = 0;
-    char *keywords[] = {"input", "seed", NULL};
-    Py_buffer buf;
+    PyObject *data_obj = NULL;
+    Py_buffer buf = {NULL, NULL};
+    Py_ssize_t nargs = PyTuple_GET_SIZE(args);
 
-    buf.buf = buf.obj = NULL;
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|s*I:__init__", keywords, &buf, &seed)) {
+    if (_check_kwargs(kwargs) < 0)
         return -1;
+
+    if (nargs >= 1) {
+        data_obj = PyTuple_GET_ITEM(args, 0);
+        if (kwargs && PyDict_GetItemString(kwargs, "data")) {
+            PyErr_SetString(PyExc_TypeError,
+                "__init__() got multiple values for argument 'data'");
+            return -1;
+        }
+    }
+    if (nargs >= 2) {
+        seed = (XXH32_hash_t)PyLong_AsUnsignedLongMask(PyTuple_GET_ITEM(args, 1));
+        if (PyErr_Occurred()) return -1;
+        if (kwargs && PyDict_GetItemString(kwargs, "seed")) {
+            PyErr_SetString(PyExc_TypeError,
+                "__init__() got multiple values for argument 'seed'");
+            return -1;
+        }
+    }
+    if (nargs > 2) {
+        PyErr_SetString(PyExc_TypeError,
+            "__init__() takes at most 2 positional arguments");
+        return -1;
+    }
+
+    if (kwargs) {
+        PyObject *val = PyDict_GetItemString(kwargs, "data");
+        if (val) {
+            if (data_obj) return -1; /* unreachable, caught above */
+            data_obj = val;
+        }
+        val = PyDict_GetItemString(kwargs, "seed");
+        if (val) {
+            seed = (XXH32_hash_t)PyLong_AsUnsignedLongMask(val);
+            if (PyErr_Occurred()) return -1;
+        }
+    }
+
+    if (data_obj) {
+        if (_get_buffer_or_str(data_obj, &buf) < 0)
+            return -1;
     }
 
     self->seed = seed;
     XXH32_reset(self->xxhash_state, seed);
 
-    if (buf.obj) {
+    if (buf.obj)
         PYXXH32_do_update(self, &buf);
-    }
-
     return 0;
 }
 
 PyDoc_STRVAR(
     PYXXH32_update_doc,
-    "update (input)\n\n"
-    "Update the xxh32 object with the string input. Repeated calls are\n"
+    "update (data)\n\n"
+    "Update the xxh32 object with bytes-like data. Repeated calls are\n"
     "equivalent to a single call with the concatenation of all the arguments.");
 
-static PyObject *PYXXH32_update(PYXXH32Object *self, PyObject *args)
+static PyObject *PYXXH32_update(PYXXH32Object *self, PyObject *const *args,
+                                 Py_ssize_t nargs, PyObject *kwnames)
 {
-    Py_buffer buf;
+    PyObject *arg = NULL;
 
-    buf.buf = buf.obj = NULL;
+    /* validate keywords first */
+    if (kwnames) {
+        Py_ssize_t nkw = PyTuple_GET_SIZE(kwnames);
+        for (Py_ssize_t i = 0; i < nkw; i++) {
+            PyObject *key = PyTuple_GET_ITEM(kwnames, i);
+            if (PyUnicode_CompareWithASCIIString(key, "data") == 0) {
+                if (nargs >= 1) {
+                    PyErr_SetString(PyExc_TypeError,
+                        "xxh32.update() got multiple values for argument 'data'");
+                    return NULL;
+                }
+                arg = args[nargs + i];
+            } else {
+                PyErr_Format(PyExc_TypeError,
+                    "'%U' is an invalid keyword argument for 'xxh32.update()'",
+                    key);
+                return NULL;
+            }
+        }
+    }
 
-    if (!PyArg_ParseTuple(args, "s*:update", &buf)) {
+    if (nargs >= 1) {
+        if (nargs > 1) {
+            PyErr_Format(PyExc_TypeError,
+                "xxh32.update() takes at most 1 positional argument (%zd given)", nargs);
+            return NULL;
+        }
+        arg = args[0];
+    }
+
+    if (!arg) {
+        PyErr_SetString(PyExc_TypeError, "xxh32.update() missing required argument 'data'");
         return NULL;
     }
 
+    Py_buffer buf;
+    if (_get_buffer_or_str(arg, &buf) < 0)
+        return NULL;
     PYXXH32_do_update(self, &buf);
-
     Py_RETURN_NONE;
 }
 
@@ -603,7 +657,7 @@ static PyObject *PYXXH32_update(PYXXH32Object *self, PyObject *args)
 PyDoc_STRVAR(
     PYXXH32_digest_doc,
     "digest() -> string\n\n"
-    "Return the digest of the strings passed to the update() method so\n"
+    "Return the digest of the data passed to the update() method so\n"
     "far. This is a 4-byte string which may contain non-ASCII characters,\n"
     "including null bytes.");
 
@@ -695,7 +749,7 @@ static PyObject *PYXXH32_reset(PYXXH32Object *self)
 }
 
 static PyMethodDef PYXXH32_methods[] = {
-    {"update", (PyCFunction)PYXXH32_update, METH_VARARGS, PYXXH32_update_doc},
+    {"update", (PyCFunction)PYXXH32_update, METH_FASTCALL | METH_KEYWORDS, PYXXH32_update_doc},
     {"digest", (PyCFunction)PYXXH32_digest, METH_NOARGS, PYXXH32_digest_doc},
     {"hexdigest", (PyCFunction)PYXXH32_hexdigest, METH_NOARGS, PYXXH32_hexdigest_doc},
     {"intdigest", (PyCFunction)PYXXH32_intdigest, METH_NOARGS, PYXXH32_intdigest_doc},
@@ -768,7 +822,7 @@ PyDoc_STRVAR(
     "\n"
     "Methods:\n"
     "\n"
-    "update(input) -- updates the current digest with the provided string.\n"
+    "update(data) -- updates the current digest with the provided data.\n"
     "digest() -- return the current digest value\n"
     "hexdigest() -- return the current digest as a string of hexadecimal digits\n"
     "intdigest() -- return the current digest as an integer\n"
@@ -861,11 +915,10 @@ PYXXH64_vectorcall(PyObject *type, PyObject *const *args,
     Py_ssize_t nargs = PyVectorcall_NARGS(nargsf);
     XXH64_hash_t seed = 0;
     Py_buffer buf;
-    PyObject *buf_owner;
     unsigned long long raw_seed;
 
     if (_parse_fastcall_args(args, nargs, kwnames, "xxhash.xxh64()", 0,
-                             &buf, &buf_owner, &raw_seed) < 0)
+                             &buf, &raw_seed) < 0)
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
 
@@ -873,23 +926,20 @@ PYXXH64_vectorcall(PyObject *type, PyObject *const *args,
         ((PyTypeObject *)type)->tp_alloc((PyTypeObject *)type, 0);
     if (self == NULL) {
         PyBuffer_Release(&buf);
-        Py_XDECREF(buf_owner);
-        return NULL;
+            return NULL;
     }
 
     self->xxhash_state = XXH64_createState();
     if (self->xxhash_state == NULL) {
         Py_DECREF(self);
         PyBuffer_Release(&buf);
-        Py_XDECREF(buf_owner);
-        return PyErr_NoMemory();
+            return PyErr_NoMemory();
     }
     self->seed = seed;
     XXH64_reset(self->xxhash_state, seed);
 
     if (buf.obj)
         PYXXH64_do_update(self, &buf);
-    Py_XDECREF(buf_owner);
     return (PyObject *)self;
 }
 static PyObject *PYXXH64_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
@@ -915,50 +965,119 @@ static PyObject *PYXXH64_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
 static int PYXXH64_init(PYXXH64Object *self, PyObject *args, PyObject *kwargs)
 {
     XXH64_hash_t seed = 0;
-    char *keywords[] = {"input", "seed", NULL};
-    Py_buffer buf;
+    PyObject *data_obj = NULL;
+    Py_buffer buf = {NULL, NULL};
+    Py_ssize_t nargs = PyTuple_GET_SIZE(args);
 
-    buf.buf = buf.obj = NULL;
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|s*K:__init__", keywords, &buf, &seed)) {
+    if (_check_kwargs(kwargs) < 0)
         return -1;
+
+    if (nargs >= 1) {
+        data_obj = PyTuple_GET_ITEM(args, 0);
+        if (kwargs && PyDict_GetItemString(kwargs, "data")) {
+            PyErr_SetString(PyExc_TypeError,
+                "__init__() got multiple values for argument 'data'");
+            return -1;
+        }
+    }
+    if (nargs >= 2) {
+        seed = PyLong_AsUnsignedLongLongMask(PyTuple_GET_ITEM(args, 1));
+        if (PyErr_Occurred()) return -1;
+        if (kwargs && PyDict_GetItemString(kwargs, "seed")) {
+            PyErr_SetString(PyExc_TypeError,
+                "__init__() got multiple values for argument 'seed'");
+            return -1;
+        }
+    }
+    if (nargs > 2) {
+        PyErr_SetString(PyExc_TypeError,
+            "__init__() takes at most 2 positional arguments");
+        return -1;
+    }
+
+    if (kwargs) {
+        PyObject *val = PyDict_GetItemString(kwargs, "data");
+        if (val) {
+            if (data_obj) return -1; /* unreachable, caught above */
+            data_obj = val;
+        }
+        val = PyDict_GetItemString(kwargs, "seed");
+        if (val) {
+            seed = PyLong_AsUnsignedLongLongMask(val);
+            if (PyErr_Occurred()) return -1;
+        }
+    }
+
+    if (data_obj) {
+        if (_get_buffer_or_str(data_obj, &buf) < 0)
+            return -1;
     }
 
     self->seed = seed;
     XXH64_reset(self->xxhash_state, seed);
 
-    if (buf.obj) {
+    if (buf.obj)
         PYXXH64_do_update(self, &buf);
-    }
-
     return 0;
 }
 
 PyDoc_STRVAR(
     PYXXH64_update_doc,
-    "update (input)\n\n"
-    "Update the xxh64 object with the string input. Repeated calls are\n"
+    "update (data)\n\n"
+    "Update the xxh64 object with bytes-like data. Repeated calls are\n"
     "equivalent to a single call with the concatenation of all the arguments.");
 
-static PyObject *PYXXH64_update(PYXXH64Object *self, PyObject *args)
+static PyObject *PYXXH64_update(PYXXH64Object *self, PyObject *const *args,
+                                 Py_ssize_t nargs, PyObject *kwnames)
 {
-    Py_buffer buf;
+    PyObject *arg = NULL;
 
-    buf.buf = buf.obj = NULL;
+    /* validate keywords first */
+    if (kwnames) {
+        Py_ssize_t nkw = PyTuple_GET_SIZE(kwnames);
+        for (Py_ssize_t i = 0; i < nkw; i++) {
+            PyObject *key = PyTuple_GET_ITEM(kwnames, i);
+            if (PyUnicode_CompareWithASCIIString(key, "data") == 0) {
+                if (nargs >= 1) {
+                    PyErr_SetString(PyExc_TypeError,
+                        "xxh64.update() got multiple values for argument 'data'");
+                    return NULL;
+                }
+                arg = args[nargs + i];
+            } else {
+                PyErr_Format(PyExc_TypeError,
+                    "'%U' is an invalid keyword argument for 'xxh64.update()'",
+                    key);
+                return NULL;
+            }
+        }
+    }
 
-    if (!PyArg_ParseTuple(args, "s*:update", &buf)) {
+    if (nargs >= 1) {
+        if (nargs > 1) {
+            PyErr_Format(PyExc_TypeError,
+                "xxh64.update() takes at most 1 positional argument (%zd given)", nargs);
+            return NULL;
+        }
+        arg = args[0];
+    }
+
+    if (!arg) {
+        PyErr_SetString(PyExc_TypeError, "xxh64.update() missing required argument 'data'");
         return NULL;
     }
 
+    Py_buffer buf;
+    if (_get_buffer_or_str(arg, &buf) < 0)
+        return NULL;
     PYXXH64_do_update(self, &buf);
-
     Py_RETURN_NONE;
 }
 
 PyDoc_STRVAR(
     PYXXH64_digest_doc,
     "digest() -> string\n\n"
-    "Return the digest of the strings passed to the update() method so\n"
+    "Return the digest of the data passed to the update() method so\n"
     "far. This is a 8-byte string which may contain non-ASCII characters,\n"
     "including null bytes.");
 
@@ -1051,7 +1170,7 @@ static PyObject *PYXXH64_reset(PYXXH64Object *self)
 }
 
 static PyMethodDef PYXXH64_methods[] = {
-    {"update", (PyCFunction)PYXXH64_update, METH_VARARGS, PYXXH64_update_doc},
+    {"update", (PyCFunction)PYXXH64_update, METH_FASTCALL | METH_KEYWORDS, PYXXH64_update_doc},
     {"digest", (PyCFunction)PYXXH64_digest, METH_NOARGS, PYXXH64_digest_doc},
     {"hexdigest", (PyCFunction)PYXXH64_hexdigest, METH_NOARGS, PYXXH64_hexdigest_doc},
     {"intdigest", (PyCFunction)PYXXH64_intdigest, METH_NOARGS, PYXXH64_intdigest_doc},
@@ -1124,7 +1243,7 @@ PyDoc_STRVAR(
     "\n"
     "Methods:\n"
     "\n"
-    "update(input) -- updates the current digest with an additional string\n"
+    "update(data) -- updates the current digest with additional data\n"
     "digest() -- return the current digest value\n"
     "hexdigest() -- return the current digest as a string of hexadecimal digits\n"
     "intdigest() -- return the current digest as an integer\n"
@@ -1216,11 +1335,10 @@ PYXXH3_64_vectorcall(PyObject *type, PyObject *const *args,
     Py_ssize_t nargs = PyVectorcall_NARGS(nargsf);
     XXH64_hash_t seed = 0;
     Py_buffer buf;
-    PyObject *buf_owner;
     unsigned long long raw_seed;
 
     if (_parse_fastcall_args(args, nargs, kwnames, "xxhash.xxh3_64()", 0,
-                             &buf, &buf_owner, &raw_seed) < 0)
+                             &buf, &raw_seed) < 0)
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
 
@@ -1228,23 +1346,20 @@ PYXXH3_64_vectorcall(PyObject *type, PyObject *const *args,
         ((PyTypeObject *)type)->tp_alloc((PyTypeObject *)type, 0);
     if (self == NULL) {
         PyBuffer_Release(&buf);
-        Py_XDECREF(buf_owner);
-        return NULL;
+            return NULL;
     }
 
     self->xxhash_state = XXH3_createState();
     if (self->xxhash_state == NULL) {
         Py_DECREF(self);
         PyBuffer_Release(&buf);
-        Py_XDECREF(buf_owner);
-        return PyErr_NoMemory();
+            return PyErr_NoMemory();
     }
     self->seed = seed;
     XXH3_64bits_reset_withSeed(self->xxhash_state, seed);
 
     if (buf.obj)
         PYXXH3_64_do_update(self, &buf);
-    Py_XDECREF(buf_owner);
     return (PyObject *)self;
 }
 static PyObject *PYXXH3_64_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
@@ -1270,50 +1385,119 @@ static PyObject *PYXXH3_64_new(PyTypeObject *type, PyObject *args, PyObject *kwa
 static int PYXXH3_64_init(PYXXH3_64Object *self, PyObject *args, PyObject *kwargs)
 {
     XXH64_hash_t seed = 0;
-    char *keywords[] = {"input", "seed", NULL};
-    Py_buffer buf;
+    PyObject *data_obj = NULL;
+    Py_buffer buf = {NULL, NULL};
+    Py_ssize_t nargs = PyTuple_GET_SIZE(args);
 
-    buf.buf = buf.obj = NULL;
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|s*K:__init__", keywords, &buf, &seed)) {
+    if (_check_kwargs(kwargs) < 0)
         return -1;
+
+    if (nargs >= 1) {
+        data_obj = PyTuple_GET_ITEM(args, 0);
+        if (kwargs && PyDict_GetItemString(kwargs, "data")) {
+            PyErr_SetString(PyExc_TypeError,
+                "__init__() got multiple values for argument 'data'");
+            return -1;
+        }
+    }
+    if (nargs >= 2) {
+        seed = PyLong_AsUnsignedLongLongMask(PyTuple_GET_ITEM(args, 1));
+        if (PyErr_Occurred()) return -1;
+        if (kwargs && PyDict_GetItemString(kwargs, "seed")) {
+            PyErr_SetString(PyExc_TypeError,
+                "__init__() got multiple values for argument 'seed'");
+            return -1;
+        }
+    }
+    if (nargs > 2) {
+        PyErr_SetString(PyExc_TypeError,
+            "__init__() takes at most 2 positional arguments");
+        return -1;
+    }
+
+    if (kwargs) {
+        PyObject *val = PyDict_GetItemString(kwargs, "data");
+        if (val) {
+            if (data_obj) return -1; /* unreachable, caught above */
+            data_obj = val;
+        }
+        val = PyDict_GetItemString(kwargs, "seed");
+        if (val) {
+            seed = PyLong_AsUnsignedLongLongMask(val);
+            if (PyErr_Occurred()) return -1;
+        }
+    }
+
+    if (data_obj) {
+        if (_get_buffer_or_str(data_obj, &buf) < 0)
+            return -1;
     }
 
     self->seed = seed;
     XXH3_64bits_reset_withSeed(self->xxhash_state, seed);
 
-    if (buf.obj) {
+    if (buf.obj)
         PYXXH3_64_do_update(self, &buf);
-    }
-
     return 0;
 }
 
 PyDoc_STRVAR(
     PYXXH3_64_update_doc,
-    "update (input)\n\n"
-    "Update the xxh3_64 object with the string input. Repeated calls are\n"
+    "update (data)\n\n"
+    "Update the xxh3_64 object with bytes-like data. Repeated calls are\n"
     "equivalent to a single call with the concatenation of all the arguments.");
 
-static PyObject *PYXXH3_64_update(PYXXH3_64Object *self, PyObject *args)
+static PyObject *PYXXH3_64_update(PYXXH3_64Object *self, PyObject *const *args,
+                                 Py_ssize_t nargs, PyObject *kwnames)
 {
-    Py_buffer buf;
+    PyObject *arg = NULL;
 
-    buf.buf = buf.obj = NULL;
+    /* validate keywords first */
+    if (kwnames) {
+        Py_ssize_t nkw = PyTuple_GET_SIZE(kwnames);
+        for (Py_ssize_t i = 0; i < nkw; i++) {
+            PyObject *key = PyTuple_GET_ITEM(kwnames, i);
+            if (PyUnicode_CompareWithASCIIString(key, "data") == 0) {
+                if (nargs >= 1) {
+                    PyErr_SetString(PyExc_TypeError,
+                        "xxh3_64.update() got multiple values for argument 'data'");
+                    return NULL;
+                }
+                arg = args[nargs + i];
+            } else {
+                PyErr_Format(PyExc_TypeError,
+                    "'%U' is an invalid keyword argument for 'xxh3_64.update()'",
+                    key);
+                return NULL;
+            }
+        }
+    }
 
-    if (!PyArg_ParseTuple(args, "s*:update", &buf)) {
+    if (nargs >= 1) {
+        if (nargs > 1) {
+            PyErr_Format(PyExc_TypeError,
+                "xxh3_64.update() takes at most 1 positional argument (%zd given)", nargs);
+            return NULL;
+        }
+        arg = args[0];
+    }
+
+    if (!arg) {
+        PyErr_SetString(PyExc_TypeError, "xxh3_64.update() missing required argument 'data'");
         return NULL;
     }
 
+    Py_buffer buf;
+    if (_get_buffer_or_str(arg, &buf) < 0)
+        return NULL;
     PYXXH3_64_do_update(self, &buf);
-
     Py_RETURN_NONE;
 }
 
 PyDoc_STRVAR(
     PYXXH3_64_digest_doc,
     "digest() -> string\n\n"
-    "Return the digest of the strings passed to the update() method so\n"
+    "Return the digest of the data passed to the update() method so\n"
     "far. This is a 8-byte string which may contain non-ASCII characters,\n"
     "including null bytes.");
 
@@ -1414,7 +1598,7 @@ static PyObject *PYXXH3_64_reset(PYXXH3_64Object *self)
 }
 
 static PyMethodDef PYXXH3_64_methods[] = {
-    {"update", (PyCFunction)PYXXH3_64_update, METH_VARARGS, PYXXH3_64_update_doc},
+    {"update", (PyCFunction)PYXXH3_64_update, METH_FASTCALL | METH_KEYWORDS, PYXXH3_64_update_doc},
     {"digest", (PyCFunction)PYXXH3_64_digest, METH_NOARGS, PYXXH3_64_digest_doc},
     {"hexdigest", (PyCFunction)PYXXH3_64_hexdigest, METH_NOARGS, PYXXH3_64_hexdigest_doc},
     {"intdigest", (PyCFunction)PYXXH3_64_intdigest, METH_NOARGS, PYXXH3_64_intdigest_doc},
@@ -1487,7 +1671,7 @@ PyDoc_STRVAR(
     "\n"
     "Methods:\n"
     "\n"
-    "update(input) -- updates the current digest with an additional string\n"
+    "update(data) -- updates the current digest with additional data\n"
     "digest() -- return the current digest value\n"
     "hexdigest() -- return the current digest as a string of hexadecimal digits\n"
     "intdigest() -- return the current digest as an integer\n"
@@ -1580,11 +1764,10 @@ PYXXH3_128_vectorcall(PyObject *type, PyObject *const *args,
     Py_ssize_t nargs = PyVectorcall_NARGS(nargsf);
     XXH64_hash_t seed = 0;
     Py_buffer buf;
-    PyObject *buf_owner;
     unsigned long long raw_seed;
 
     if (_parse_fastcall_args(args, nargs, kwnames, "xxhash.xxh3_128()", 0,
-                             &buf, &buf_owner, &raw_seed) < 0)
+                             &buf, &raw_seed) < 0)
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
 
@@ -1592,23 +1775,20 @@ PYXXH3_128_vectorcall(PyObject *type, PyObject *const *args,
         ((PyTypeObject *)type)->tp_alloc((PyTypeObject *)type, 0);
     if (self == NULL) {
         PyBuffer_Release(&buf);
-        Py_XDECREF(buf_owner);
-        return NULL;
+            return NULL;
     }
 
     self->xxhash_state = XXH3_createState();
     if (self->xxhash_state == NULL) {
         Py_DECREF(self);
         PyBuffer_Release(&buf);
-        Py_XDECREF(buf_owner);
-        return PyErr_NoMemory();
+            return PyErr_NoMemory();
     }
     self->seed = seed;
     XXH3_128bits_reset_withSeed(self->xxhash_state, seed);
 
     if (buf.obj)
         PYXXH3_128_do_update(self, &buf);
-    Py_XDECREF(buf_owner);
     return (PyObject *)self;
 }
 static PyObject *PYXXH3_128_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
@@ -1634,49 +1814,119 @@ static PyObject *PYXXH3_128_new(PyTypeObject *type, PyObject *args, PyObject *kw
 static int PYXXH3_128_init(PYXXH3_128Object *self, PyObject *args, PyObject *kwargs)
 {
     XXH64_hash_t seed = 0;
-    char *keywords[] = {"input", "seed", NULL};
-    Py_buffer buf;
+    PyObject *data_obj = NULL;
+    Py_buffer buf = {NULL, NULL};
+    Py_ssize_t nargs = PyTuple_GET_SIZE(args);
 
-    buf.buf = buf.obj = NULL;
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|s*K:__init__", keywords, &buf, &seed)) {
+    if (_check_kwargs(kwargs) < 0)
         return -1;
+
+    if (nargs >= 1) {
+        data_obj = PyTuple_GET_ITEM(args, 0);
+        if (kwargs && PyDict_GetItemString(kwargs, "data")) {
+            PyErr_SetString(PyExc_TypeError,
+                "__init__() got multiple values for argument 'data'");
+            return -1;
+        }
+    }
+    if (nargs >= 2) {
+        seed = PyLong_AsUnsignedLongLongMask(PyTuple_GET_ITEM(args, 1));
+        if (PyErr_Occurred()) return -1;
+        if (kwargs && PyDict_GetItemString(kwargs, "seed")) {
+            PyErr_SetString(PyExc_TypeError,
+                "__init__() got multiple values for argument 'seed'");
+            return -1;
+        }
+    }
+    if (nargs > 2) {
+        PyErr_SetString(PyExc_TypeError,
+            "__init__() takes at most 2 positional arguments");
+        return -1;
+    }
+
+    if (kwargs) {
+        PyObject *val = PyDict_GetItemString(kwargs, "data");
+        if (val) {
+            if (data_obj) return -1; /* unreachable, caught above */
+            data_obj = val;
+        }
+        val = PyDict_GetItemString(kwargs, "seed");
+        if (val) {
+            seed = PyLong_AsUnsignedLongLongMask(val);
+            if (PyErr_Occurred()) return -1;
+        }
+    }
+
+    if (data_obj) {
+        if (_get_buffer_or_str(data_obj, &buf) < 0)
+            return -1;
     }
 
     self->seed = seed;
     XXH3_128bits_reset_withSeed(self->xxhash_state, seed);
 
-    if (buf.obj) {
+    if (buf.obj)
         PYXXH3_128_do_update(self, &buf);
-    }
-
     return 0;
 }
 
 PyDoc_STRVAR(
     PYXXH3_128_update_doc,
-    "update (input)\n\n"
-    "Update the xxh3_128 object with the string input. Repeated calls are\n"
+    "update (data)\n\n"
+    "Update the xxh3_128 object with bytes-like data. Repeated calls are\n"
     "equivalent to a single call with the concatenation of all the arguments.");
 
-static PyObject *PYXXH3_128_update(PYXXH3_128Object *self, PyObject *args)
+static PyObject *PYXXH3_128_update(PYXXH3_128Object *self, PyObject *const *args,
+                                 Py_ssize_t nargs, PyObject *kwnames)
 {
-    Py_buffer buf;
-    buf.buf = buf.obj = NULL;
+    PyObject *arg = NULL;
 
-    if (!PyArg_ParseTuple(args, "s*:update", &buf)) {
+    /* validate keywords first */
+    if (kwnames) {
+        Py_ssize_t nkw = PyTuple_GET_SIZE(kwnames);
+        for (Py_ssize_t i = 0; i < nkw; i++) {
+            PyObject *key = PyTuple_GET_ITEM(kwnames, i);
+            if (PyUnicode_CompareWithASCIIString(key, "data") == 0) {
+                if (nargs >= 1) {
+                    PyErr_SetString(PyExc_TypeError,
+                        "xxh3_128.update() got multiple values for argument 'data'");
+                    return NULL;
+                }
+                arg = args[nargs + i];
+            } else {
+                PyErr_Format(PyExc_TypeError,
+                    "'%U' is an invalid keyword argument for 'xxh3_128.update()'",
+                    key);
+                return NULL;
+            }
+        }
+    }
+
+    if (nargs >= 1) {
+        if (nargs > 1) {
+            PyErr_Format(PyExc_TypeError,
+                "xxh3_128.update() takes at most 1 positional argument (%zd given)", nargs);
+            return NULL;
+        }
+        arg = args[0];
+    }
+
+    if (!arg) {
+        PyErr_SetString(PyExc_TypeError, "xxh3_128.update() missing required argument 'data'");
         return NULL;
     }
 
+    Py_buffer buf;
+    if (_get_buffer_or_str(arg, &buf) < 0)
+        return NULL;
     PYXXH3_128_do_update(self, &buf);
-
     Py_RETURN_NONE;
 }
 
 PyDoc_STRVAR(
     PYXXH3_128_digest_doc,
     "digest() -> string\n\n"
-    "Return the digest of the strings passed to the update() method so\n"
+    "Return the digest of the data passed to the update() method so\n"
     "far. This is a 16-byte string which may contain non-ASCII characters,\n"
     "including null bytes.");
 
@@ -1795,7 +2045,7 @@ static PyObject *PYXXH3_128_reset(PYXXH3_128Object *self)
 }
 
 static PyMethodDef PYXXH3_128_methods[] = {
-    {"update", (PyCFunction)PYXXH3_128_update, METH_VARARGS, PYXXH3_128_update_doc},
+    {"update", (PyCFunction)PYXXH3_128_update, METH_FASTCALL | METH_KEYWORDS, PYXXH3_128_update_doc},
     {"digest", (PyCFunction)PYXXH3_128_digest, METH_NOARGS, PYXXH3_128_digest_doc},
     {"hexdigest", (PyCFunction)PYXXH3_128_hexdigest, METH_NOARGS, PYXXH3_128_hexdigest_doc},
     {"intdigest", (PyCFunction)PYXXH3_128_intdigest, METH_NOARGS, PYXXH3_128_intdigest_doc},
@@ -1868,7 +2118,7 @@ PyDoc_STRVAR(
     "\n"
     "Methods:\n"
     "\n"
-    "update(input) -- updates the current digest with an additional string\n"
+    "update(data) -- updates the current digest with additional data\n"
     "digest() -- return the current digest value\n"
     "hexdigest() -- return the current digest as a string of hexadecimal digits\n"
     "intdigest() -- return the current digest as an integer\n"

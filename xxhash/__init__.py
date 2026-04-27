@@ -34,6 +34,8 @@ algorithms_available = set([
     "xxh3_128",
 ])
 
+algorithms_guaranteed = algorithms_available
+
 
 __all__ = [
     "xxh32",
@@ -60,4 +62,5 @@ __all__ = [
     "VERSION_TUPLE",
     "XXHASH_VERSION",
     "algorithms_available",
+    "algorithms_guaranteed",
 ]
