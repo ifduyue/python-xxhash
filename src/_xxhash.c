@@ -52,12 +52,9 @@
 static int
 _get_buffer_or_str(PyObject *obj, Py_buffer *buf, PyObject **owner)
 {
-    if (PyObject_GetBuffer(obj, buf, PyBUF_SIMPLE) == 0) {
-        *owner = NULL;
-        return 0;
-    }
+    /* Check str first to avoid a guaranteed-failing PyObject_GetBuffer call
+     * and the resulting set/clear of a TypeError. */
     if (PyUnicode_Check(obj)) {
-        PyErr_Clear();
         *owner = PyUnicode_AsUTF8String(obj);
         if (*owner == NULL)
             return -1;
@@ -67,7 +64,10 @@ _get_buffer_or_str(PyObject *obj, Py_buffer *buf, PyObject **owner)
         }
         return 0;
     }
-    return -1;
+    if (PyObject_GetBuffer(obj, buf, PyBUF_SIMPLE) < 0)
+        return -1;
+    *owner = NULL;
+    return 0;
 }
 
 /*****************************************************************************
