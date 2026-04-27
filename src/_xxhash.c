@@ -527,12 +527,8 @@ PYXXH32_vectorcall(PyObject *type, PyObject *const *args,
     self->seed = seed;
     XXH32_reset(self->xxhash_state, seed);
 
-    if (buf.buf) {
-        Py_BEGIN_ALLOW_THREADS
-        XXH32_update(self->xxhash_state, buf.buf, buf.len);
-        Py_END_ALLOW_THREADS
-        PyBuffer_Release(&buf);
-    }
+    if (buf.buf)
+        PYXXH32_do_update(self, &buf);
     Py_XDECREF(buf_owner);
     return (PyObject *)self;
 }
@@ -890,12 +886,8 @@ PYXXH64_vectorcall(PyObject *type, PyObject *const *args,
     self->seed = seed;
     XXH64_reset(self->xxhash_state, seed);
 
-    if (buf.buf) {
-        Py_BEGIN_ALLOW_THREADS
-        XXH64_update(self->xxhash_state, buf.buf, buf.len);
-        Py_END_ALLOW_THREADS
-        PyBuffer_Release(&buf);
-    }
+    if (buf.buf)
+        PYXXH64_do_update(self, &buf);
     Py_XDECREF(buf_owner);
     return (PyObject *)self;
 }
@@ -1249,12 +1241,8 @@ PYXXH3_64_vectorcall(PyObject *type, PyObject *const *args,
     self->seed = seed;
     XXH3_64bits_reset_withSeed(self->xxhash_state, seed);
 
-    if (buf.buf) {
-        Py_BEGIN_ALLOW_THREADS
-        XXH3_64bits_update(self->xxhash_state, buf.buf, buf.len);
-        Py_END_ALLOW_THREADS
-        PyBuffer_Release(&buf);
-    }
+    if (buf.buf)
+        PYXXH3_64_do_update(self, &buf);
     Py_XDECREF(buf_owner);
     return (PyObject *)self;
 }
@@ -1617,12 +1605,8 @@ PYXXH3_128_vectorcall(PyObject *type, PyObject *const *args,
     self->seed = seed;
     XXH3_128bits_reset_withSeed(self->xxhash_state, seed);
 
-    if (buf.buf) {
-        Py_BEGIN_ALLOW_THREADS
-        XXH3_128bits_update(self->xxhash_state, buf.buf, buf.len);
-        Py_END_ALLOW_THREADS
-        PyBuffer_Release(&buf);
-    }
+    if (buf.buf)
+        PYXXH3_128_do_update(self, &buf);
     Py_XDECREF(buf_owner);
     return (PyObject *)self;
 }
