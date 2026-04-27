@@ -82,6 +82,7 @@ _parse_fastcall_args(PyObject *const *args, Py_ssize_t nargs,
                      unsigned long long *seed)
 {
     int input_found = 0;
+    int seed_found = 0;
 
     *seed = 0;
     buf->buf = NULL;
@@ -97,6 +98,7 @@ _parse_fastcall_args(PyObject *const *args, Py_ssize_t nargs,
         *seed = PyLong_AsUnsignedLongLongMask(args[1]);
         if (PyErr_Occurred())
             goto error;
+        seed_found = 1;
     }
     if (nargs > 2) {
         PyErr_Format(PyExc_TypeError,
@@ -123,9 +125,16 @@ _parse_fastcall_args(PyObject *const *args, Py_ssize_t nargs,
                     return -1;
                 input_found = 1;
             } else if (PyUnicode_CompareWithASCIIString(key, "seed") == 0) {
+                if (seed_found) {
+                    PyErr_Format(PyExc_TypeError,
+                        "%s() got multiple values for argument 'seed'",
+                        funcname);
+                    goto error;
+                }
                 *seed = PyLong_AsUnsignedLongLongMask(val);
                 if (PyErr_Occurred())
                     goto error;
+                seed_found = 1;
             } else {
                 PyErr_Format(PyExc_TypeError,
                     "'%U' is an invalid keyword argument for '%s()'",
