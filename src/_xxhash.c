@@ -511,12 +511,15 @@ PYXXH32_vectorcall(PyObject *type, PyObject *const *args,
 
     PYXXH32Object *self = (PYXXH32Object *)
         ((PyTypeObject *)type)->tp_alloc((PyTypeObject *)type, 0);
-    if (self == NULL) goto error;
+    if (self == NULL)
+        return NULL;
 
     self->xxhash_state = XXH32_createState();
     if (self->xxhash_state == NULL) {
         Py_DECREF(self);
-        goto error;
+        PyBuffer_Release(&buf);
+        Py_XDECREF(buf_owner);
+        return PyErr_NoMemory();
     }
     self->seed = seed;
     XXH32_reset(self->xxhash_state, seed);
@@ -529,12 +532,6 @@ PYXXH32_vectorcall(PyObject *type, PyObject *const *args,
     }
     Py_XDECREF(buf_owner);
     return (PyObject *)self;
-
-error:
-    if (buf.buf)
-        PyBuffer_Release(&buf);
-    Py_XDECREF(buf_owner);
-    return PyErr_NoMemory();
 }
 
 /* XXH32 methods */
@@ -874,12 +871,15 @@ PYXXH64_vectorcall(PyObject *type, PyObject *const *args,
 
     PYXXH64Object *self = (PYXXH64Object *)
         ((PyTypeObject *)type)->tp_alloc((PyTypeObject *)type, 0);
-    if (self == NULL) goto error;
+    if (self == NULL)
+        return NULL;
 
     self->xxhash_state = XXH64_createState();
     if (self->xxhash_state == NULL) {
         Py_DECREF(self);
-        goto error;
+        PyBuffer_Release(&buf);
+        Py_XDECREF(buf_owner);
+        return PyErr_NoMemory();
     }
     self->seed = seed;
     XXH64_reset(self->xxhash_state, seed);
@@ -892,12 +892,6 @@ PYXXH64_vectorcall(PyObject *type, PyObject *const *args,
     }
     Py_XDECREF(buf_owner);
     return (PyObject *)self;
-
-error:
-    if (buf.buf)
-        PyBuffer_Release(&buf);
-    Py_XDECREF(buf_owner);
-    return PyErr_NoMemory();
 }
 static PyObject *PYXXH64_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
@@ -1233,12 +1227,15 @@ PYXXH3_64_vectorcall(PyObject *type, PyObject *const *args,
 
     PYXXH3_64Object *self = (PYXXH3_64Object *)
         ((PyTypeObject *)type)->tp_alloc((PyTypeObject *)type, 0);
-    if (self == NULL) goto error;
+    if (self == NULL)
+        return NULL;
 
     self->xxhash_state = XXH3_createState();
     if (self->xxhash_state == NULL) {
         Py_DECREF(self);
-        goto error;
+        PyBuffer_Release(&buf);
+        Py_XDECREF(buf_owner);
+        return PyErr_NoMemory();
     }
     self->seed = seed;
     XXH3_64bits_reset_withSeed(self->xxhash_state, seed);
@@ -1251,12 +1248,6 @@ PYXXH3_64_vectorcall(PyObject *type, PyObject *const *args,
     }
     Py_XDECREF(buf_owner);
     return (PyObject *)self;
-
-error:
-    if (buf.buf)
-        PyBuffer_Release(&buf);
-    Py_XDECREF(buf_owner);
-    return PyErr_NoMemory();
 }
 static PyObject *PYXXH3_64_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
@@ -1601,12 +1592,15 @@ PYXXH3_128_vectorcall(PyObject *type, PyObject *const *args,
 
     PYXXH3_128Object *self = (PYXXH3_128Object *)
         ((PyTypeObject *)type)->tp_alloc((PyTypeObject *)type, 0);
-    if (self == NULL) goto error;
+    if (self == NULL)
+        return NULL;
 
     self->xxhash_state = XXH3_createState();
     if (self->xxhash_state == NULL) {
         Py_DECREF(self);
-        goto error;
+        PyBuffer_Release(&buf);
+        Py_XDECREF(buf_owner);
+        return PyErr_NoMemory();
     }
     self->seed = seed;
     XXH3_128bits_reset_withSeed(self->xxhash_state, seed);
@@ -1619,12 +1613,6 @@ PYXXH3_128_vectorcall(PyObject *type, PyObject *const *args,
     }
     Py_XDECREF(buf_owner);
     return (PyObject *)self;
-
-error:
-    if (buf.buf)
-        PyBuffer_Release(&buf);
-    Py_XDECREF(buf_owner);
-    return PyErr_NoMemory();
 }
 static PyObject *PYXXH3_128_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
