@@ -56,17 +56,18 @@ _get_buffer_or_str(PyObject *obj, Py_buffer *buf, PyObject **owner)
         *owner = NULL;
         return 0;
     }
-    PyErr_Clear();
-    if (!PyUnicode_Check(obj))
-        return -1;
-    *owner = PyUnicode_AsUTF8String(obj);
-    if (*owner == NULL)
-        return -1;
-    if (PyObject_GetBuffer(*owner, buf, PyBUF_SIMPLE) < 0) {
-        Py_DECREF(*owner);
-        return -1;
+    if (PyUnicode_Check(obj)) {
+        PyErr_Clear();
+        *owner = PyUnicode_AsUTF8String(obj);
+        if (*owner == NULL)
+            return -1;
+        if (PyObject_GetBuffer(*owner, buf, PyBUF_SIMPLE) < 0) {
+            Py_DECREF(*owner);
+            return -1;
+        }
+        return 0;
     }
-    return 0;
+    return -1;
 }
 
 /*****************************************************************************
