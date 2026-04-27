@@ -49,6 +49,10 @@
  * On success, *owner is set to the object that owns the buffer
  * (NULL if the arg itself supports the buffer protocol).
  * Caller must PyBuffer_Release(buf) and Py_XDECREF(*owner). */
+#ifndef Py_ALWAYS_INLINE
+#  define Py_ALWAYS_INLINE
+#endif
+
 static Py_ALWAYS_INLINE int
 _get_buffer_or_str(PyObject *obj, Py_buffer *buf, PyObject **owner)
 {
