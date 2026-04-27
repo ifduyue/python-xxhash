@@ -36,9 +36,12 @@ class TestFastcallNormal(unittest.TestCase):
             self._check(a, self.data)
 
     def test_input_str(self):
+        """hashlib compatibility: str raises TypeError."""
         s = self.data.decode()
         for a in self.algorithms:
-            self._check(a, s)
+            for fn in self._funcs(a):
+                with self.assertRaises(TypeError):
+                    fn(s)
 
     def test_input_empty(self):
         for a in self.algorithms:
@@ -64,13 +67,13 @@ class TestFastcallNormal(unittest.TestCase):
 
     # ── keyword input ─────────────────────────────────────────────
 
-    def test_keyword_input(self):
+    def test_keyword_data(self):
         for a in self.algorithms:
-            self._check(a, input=self.data)
+            self._check(a, data=self.data)
 
-    def test_keyword_input_and_seed(self):
+    def test_keyword_data_and_seed(self):
         for a in self.algorithms:
-            self._check(a, input=self.data, seed=42)
+            self._check(a, data=self.data, seed=42)
 
     # ── keyword seed (with positional input) ──────────────────────
 
@@ -104,6 +107,33 @@ class TestFastcallNormal(unittest.TestCase):
         import array
         for a in self.algorithms:
             self._check(a, array.array('B', self.data))
+
+    def test_input_mmap(self):
+        import mmap, tempfile, os
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            f.write(self.data)
+            f.flush()
+        try:
+            with open(f.name, 'rb') as f2:
+                with mmap.mmap(f2.fileno(), 0, access=mmap.ACCESS_READ) as m:
+                    for a in self.algorithms:
+                        self._check(a, m)
+        finally:
+            os.unlink(f.name)
+
+    def test_input_pickle_buffer(self):
+        try:
+            from pickle import PickleBuffer
+        except ImportError:
+            raise self.skipTest('PickleBuffer not available')
+        for a in self.algorithms:
+            self._check(a, PickleBuffer(self.data))
+
+    def test_input_ctypes(self):
+        import ctypes
+        buf = (ctypes.c_char * len(self.data)).from_buffer_copy(self.data)
+        for a in self.algorithms:
+            self._check(a, buf)
 
 
 class TestFastcallErrors(unittest.TestCase):
@@ -141,16 +171,17 @@ class TestFastcallErrors(unittest.TestCase):
 
     # ── unknown keyword ───────────────────────────────────────────
 
-    def test_unknown_keyword(self):
-        self._assert_all_raise(TypeError, self.data, bad=1)
+    def test_unknown_keyword_input(self):
+        """Old 'input' keyword is now unknown — was renamed to 'data'."""
+        self._assert_all_raise(TypeError, input=self.data)
 
-    def test_unknown_keyword_input_kw(self):
-        self._assert_all_raise(TypeError, input=self.data, bad=1)
+    def test_unknown_keyword_data_kw(self):
+        self._assert_all_raise(TypeError, data=self.data, bad=1)
 
     # ── duplicate arguments ───────────────────────────────────────
 
     def test_duplicate_input(self):
-        self._assert_all_raise(TypeError, self.data, input=self.data)
+        self._assert_all_raise(TypeError, self.data, data=self.data)
 
     def test_duplicate_seed(self):
         self._assert_all_raise(TypeError, self.data, 0, seed=1)
@@ -164,7 +195,7 @@ class TestFastcallErrors(unittest.TestCase):
         self._assert_all_raise(TypeError, self.data, seed='bad')
 
     def test_invalid_seed_with_input_kw(self):
-        self._assert_all_raise(TypeError, input=self.data, seed='bad')
+        self._assert_all_raise(TypeError, data=self.data, seed='bad')
 
     # ── invalid input type (not str, not buffer) ──────────────────
 
@@ -172,7 +203,7 @@ class TestFastcallErrors(unittest.TestCase):
         self._assert_all_raise(TypeError, 12345)
 
     def test_input_not_bytes_or_str_kw(self):
-        self._assert_all_raise(TypeError, input=12345)
+        self._assert_all_raise(TypeError, data=12345)
 
 
 class TestFastcallSeedOverflow(unittest.TestCase):

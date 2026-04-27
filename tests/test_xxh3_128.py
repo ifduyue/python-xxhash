@@ -6,45 +6,45 @@ import xxhash
 
 class TestXXH(unittest.TestCase):
     def test_xxh3_128(self):
-        self.assertEqual(xxhash.xxh3_128('a').intdigest(), 225219434562328483135862406050043285023)
-        self.assertEqual(xxhash.xxh3_128('a', 0).intdigest(), 225219434562328483135862406050043285023)
-        self.assertEqual(xxhash.xxh3_128('a', 1).intdigest(), 337425133163118381928709500770786453280)
-        self.assertEqual(xxhash.xxh3_128('a', 2**64-1).intdigest(), 198297796855923085494266857744987477846)
+        self.assertEqual(xxhash.xxh3_128(b'a').intdigest(), 225219434562328483135862406050043285023)
+        self.assertEqual(xxhash.xxh3_128(b'a', 0).intdigest(), 225219434562328483135862406050043285023)
+        self.assertEqual(xxhash.xxh3_128(b'a', 1).intdigest(), 337425133163118381928709500770786453280)
+        self.assertEqual(xxhash.xxh3_128(b'a', 2**64-1).intdigest(), 198297796855923085494266857744987477846)
 
     def test_xxh3_128_intdigest(self):
-        self.assertEqual(xxhash.xxh3_128_intdigest('a'), 225219434562328483135862406050043285023)
-        self.assertEqual(xxhash.xxh3_128_intdigest('a', 0), 225219434562328483135862406050043285023)
-        self.assertEqual(xxhash.xxh3_128_intdigest('a', 1), 337425133163118381928709500770786453280)
-        self.assertEqual(xxhash.xxh3_128_intdigest('a', 2**64-1), 198297796855923085494266857744987477846)
+        self.assertEqual(xxhash.xxh3_128_intdigest(b'a'), 225219434562328483135862406050043285023)
+        self.assertEqual(xxhash.xxh3_128_intdigest(b'a', 0), 225219434562328483135862406050043285023)
+        self.assertEqual(xxhash.xxh3_128_intdigest(b'a', 1), 337425133163118381928709500770786453280)
+        self.assertEqual(xxhash.xxh3_128_intdigest(b'a', 2**64-1), 198297796855923085494266857744987477846)
 
     def test_xxh3_128_update(self):
         x = xxhash.xxh3_128()
-        x.update('a')
-        self.assertEqual(xxhash.xxh3_128('a').digest(), x.digest())
-        self.assertEqual(xxhash.xxh3_128_digest('a'), x.digest())
-        x.update('b')
-        self.assertEqual(xxhash.xxh3_128('ab').digest(), x.digest())
-        self.assertEqual(xxhash.xxh3_128_digest('ab'), x.digest())
-        x.update('c')
-        self.assertEqual(xxhash.xxh3_128('abc').digest(), x.digest())
-        self.assertEqual(xxhash.xxh3_128_digest('abc'), x.digest())
+        x.update(b'a')
+        self.assertEqual(xxhash.xxh3_128(b'a').digest(), x.digest())
+        self.assertEqual(xxhash.xxh3_128_digest(b'a'), x.digest())
+        x.update(b'b')
+        self.assertEqual(xxhash.xxh3_128(b'ab').digest(), x.digest())
+        self.assertEqual(xxhash.xxh3_128_digest(b'ab'), x.digest())
+        x.update(b'c')
+        self.assertEqual(xxhash.xxh3_128(b'abc').digest(), x.digest())
+        self.assertEqual(xxhash.xxh3_128_digest(b'abc'), x.digest())
 
         seed = random.randint(0, 2**64)
         x = xxhash.xxh3_128(seed=seed)
-        x.update('a')
-        self.assertEqual(xxhash.xxh3_128('a', seed).digest(), x.digest())
-        self.assertEqual(xxhash.xxh3_128_digest('a', seed), x.digest())
-        x.update('b')
-        self.assertEqual(xxhash.xxh3_128('ab', seed).digest(), x.digest())
-        self.assertEqual(xxhash.xxh3_128_digest('ab', seed), x.digest())
-        x.update('c')
-        self.assertEqual(xxhash.xxh3_128('abc', seed).digest(), x.digest())
-        self.assertEqual(xxhash.xxh3_128_digest('abc', seed), x.digest())
+        x.update(b'a')
+        self.assertEqual(xxhash.xxh3_128(b'a', seed).digest(), x.digest())
+        self.assertEqual(xxhash.xxh3_128_digest(b'a', seed), x.digest())
+        x.update(b'b')
+        self.assertEqual(xxhash.xxh3_128(b'ab', seed).digest(), x.digest())
+        self.assertEqual(xxhash.xxh3_128_digest(b'ab', seed), x.digest())
+        x.update(b'c')
+        self.assertEqual(xxhash.xxh3_128(b'abc', seed).digest(), x.digest())
+        self.assertEqual(xxhash.xxh3_128_digest(b'abc', seed), x.digest())
 
     def test_xxh3_128_reset(self):
         x = xxhash.xxh3_128()
         h = x.intdigest()
-        x.update('x' * 10240)
+        x.update(b'x' * 10240)
         x.reset()
         self.assertEqual(h, x.intdigest())
 
@@ -52,7 +52,7 @@ class TestXXH(unittest.TestCase):
         seed = random.randint(0, 2**64-1)
         x = xxhash.xxh3_128(seed=seed)
         h = x.intdigest()
-        x.update('x' * 10240)
+        x.update(b'x' * 10240)
         x.reset()
         self.assertEqual(h, x.intdigest())
 
@@ -97,25 +97,25 @@ class TestXXH(unittest.TestCase):
 
     def test_xxh3_128_copy(self):
         a = xxhash.xxh3_128()
-        a.update('xxhash')
+        a.update(b'xxhash')
 
         b = a.copy()
         self.assertEqual(a.digest(), b.digest())
         self.assertEqual(a.intdigest(), b.intdigest())
         self.assertEqual(a.hexdigest(), b.hexdigest())
 
-        b.update('xxhash')
+        b.update(b'xxhash')
         self.assertNotEqual(a.digest(), b.digest())
         self.assertNotEqual(a.intdigest(), b.intdigest())
         self.assertNotEqual(a.hexdigest(), b.hexdigest())
 
-        a.update('xxhash')
+        a.update(b'xxhash')
         self.assertEqual(a.digest(), b.digest())
         self.assertEqual(a.intdigest(), b.intdigest())
         self.assertEqual(a.hexdigest(), b.hexdigest())
 
     def test_xxh3_128_overflow(self):
-        s = 'I want an unsigned 64-bit seed!'
+        s = b'I want an unsigned 64-bit seed!'
         a = xxhash.xxh3_128(s, seed=0)
         b = xxhash.xxh3_128(s, seed=2**64)
         self.assertEqual(a.seed, b.seed)

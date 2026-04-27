@@ -90,42 +90,17 @@ def test_xxh64_hexdigest_5b():
     xxhash.xxh64_hexdigest(DATA_5B)
 
 
-# ── str input (tests _get_buffer_or_str UTF-8 encoding path) ────────
-
-DATA_STR = "hello world"
-
-
-@pytest.mark.benchmark
-def test_xxh32_intdigest_str():
-    xxhash.xxh32_intdigest(DATA_STR)
-
-
-@pytest.mark.benchmark
-def test_xxh64_intdigest_str():
-    xxhash.xxh64_intdigest(DATA_STR)
-
-
-@pytest.mark.benchmark
-def test_xxh3_64_intdigest_str():
-    xxhash.xxh3_64_intdigest(DATA_STR)
-
-
-@pytest.mark.benchmark
-def test_xxh3_128_intdigest_str():
-    xxhash.xxh3_128_intdigest(DATA_STR)
-
-
 # ── type constructor (tests tp_vectorcall) ──────────────────────────
 
 
 @pytest.mark.benchmark
 def test_xxh32_ctor():
-    xxhash.xxh32(DATA_STR)
+    xxhash.xxh32(DATA_5B)
 
 
 @pytest.mark.benchmark
 def test_xxh32_ctor_seed():
-    xxhash.xxh32(DATA_STR, seed=SEED_32)
+    xxhash.xxh32(DATA_5B, seed=SEED_32)
 
 
 @pytest.mark.benchmark
@@ -135,17 +110,17 @@ def test_xxh32_ctor_empty():
 
 @pytest.mark.benchmark
 def test_xxh64_ctor():
-    xxhash.xxh64(DATA_STR, seed=SEED_64)
+    xxhash.xxh64(DATA_5B, seed=SEED_64)
 
 
 @pytest.mark.benchmark
 def test_xxh3_64_ctor():
-    xxhash.xxh3_64(DATA_STR, seed=SEED_64)
+    xxhash.xxh3_64(DATA_5B, seed=SEED_64)
 
 
 @pytest.mark.benchmark
 def test_xxh3_128_ctor():
-    xxhash.xxh3_128(DATA_STR, seed=SEED_64)
+    xxhash.xxh3_128(DATA_5B, seed=SEED_64)
 
 
 # ── 2MB throughput: hashing dominates, call overhead negligible ─────

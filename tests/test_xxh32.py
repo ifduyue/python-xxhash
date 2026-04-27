@@ -6,40 +6,40 @@ import xxhash
 
 class TestXXH(unittest.TestCase):
     def test_xxh32(self):
-        self.assertEqual(xxhash.xxh32('a').intdigest(), 1426945110)
-        self.assertEqual(xxhash.xxh32('a', 0).intdigest(), 1426945110)
-        self.assertEqual(xxhash.xxh32('a', 1).intdigest(), 4111757423)
-        self.assertEqual(xxhash.xxh32('a', 2**32-1).intdigest(), 3443684653)
+        self.assertEqual(xxhash.xxh32(b'a').intdigest(), 1426945110)
+        self.assertEqual(xxhash.xxh32(b'a', 0).intdigest(), 1426945110)
+        self.assertEqual(xxhash.xxh32(b'a', 1).intdigest(), 4111757423)
+        self.assertEqual(xxhash.xxh32(b'a', 2**32-1).intdigest(), 3443684653)
 
     def test_xxh32_intdigest(self):
-        self.assertEqual(xxhash.xxh32_intdigest('a'), 1426945110)
-        self.assertEqual(xxhash.xxh32_intdigest('a', 0), 1426945110)
-        self.assertEqual(xxhash.xxh32_intdigest('a', 1), 4111757423)
-        self.assertEqual(xxhash.xxh32_intdigest('a', 2**32-1), 3443684653)
+        self.assertEqual(xxhash.xxh32_intdigest(b'a'), 1426945110)
+        self.assertEqual(xxhash.xxh32_intdigest(b'a', 0), 1426945110)
+        self.assertEqual(xxhash.xxh32_intdigest(b'a', 1), 4111757423)
+        self.assertEqual(xxhash.xxh32_intdigest(b'a', 2**32-1), 3443684653)
 
     def test_xxh32_update(self):
         x = xxhash.xxh32()
-        x.update('a')
-        self.assertEqual(xxhash.xxh32('a').digest(), x.digest())
-        self.assertEqual(xxhash.xxh32_digest('a'), x.digest())
-        x.update('b')
-        self.assertEqual(xxhash.xxh32('ab').digest(), x.digest())
-        self.assertEqual(xxhash.xxh32_digest('ab'), x.digest())
-        x.update('c')
-        self.assertEqual(xxhash.xxh32('abc').digest(), x.digest())
-        self.assertEqual(xxhash.xxh32_digest('abc'), x.digest())
+        x.update(b'a')
+        self.assertEqual(xxhash.xxh32(b'a').digest(), x.digest())
+        self.assertEqual(xxhash.xxh32_digest(b'a'), x.digest())
+        x.update(b'b')
+        self.assertEqual(xxhash.xxh32(b'ab').digest(), x.digest())
+        self.assertEqual(xxhash.xxh32_digest(b'ab'), x.digest())
+        x.update(b'c')
+        self.assertEqual(xxhash.xxh32(b'abc').digest(), x.digest())
+        self.assertEqual(xxhash.xxh32_digest(b'abc'), x.digest())
 
         seed = random.randint(0, 2**32)
         x = xxhash.xxh32(seed=seed)
-        x.update('a')
-        self.assertEqual(xxhash.xxh32('a', seed).digest(), x.digest())
-        self.assertEqual(xxhash.xxh32_digest('a', seed), x.digest())
-        x.update('b')
-        self.assertEqual(xxhash.xxh32('ab', seed).digest(), x.digest())
-        self.assertEqual(xxhash.xxh32_digest('ab', seed), x.digest())
-        x.update('c')
-        self.assertEqual(xxhash.xxh32('abc', seed).digest(), x.digest())
-        self.assertEqual(xxhash.xxh32_digest('abc', seed), x.digest())
+        x.update(b'a')
+        self.assertEqual(xxhash.xxh32(b'a', seed).digest(), x.digest())
+        self.assertEqual(xxhash.xxh32_digest(b'a', seed), x.digest())
+        x.update(b'b')
+        self.assertEqual(xxhash.xxh32(b'ab', seed).digest(), x.digest())
+        self.assertEqual(xxhash.xxh32_digest(b'ab', seed), x.digest())
+        x.update(b'c')
+        self.assertEqual(xxhash.xxh32(b'abc', seed).digest(), x.digest())
+        self.assertEqual(xxhash.xxh32_digest(b'abc', seed), x.digest())
 
     def test_xxh32_reset(self):
         x = xxhash.xxh32()
@@ -54,25 +54,25 @@ class TestXXH(unittest.TestCase):
 
     def test_xxh32_copy(self):
         a = xxhash.xxh32()
-        a.update('xxhash')
+        a.update(b'xxhash')
 
         b = a.copy()
         self.assertEqual(a.digest(), b.digest())
         self.assertEqual(a.intdigest(), b.intdigest())
         self.assertEqual(a.hexdigest(), b.hexdigest())
 
-        b.update('xxhash')
+        b.update(b'xxhash')
         self.assertNotEqual(a.digest(), b.digest())
         self.assertNotEqual(a.intdigest(), b.intdigest())
         self.assertNotEqual(a.hexdigest(), b.hexdigest())
 
-        a.update('xxhash')
+        a.update(b'xxhash')
         self.assertEqual(a.digest(), b.digest())
         self.assertEqual(a.intdigest(), b.intdigest())
         self.assertEqual(a.hexdigest(), b.hexdigest())
 
     def test_xxh32_overflow(self):
-        s = 'I want an unsigned 32-bit seed!'
+        s = b'I want an unsigned 32-bit seed!'
         a = xxhash.xxh32(s, seed=0)
         b = xxhash.xxh32(s, seed=2**32)
         self.assertEqual(a.seed, b.seed)
