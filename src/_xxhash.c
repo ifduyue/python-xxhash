@@ -82,6 +82,7 @@ _get_buffer_or_str(PyObject *obj, Py_buffer *buf, PyObject **owner)
 static Py_ALWAYS_INLINE int
 _parse_fastcall_args(PyObject *const *args, Py_ssize_t nargs,
                      PyObject *kwnames, const char *funcname,
+                     int input_required,
                      Py_buffer *buf, PyObject **buf_owner,
                      unsigned long long *seed)
 {
@@ -148,7 +149,7 @@ _parse_fastcall_args(PyObject *const *args, Py_ssize_t nargs,
         }
     }
 
-    if (!input_found) {
+    if (!input_found && input_required) {
         PyErr_Format(PyExc_TypeError,
             "%s() missing required argument 'input'", funcname);
         return -1;
@@ -175,7 +176,7 @@ static PyObject *xxh32_digest(PyObject *self, PyObject *const *args,
     Py_buffer buf;
     PyObject *buf_owner;
     unsigned long long raw_seed;
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxh32_digest", &buf, &buf_owner, &raw_seed) < 0)
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxh32_digest", 1, &buf, &buf_owner, &raw_seed) < 0)
         return NULL;
     seed = (XXH32_hash_t)raw_seed;
 
@@ -194,7 +195,7 @@ static PyObject *xxh32_intdigest(PyObject *self, PyObject *const *args,
     Py_buffer buf;
     PyObject *buf_owner;
     unsigned long long raw_seed;
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxh32_intdigest", &buf, &buf_owner, &raw_seed) < 0)
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxh32_intdigest", 1, &buf, &buf_owner, &raw_seed) < 0)
         return NULL;
     seed = (XXH32_hash_t)raw_seed;
 
@@ -211,7 +212,7 @@ static PyObject *xxh32_hexdigest(PyObject *self, PyObject *const *args,
     Py_buffer buf;
     PyObject *buf_owner;
     unsigned long long raw_seed;
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxh32_hexdigest", &buf, &buf_owner, &raw_seed) < 0)
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxh32_hexdigest", 1, &buf, &buf_owner, &raw_seed) < 0)
         return NULL;
     seed = (XXH32_hash_t)raw_seed;
 
@@ -245,7 +246,7 @@ static PyObject *xxh64_digest(PyObject *self, PyObject *const *args,
     Py_buffer buf;
     PyObject *buf_owner;
     unsigned long long raw_seed;
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxh64_digest", &buf, &buf_owner, &raw_seed) < 0)
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxh64_digest", 1, &buf, &buf_owner, &raw_seed) < 0)
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
 
@@ -264,7 +265,7 @@ static PyObject *xxh64_intdigest(PyObject *self, PyObject *const *args,
     Py_buffer buf;
     PyObject *buf_owner;
     unsigned long long raw_seed;
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxh64_intdigest", &buf, &buf_owner, &raw_seed) < 0)
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxh64_intdigest", 1, &buf, &buf_owner, &raw_seed) < 0)
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
 
@@ -281,7 +282,7 @@ static PyObject *xxh64_hexdigest(PyObject *self, PyObject *const *args,
     Py_buffer buf;
     PyObject *buf_owner;
     unsigned long long raw_seed;
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxh64_hexdigest", &buf, &buf_owner, &raw_seed) < 0)
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxh64_hexdigest", 1, &buf, &buf_owner, &raw_seed) < 0)
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
 
@@ -315,7 +316,7 @@ static PyObject *xxh3_64_digest(PyObject *self, PyObject *const *args,
     Py_buffer buf;
     PyObject *buf_owner;
     unsigned long long raw_seed;
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxh3_64_digest", &buf, &buf_owner, &raw_seed) < 0)
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxh3_64_digest", 1, &buf, &buf_owner, &raw_seed) < 0)
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
 
@@ -334,7 +335,7 @@ static PyObject *xxh3_64_intdigest(PyObject *self, PyObject *const *args,
     Py_buffer buf;
     PyObject *buf_owner;
     unsigned long long raw_seed;
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxh3_64_intdigest", &buf, &buf_owner, &raw_seed) < 0)
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxh3_64_intdigest", 1, &buf, &buf_owner, &raw_seed) < 0)
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
 
@@ -351,7 +352,7 @@ static PyObject *xxh3_64_hexdigest(PyObject *self, PyObject *const *args,
     Py_buffer buf;
     PyObject *buf_owner;
     unsigned long long raw_seed;
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxh3_64_hexdigest", &buf, &buf_owner, &raw_seed) < 0)
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxh3_64_hexdigest", 1, &buf, &buf_owner, &raw_seed) < 0)
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
 
@@ -385,7 +386,7 @@ static PyObject *xxh3_128_digest(PyObject *self, PyObject *const *args,
     Py_buffer buf;
     PyObject *buf_owner;
     unsigned long long raw_seed;
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxh3_128_digest", &buf, &buf_owner, &raw_seed) < 0)
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxh3_128_digest", 1, &buf, &buf_owner, &raw_seed) < 0)
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
 
@@ -404,7 +405,7 @@ static PyObject *xxh3_128_intdigest(PyObject *self, PyObject *const *args,
     Py_buffer buf;
     PyObject *buf_owner;
     unsigned long long raw_seed;
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxh3_128_intdigest", &buf, &buf_owner, &raw_seed) < 0)
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxh3_128_intdigest", 1, &buf, &buf_owner, &raw_seed) < 0)
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
 
@@ -436,7 +437,7 @@ static PyObject *xxh3_128_hexdigest(PyObject *self, PyObject *const *args,
     Py_buffer buf;
     PyObject *buf_owner;
     unsigned long long raw_seed;
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxh3_128_hexdigest", &buf, &buf_owner, &raw_seed) < 0)
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxh3_128_hexdigest", 1, &buf, &buf_owner, &raw_seed) < 0)
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
 
@@ -491,6 +492,47 @@ static void PYXXH32_do_update(PYXXH32Object *self, Py_buffer *buf)
     Py_END_ALLOW_THREADS
 
     PyBuffer_Release(buf);
+}
+
+static PyObject *
+PYXXH32_vectorcall(PyObject *type, PyObject *const *args,
+                   size_t nargsf, PyObject *kwnames)
+{
+    Py_ssize_t nargs = PyVectorcall_NARGS(nargsf);
+    XXH32_hash_t seed = 0;
+    Py_buffer buf;
+    PyObject *buf_owner;
+    unsigned long long raw_seed;
+
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxhash.xxh32()", 0,
+                             &buf, &buf_owner, &raw_seed) < 0)
+        return NULL;
+    seed = (XXH32_hash_t)raw_seed;
+
+    PYXXH32Object *self = (PYXXH32Object *)
+        ((PyTypeObject *)type)->tp_alloc((PyTypeObject *)type, 0);
+    if (self == NULL) goto error;
+
+    self->xxhash_state = XXH32_createState();
+    if (self->xxhash_state == NULL) {
+        Py_DECREF(self);
+        goto error;
+    }
+    self->seed = seed;
+    XXH32_reset(self->xxhash_state, seed);
+
+    if (buf.buf) {
+        XXH32_update(self->xxhash_state, buf.buf, buf.len);
+        PyBuffer_Release(&buf);
+    }
+    Py_XDECREF(buf_owner);
+    return (PyObject *)self;
+
+error:
+    if (buf.buf)
+        PyBuffer_Release(&buf);
+    Py_XDECREF(buf_owner);
+    return PyErr_NoMemory();
 }
 
 /* XXH32 methods */
@@ -753,7 +795,7 @@ static PyTypeObject PYXXH32Type = {
     0,                             /* tp_getattro */
     0,                             /* tp_setattro */
     0,                             /* tp_as_buffer */
-    Py_TPFLAGS_DEFAULT,            /* tp_flags */
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_VECTORCALL,  /* tp_flags */
     PYXXH32Type_doc,               /* tp_doc */
     0,                             /* tp_traverse */
     0,                             /* tp_clear */
@@ -772,6 +814,17 @@ static PyTypeObject PYXXH32Type = {
     (initproc)PYXXH32_init,        /* tp_init */
     0,                             /* tp_alloc */
     PYXXH32_new,                   /* tp_new */
+    0,                             /* tp_free */
+    0,                             /* tp_is_gc */
+    0,                             /* tp_bases */
+    0,                             /* tp_mro */
+    0,                             /* tp_cache */
+    0,                             /* tp_subclasses */
+    0,                             /* tp_weaklist */
+    0,                             /* tp_del */
+    0,                             /* tp_version_tag */
+    0,                             /* tp_finalize */
+    PYXXH32_vectorcall,            /* tp_vectorcall */
 };
 
 
@@ -802,6 +855,46 @@ static void PYXXH64_do_update(PYXXH64Object *self, Py_buffer *buf)
     PyBuffer_Release(buf);
 }
 
+static PyObject *
+PYXXH64_vectorcall(PyObject *type, PyObject *const *args,
+                   size_t nargsf, PyObject *kwnames)
+{
+    Py_ssize_t nargs = PyVectorcall_NARGS(nargsf);
+    XXH64_hash_t seed = 0;
+    Py_buffer buf;
+    PyObject *buf_owner;
+    unsigned long long raw_seed;
+
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxhash.xxh64()", 0,
+                             &buf, &buf_owner, &raw_seed) < 0)
+        return NULL;
+    seed = (XXH64_hash_t)raw_seed;
+
+    PYXXH64Object *self = (PYXXH64Object *)
+        ((PyTypeObject *)type)->tp_alloc((PyTypeObject *)type, 0);
+    if (self == NULL) goto error;
+
+    self->xxhash_state = XXH64_createState();
+    if (self->xxhash_state == NULL) {
+        Py_DECREF(self);
+        goto error;
+    }
+    self->seed = seed;
+    XXH64_reset(self->xxhash_state, seed);
+
+    if (buf.buf) {
+        XXH64_update(self->xxhash_state, buf.buf, buf.len);
+        PyBuffer_Release(&buf);
+    }
+    Py_XDECREF(buf_owner);
+    return (PyObject *)self;
+
+error:
+    if (buf.buf)
+        PyBuffer_Release(&buf);
+    Py_XDECREF(buf_owner);
+    return PyErr_NoMemory();
+}
 static PyObject *PYXXH64_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
     PYXXH64Object *self;
@@ -1060,7 +1153,7 @@ static PyTypeObject PYXXH64Type = {
     0,                             /* tp_getattro */
     0,                             /* tp_setattro */
     0,                             /* tp_as_buffer */
-    Py_TPFLAGS_DEFAULT,            /* tp_flags */
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_VECTORCALL,  /* tp_flags */
     PYXXH64Type_doc,               /* tp_doc */
     0,                             /* tp_traverse */
     0,                             /* tp_clear */
@@ -1079,6 +1172,17 @@ static PyTypeObject PYXXH64Type = {
     (initproc)PYXXH64_init,        /* tp_init */
     0,                             /* tp_alloc */
     PYXXH64_new,                   /* tp_new */
+    0,                             /* tp_free */
+    0,                             /* tp_is_gc */
+    0,                             /* tp_bases */
+    0,                             /* tp_mro */
+    0,                             /* tp_cache */
+    0,                             /* tp_subclasses */
+    0,                             /* tp_weaklist */
+    0,                             /* tp_del */
+    0,                             /* tp_version_tag */
+    0,                             /* tp_finalize */
+    PYXXH64_vectorcall,            /* tp_vectorcall */
 };
 
 /* XXH3_64 */
@@ -1108,6 +1212,46 @@ static void PYXXH3_64_do_update(PYXXH3_64Object *self, Py_buffer *buf)
     PyBuffer_Release(buf);
 }
 
+static PyObject *
+PYXXH3_64_vectorcall(PyObject *type, PyObject *const *args,
+                     size_t nargsf, PyObject *kwnames)
+{
+    Py_ssize_t nargs = PyVectorcall_NARGS(nargsf);
+    XXH64_hash_t seed = 0;
+    Py_buffer buf;
+    PyObject *buf_owner;
+    unsigned long long raw_seed;
+
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxhash.xxh3_64()", 0,
+                             &buf, &buf_owner, &raw_seed) < 0)
+        return NULL;
+    seed = (XXH64_hash_t)raw_seed;
+
+    PYXXH3_64Object *self = (PYXXH3_64Object *)
+        ((PyTypeObject *)type)->tp_alloc((PyTypeObject *)type, 0);
+    if (self == NULL) goto error;
+
+    self->xxhash_state = XXH3_createState();
+    if (self->xxhash_state == NULL) {
+        Py_DECREF(self);
+        goto error;
+    }
+    self->seed = seed;
+    XXH3_64bits_reset_withSeed(self->xxhash_state, seed);
+
+    if (buf.buf) {
+        XXH3_64bits_update(self->xxhash_state, buf.buf, buf.len);
+        PyBuffer_Release(&buf);
+    }
+    Py_XDECREF(buf_owner);
+    return (PyObject *)self;
+
+error:
+    if (buf.buf)
+        PyBuffer_Release(&buf);
+    Py_XDECREF(buf_owner);
+    return PyErr_NoMemory();
+}
 static PyObject *PYXXH3_64_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
     PYXXH3_64Object *self;
@@ -1374,7 +1518,7 @@ static PyTypeObject PYXXH3_64Type = {
     0,                             /* tp_getattro */
     0,                             /* tp_setattro */
     0,                             /* tp_as_buffer */
-    Py_TPFLAGS_DEFAULT,            /* tp_flags */
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_VECTORCALL,  /* tp_flags */
     PYXXH3_64Type_doc,               /* tp_doc */
     0,                             /* tp_traverse */
     0,                             /* tp_clear */
@@ -1393,6 +1537,17 @@ static PyTypeObject PYXXH3_64Type = {
     (initproc)PYXXH3_64_init,        /* tp_init */
     0,                             /* tp_alloc */
     PYXXH3_64_new,                   /* tp_new */
+    0,                             /* tp_free */
+    0,                             /* tp_is_gc */
+    0,                             /* tp_bases */
+    0,                             /* tp_mro */
+    0,                             /* tp_cache */
+    0,                             /* tp_subclasses */
+    0,                             /* tp_weaklist */
+    0,                             /* tp_del */
+    0,                             /* tp_version_tag */
+    0,                             /* tp_finalize */
+    PYXXH3_64_vectorcall,            /* tp_vectorcall */
 };
 
 
@@ -1423,6 +1578,46 @@ static void PYXXH3_128_do_update(PYXXH3_128Object *self, Py_buffer *buf)
     PyBuffer_Release(buf);
 }
 
+static PyObject *
+PYXXH3_128_vectorcall(PyObject *type, PyObject *const *args,
+                      size_t nargsf, PyObject *kwnames)
+{
+    Py_ssize_t nargs = PyVectorcall_NARGS(nargsf);
+    XXH64_hash_t seed = 0;
+    Py_buffer buf;
+    PyObject *buf_owner;
+    unsigned long long raw_seed;
+
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxhash.xxh3_128()", 0,
+                             &buf, &buf_owner, &raw_seed) < 0)
+        return NULL;
+    seed = (XXH64_hash_t)raw_seed;
+
+    PYXXH3_128Object *self = (PYXXH3_128Object *)
+        ((PyTypeObject *)type)->tp_alloc((PyTypeObject *)type, 0);
+    if (self == NULL) goto error;
+
+    self->xxhash_state = XXH3_createState();
+    if (self->xxhash_state == NULL) {
+        Py_DECREF(self);
+        goto error;
+    }
+    self->seed = seed;
+    XXH3_128bits_reset_withSeed(self->xxhash_state, seed);
+
+    if (buf.buf) {
+        XXH3_128bits_update(self->xxhash_state, buf.buf, buf.len);
+        PyBuffer_Release(&buf);
+    }
+    Py_XDECREF(buf_owner);
+    return (PyObject *)self;
+
+error:
+    if (buf.buf)
+        PyBuffer_Release(&buf);
+    Py_XDECREF(buf_owner);
+    return PyErr_NoMemory();
+}
 static PyObject *PYXXH3_128_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
     PYXXH3_128Object *self;
@@ -1706,7 +1901,7 @@ static PyTypeObject PYXXH3_128Type = {
     0,                             /* tp_getattro */
     0,                             /* tp_setattro */
     0,                             /* tp_as_buffer */
-    Py_TPFLAGS_DEFAULT,            /* tp_flags */
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_VECTORCALL,  /* tp_flags */
     PYXXH3_128Type_doc,               /* tp_doc */
     0,                             /* tp_traverse */
     0,                             /* tp_clear */
@@ -1725,6 +1920,17 @@ static PyTypeObject PYXXH3_128Type = {
     (initproc)PYXXH3_128_init,        /* tp_init */
     0,                             /* tp_alloc */
     PYXXH3_128_new,                   /* tp_new */
+    0,                             /* tp_free */
+    0,                             /* tp_is_gc */
+    0,                             /* tp_bases */
+    0,                             /* tp_mro */
+    0,                             /* tp_cache */
+    0,                             /* tp_subclasses */
+    0,                             /* tp_weaklist */
+    0,                             /* tp_del */
+    0,                             /* tp_version_tag */
+    0,                             /* tp_finalize */
+    PYXXH3_128_vectorcall,            /* tp_vectorcall */
 };
 
 /*****************************************************************************
