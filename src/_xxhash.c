@@ -82,27 +82,36 @@ static PyObject *xxh32_digest(PyObject *self, PyObject *const *args,
     PyObject *buf_owner;
 
     if (nargs < 1) {
-        PyErr_SetString(PyExc_TypeError, "xxh32_digest() missing required argument 'input'");
-        return NULL;
+        if (!kwnames) {
+            PyErr_SetString(PyExc_TypeError, "xxh32_digest() missing required argument 'input'");
+            return NULL;
+        }
+        int found = 0;
+        for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
+            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "input") == 0) {
+                if (nargs + i >= 0 && _get_buffer_or_str(args[nargs + i], &buf, &buf_owner) < 0)
+                    return NULL;
+                found = 1;
+                break;
+            }
+        }
+        if (!found) {
+            PyErr_SetString(PyExc_TypeError, "xxh32_digest() missing required argument 'input'");
+            return NULL;
+        }
+    } else {
+        if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
+            return NULL;
     }
-    if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
-        return NULL;
 
     if (nargs > 1) {
-        unsigned long raw = PyLong_AsUnsignedLong(args[1]);
-        if (raw == (unsigned long)-1 && PyErr_Occurred())
-            PyErr_Clear();
-        seed = (XXH32_hash_t)raw;
+        seed = (XXH32_hash_t)PyLong_AsUnsignedLongMask(args[1]);
     }
     if (kwnames) {
         for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
-            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "seed") == 0) {
-                PyObject *val = args[nargs + i];
-                unsigned long raw = PyLong_AsUnsignedLong(val);
-                if (raw == (unsigned long)-1 && PyErr_Occurred())
-                    PyErr_Clear();
-                seed = (XXH32_hash_t)raw;
-                break;
+            PyObject *key = PyTuple_GET_ITEM(kwnames, i);
+            if (PyUnicode_CompareWithASCIIString(key, "seed") == 0) {
+                seed = (XXH32_hash_t)PyLong_AsUnsignedLongMask(args[nargs + i]);
             }
         }
     }
@@ -123,27 +132,36 @@ static PyObject *xxh32_intdigest(PyObject *self, PyObject *const *args,
     PyObject *buf_owner;
 
     if (nargs < 1) {
-        PyErr_SetString(PyExc_TypeError, "xxh32_intdigest() missing required argument 'input'");
-        return NULL;
+        if (!kwnames) {
+            PyErr_SetString(PyExc_TypeError, "xxh32_intdigest() missing required argument 'input'");
+            return NULL;
+        }
+        int found = 0;
+        for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
+            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "input") == 0) {
+                if (nargs + i >= 0 && _get_buffer_or_str(args[nargs + i], &buf, &buf_owner) < 0)
+                    return NULL;
+                found = 1;
+                break;
+            }
+        }
+        if (!found) {
+            PyErr_SetString(PyExc_TypeError, "xxh32_intdigest() missing required argument 'input'");
+            return NULL;
+        }
+    } else {
+        if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
+            return NULL;
     }
-    if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
-        return NULL;
 
     if (nargs > 1) {
-        unsigned long raw = PyLong_AsUnsignedLong(args[1]);
-        if (raw == (unsigned long)-1 && PyErr_Occurred())
-            PyErr_Clear();
-        seed = (XXH32_hash_t)raw;
+        seed = (XXH32_hash_t)PyLong_AsUnsignedLongMask(args[1]);
     }
     if (kwnames) {
         for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
-            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "seed") == 0) {
-                PyObject *val = args[nargs + i];
-                unsigned long raw = PyLong_AsUnsignedLong(val);
-                if (raw == (unsigned long)-1 && PyErr_Occurred())
-                    PyErr_Clear();
-                seed = (XXH32_hash_t)raw;
-                break;
+            PyObject *key = PyTuple_GET_ITEM(kwnames, i);
+            if (PyUnicode_CompareWithASCIIString(key, "seed") == 0) {
+                seed = (XXH32_hash_t)PyLong_AsUnsignedLongMask(args[nargs + i]);
             }
         }
     }
@@ -162,27 +180,36 @@ static PyObject *xxh32_hexdigest(PyObject *self, PyObject *const *args,
     PyObject *buf_owner;
 
     if (nargs < 1) {
-        PyErr_SetString(PyExc_TypeError, "xxh32_hexdigest() missing required argument 'input'");
-        return NULL;
+        if (!kwnames) {
+            PyErr_SetString(PyExc_TypeError, "xxh32_hexdigest() missing required argument 'input'");
+            return NULL;
+        }
+        int found = 0;
+        for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
+            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "input") == 0) {
+                if (nargs + i >= 0 && _get_buffer_or_str(args[nargs + i], &buf, &buf_owner) < 0)
+                    return NULL;
+                found = 1;
+                break;
+            }
+        }
+        if (!found) {
+            PyErr_SetString(PyExc_TypeError, "xxh32_hexdigest() missing required argument 'input'");
+            return NULL;
+        }
+    } else {
+        if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
+            return NULL;
     }
-    if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
-        return NULL;
 
     if (nargs > 1) {
-        unsigned long raw = PyLong_AsUnsignedLong(args[1]);
-        if (raw == (unsigned long)-1 && PyErr_Occurred())
-            PyErr_Clear();
-        seed = (XXH32_hash_t)raw;
+        seed = (XXH32_hash_t)PyLong_AsUnsignedLongMask(args[1]);
     }
     if (kwnames) {
         for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
-            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "seed") == 0) {
-                PyObject *val = args[nargs + i];
-                unsigned long raw = PyLong_AsUnsignedLong(val);
-                if (raw == (unsigned long)-1 && PyErr_Occurred())
-                    PyErr_Clear();
-                seed = (XXH32_hash_t)raw;
-                break;
+            PyObject *key = PyTuple_GET_ITEM(kwnames, i);
+            if (PyUnicode_CompareWithASCIIString(key, "seed") == 0) {
+                seed = (XXH32_hash_t)PyLong_AsUnsignedLongMask(args[nargs + i]);
             }
         }
     }
@@ -218,21 +245,36 @@ static PyObject *xxh64_digest(PyObject *self, PyObject *const *args,
     PyObject *buf_owner;
 
     if (nargs < 1) {
-        PyErr_SetString(PyExc_TypeError, "xxh64_digest() missing required argument 'input'");
-        return NULL;
+        if (!kwnames) {
+            PyErr_SetString(PyExc_TypeError, "xxh64_digest() missing required argument 'input'");
+            return NULL;
+        }
+        int found = 0;
+        for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
+            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "input") == 0) {
+                if (nargs + i >= 0 && _get_buffer_or_str(args[nargs + i], &buf, &buf_owner) < 0)
+                    return NULL;
+                found = 1;
+                break;
+            }
+        }
+        if (!found) {
+            PyErr_SetString(PyExc_TypeError, "xxh64_digest() missing required argument 'input'");
+            return NULL;
+        }
+    } else {
+        if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
+            return NULL;
     }
-    if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
-        return NULL;
 
     if (nargs > 1) {
         seed = PyLong_AsUnsignedLongLongMask(args[1]);
     }
     if (kwnames) {
         for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
-            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "seed") == 0) {
-                PyObject *val = args[nargs + i];
-                seed = PyLong_AsUnsignedLongLongMask(val);
-                break;
+            PyObject *key = PyTuple_GET_ITEM(kwnames, i);
+            if (PyUnicode_CompareWithASCIIString(key, "seed") == 0) {
+                seed = PyLong_AsUnsignedLongLongMask(args[nargs + i]);
             }
         }
     }
@@ -253,21 +295,36 @@ static PyObject *xxh64_intdigest(PyObject *self, PyObject *const *args,
     PyObject *buf_owner;
 
     if (nargs < 1) {
-        PyErr_SetString(PyExc_TypeError, "xxh64_intdigest() missing required argument 'input'");
-        return NULL;
+        if (!kwnames) {
+            PyErr_SetString(PyExc_TypeError, "xxh64_intdigest() missing required argument 'input'");
+            return NULL;
+        }
+        int found = 0;
+        for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
+            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "input") == 0) {
+                if (nargs + i >= 0 && _get_buffer_or_str(args[nargs + i], &buf, &buf_owner) < 0)
+                    return NULL;
+                found = 1;
+                break;
+            }
+        }
+        if (!found) {
+            PyErr_SetString(PyExc_TypeError, "xxh64_intdigest() missing required argument 'input'");
+            return NULL;
+        }
+    } else {
+        if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
+            return NULL;
     }
-    if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
-        return NULL;
 
     if (nargs > 1) {
         seed = PyLong_AsUnsignedLongLongMask(args[1]);
     }
     if (kwnames) {
         for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
-            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "seed") == 0) {
-                PyObject *val = args[nargs + i];
-                seed = PyLong_AsUnsignedLongLongMask(val);
-                break;
+            PyObject *key = PyTuple_GET_ITEM(kwnames, i);
+            if (PyUnicode_CompareWithASCIIString(key, "seed") == 0) {
+                seed = PyLong_AsUnsignedLongLongMask(args[nargs + i]);
             }
         }
     }
@@ -286,21 +343,36 @@ static PyObject *xxh64_hexdigest(PyObject *self, PyObject *const *args,
     PyObject *buf_owner;
 
     if (nargs < 1) {
-        PyErr_SetString(PyExc_TypeError, "xxh64_hexdigest() missing required argument 'input'");
-        return NULL;
+        if (!kwnames) {
+            PyErr_SetString(PyExc_TypeError, "xxh64_hexdigest() missing required argument 'input'");
+            return NULL;
+        }
+        int found = 0;
+        for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
+            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "input") == 0) {
+                if (nargs + i >= 0 && _get_buffer_or_str(args[nargs + i], &buf, &buf_owner) < 0)
+                    return NULL;
+                found = 1;
+                break;
+            }
+        }
+        if (!found) {
+            PyErr_SetString(PyExc_TypeError, "xxh64_hexdigest() missing required argument 'input'");
+            return NULL;
+        }
+    } else {
+        if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
+            return NULL;
     }
-    if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
-        return NULL;
 
     if (nargs > 1) {
         seed = PyLong_AsUnsignedLongLongMask(args[1]);
     }
     if (kwnames) {
         for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
-            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "seed") == 0) {
-                PyObject *val = args[nargs + i];
-                seed = PyLong_AsUnsignedLongLongMask(val);
-                break;
+            PyObject *key = PyTuple_GET_ITEM(kwnames, i);
+            if (PyUnicode_CompareWithASCIIString(key, "seed") == 0) {
+                seed = PyLong_AsUnsignedLongLongMask(args[nargs + i]);
             }
         }
     }
@@ -336,21 +408,36 @@ static PyObject *xxh3_64_digest(PyObject *self, PyObject *const *args,
     PyObject *buf_owner;
 
     if (nargs < 1) {
-        PyErr_SetString(PyExc_TypeError, "xxh3_64_digest() missing required argument 'input'");
-        return NULL;
+        if (!kwnames) {
+            PyErr_SetString(PyExc_TypeError, "xxh3_64_digest() missing required argument 'input'");
+            return NULL;
+        }
+        int found = 0;
+        for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
+            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "input") == 0) {
+                if (nargs + i >= 0 && _get_buffer_or_str(args[nargs + i], &buf, &buf_owner) < 0)
+                    return NULL;
+                found = 1;
+                break;
+            }
+        }
+        if (!found) {
+            PyErr_SetString(PyExc_TypeError, "xxh3_64_digest() missing required argument 'input'");
+            return NULL;
+        }
+    } else {
+        if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
+            return NULL;
     }
-    if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
-        return NULL;
 
     if (nargs > 1) {
         seed = PyLong_AsUnsignedLongLongMask(args[1]);
     }
     if (kwnames) {
         for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
-            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "seed") == 0) {
-                PyObject *val = args[nargs + i];
-                seed = PyLong_AsUnsignedLongLongMask(val);
-                break;
+            PyObject *key = PyTuple_GET_ITEM(kwnames, i);
+            if (PyUnicode_CompareWithASCIIString(key, "seed") == 0) {
+                seed = PyLong_AsUnsignedLongLongMask(args[nargs + i]);
             }
         }
     }
@@ -371,21 +458,36 @@ static PyObject *xxh3_64_intdigest(PyObject *self, PyObject *const *args,
     PyObject *buf_owner;
 
     if (nargs < 1) {
-        PyErr_SetString(PyExc_TypeError, "xxh3_64_intdigest() missing required argument 'input'");
-        return NULL;
+        if (!kwnames) {
+            PyErr_SetString(PyExc_TypeError, "xxh3_64_intdigest() missing required argument 'input'");
+            return NULL;
+        }
+        int found = 0;
+        for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
+            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "input") == 0) {
+                if (nargs + i >= 0 && _get_buffer_or_str(args[nargs + i], &buf, &buf_owner) < 0)
+                    return NULL;
+                found = 1;
+                break;
+            }
+        }
+        if (!found) {
+            PyErr_SetString(PyExc_TypeError, "xxh3_64_intdigest() missing required argument 'input'");
+            return NULL;
+        }
+    } else {
+        if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
+            return NULL;
     }
-    if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
-        return NULL;
 
     if (nargs > 1) {
         seed = PyLong_AsUnsignedLongLongMask(args[1]);
     }
     if (kwnames) {
         for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
-            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "seed") == 0) {
-                PyObject *val = args[nargs + i];
-                seed = PyLong_AsUnsignedLongLongMask(val);
-                break;
+            PyObject *key = PyTuple_GET_ITEM(kwnames, i);
+            if (PyUnicode_CompareWithASCIIString(key, "seed") == 0) {
+                seed = PyLong_AsUnsignedLongLongMask(args[nargs + i]);
             }
         }
     }
@@ -404,21 +506,36 @@ static PyObject *xxh3_64_hexdigest(PyObject *self, PyObject *const *args,
     PyObject *buf_owner;
 
     if (nargs < 1) {
-        PyErr_SetString(PyExc_TypeError, "xxh3_64_hexdigest() missing required argument 'input'");
-        return NULL;
+        if (!kwnames) {
+            PyErr_SetString(PyExc_TypeError, "xxh3_64_hexdigest() missing required argument 'input'");
+            return NULL;
+        }
+        int found = 0;
+        for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
+            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "input") == 0) {
+                if (nargs + i >= 0 && _get_buffer_or_str(args[nargs + i], &buf, &buf_owner) < 0)
+                    return NULL;
+                found = 1;
+                break;
+            }
+        }
+        if (!found) {
+            PyErr_SetString(PyExc_TypeError, "xxh3_64_hexdigest() missing required argument 'input'");
+            return NULL;
+        }
+    } else {
+        if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
+            return NULL;
     }
-    if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
-        return NULL;
 
     if (nargs > 1) {
         seed = PyLong_AsUnsignedLongLongMask(args[1]);
     }
     if (kwnames) {
         for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
-            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "seed") == 0) {
-                PyObject *val = args[nargs + i];
-                seed = PyLong_AsUnsignedLongLongMask(val);
-                break;
+            PyObject *key = PyTuple_GET_ITEM(kwnames, i);
+            if (PyUnicode_CompareWithASCIIString(key, "seed") == 0) {
+                seed = PyLong_AsUnsignedLongLongMask(args[nargs + i]);
             }
         }
     }
@@ -454,21 +571,36 @@ static PyObject *xxh3_128_digest(PyObject *self, PyObject *const *args,
     PyObject *buf_owner;
 
     if (nargs < 1) {
-        PyErr_SetString(PyExc_TypeError, "xxh3_128_digest() missing required argument 'input'");
-        return NULL;
+        if (!kwnames) {
+            PyErr_SetString(PyExc_TypeError, "xxh3_128_digest() missing required argument 'input'");
+            return NULL;
+        }
+        int found = 0;
+        for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
+            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "input") == 0) {
+                if (nargs + i >= 0 && _get_buffer_or_str(args[nargs + i], &buf, &buf_owner) < 0)
+                    return NULL;
+                found = 1;
+                break;
+            }
+        }
+        if (!found) {
+            PyErr_SetString(PyExc_TypeError, "xxh3_128_digest() missing required argument 'input'");
+            return NULL;
+        }
+    } else {
+        if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
+            return NULL;
     }
-    if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
-        return NULL;
 
     if (nargs > 1) {
         seed = PyLong_AsUnsignedLongLongMask(args[1]);
     }
     if (kwnames) {
         for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
-            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "seed") == 0) {
-                PyObject *val = args[nargs + i];
-                seed = PyLong_AsUnsignedLongLongMask(val);
-                break;
+            PyObject *key = PyTuple_GET_ITEM(kwnames, i);
+            if (PyUnicode_CompareWithASCIIString(key, "seed") == 0) {
+                seed = PyLong_AsUnsignedLongLongMask(args[nargs + i]);
             }
         }
     }
@@ -489,21 +621,36 @@ static PyObject *xxh3_128_intdigest(PyObject *self, PyObject *const *args,
     PyObject *buf_owner;
 
     if (nargs < 1) {
-        PyErr_SetString(PyExc_TypeError, "xxh3_128_intdigest() missing required argument 'input'");
-        return NULL;
+        if (!kwnames) {
+            PyErr_SetString(PyExc_TypeError, "xxh3_128_intdigest() missing required argument 'input'");
+            return NULL;
+        }
+        int found = 0;
+        for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
+            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "input") == 0) {
+                if (nargs + i >= 0 && _get_buffer_or_str(args[nargs + i], &buf, &buf_owner) < 0)
+                    return NULL;
+                found = 1;
+                break;
+            }
+        }
+        if (!found) {
+            PyErr_SetString(PyExc_TypeError, "xxh3_128_intdigest() missing required argument 'input'");
+            return NULL;
+        }
+    } else {
+        if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
+            return NULL;
     }
-    if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
-        return NULL;
 
     if (nargs > 1) {
         seed = PyLong_AsUnsignedLongLongMask(args[1]);
     }
     if (kwnames) {
         for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
-            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "seed") == 0) {
-                PyObject *val = args[nargs + i];
-                seed = PyLong_AsUnsignedLongLongMask(val);
-                break;
+            PyObject *key = PyTuple_GET_ITEM(kwnames, i);
+            if (PyUnicode_CompareWithASCIIString(key, "seed") == 0) {
+                seed = PyLong_AsUnsignedLongLongMask(args[nargs + i]);
             }
         }
     }
@@ -532,21 +679,36 @@ static PyObject *xxh3_128_hexdigest(PyObject *self, PyObject *const *args,
     PyObject *buf_owner;
 
     if (nargs < 1) {
-        PyErr_SetString(PyExc_TypeError, "xxh3_128_hexdigest() missing required argument 'input'");
-        return NULL;
+        if (!kwnames) {
+            PyErr_SetString(PyExc_TypeError, "xxh3_128_hexdigest() missing required argument 'input'");
+            return NULL;
+        }
+        int found = 0;
+        for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
+            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "input") == 0) {
+                if (nargs + i >= 0 && _get_buffer_or_str(args[nargs + i], &buf, &buf_owner) < 0)
+                    return NULL;
+                found = 1;
+                break;
+            }
+        }
+        if (!found) {
+            PyErr_SetString(PyExc_TypeError, "xxh3_128_hexdigest() missing required argument 'input'");
+            return NULL;
+        }
+    } else {
+        if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
+            return NULL;
     }
-    if (_get_buffer_or_str(args[0], &buf, &buf_owner) < 0)
-        return NULL;
 
     if (nargs > 1) {
         seed = PyLong_AsUnsignedLongLongMask(args[1]);
     }
     if (kwnames) {
         for (Py_ssize_t i = 0; i < PyTuple_GET_SIZE(kwnames); i++) {
-            if (PyUnicode_CompareWithASCIIString(PyTuple_GET_ITEM(kwnames, i), "seed") == 0) {
-                PyObject *val = args[nargs + i];
-                seed = PyLong_AsUnsignedLongLongMask(val);
-                break;
+            PyObject *key = PyTuple_GET_ITEM(kwnames, i);
+            if (PyUnicode_CompareWithASCIIString(key, "seed") == 0) {
+                seed = PyLong_AsUnsignedLongLongMask(args[nargs + i]);
             }
         }
     }
