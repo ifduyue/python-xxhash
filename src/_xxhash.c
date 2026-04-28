@@ -69,7 +69,7 @@ _get_buffer_or_str(PyObject *obj, Py_buffer *buf)
     return 0;
 }
 
-/* Parse input buffer and optional seed from fastcall arguments.
+/* Parse data buffer and optional seed from fastcall arguments.
  * Handles: positional 'data', positional 'seed', keyword 'data',
  * keyword 'seed', with proper error reporting for unknown keywords,
  * duplicate arguments, and too many positional args.
@@ -77,11 +77,11 @@ _get_buffer_or_str(PyObject *obj, Py_buffer *buf)
 static Py_ALWAYS_INLINE int
 _parse_fastcall_args(PyObject *const *args, Py_ssize_t nargs,
                      PyObject *kwnames, const char *funcname,
-                     int input_required,
+                     int data_required,
                      Py_buffer *buf,
                      unsigned long long *seed)
 {
-    int input_found = 0;
+    int data_found = 0;
     int seed_found = 0;
 
     *seed = 0;
@@ -92,7 +92,7 @@ _parse_fastcall_args(PyObject *const *args, Py_ssize_t nargs,
     if (nargs >= 1) {
         if (_get_buffer_or_str(args[0], buf) < 0)
             return -1;
-        input_found = 1;
+        data_found = 1;
     }
     if (nargs >= 2) {
         *seed = PyLong_AsUnsignedLongLongMask(args[1]);
@@ -115,7 +115,7 @@ _parse_fastcall_args(PyObject *const *args, Py_ssize_t nargs,
             PyObject *val = args[nargs + i];
 
             if (PyUnicode_CompareWithASCIIString(key, "data") == 0) {
-                if (input_found) {
+                if (data_found) {
                     PyErr_Format(PyExc_TypeError,
                         "%s() got multiple values for argument 'data'",
                         funcname);
@@ -123,7 +123,7 @@ _parse_fastcall_args(PyObject *const *args, Py_ssize_t nargs,
                 }
                 if (_get_buffer_or_str(val, buf) < 0)
                     return -1;
-                input_found = 1;
+                data_found = 1;
             } else if (PyUnicode_CompareWithASCIIString(key, "seed") == 0) {
                 if (seed_found) {
                     PyErr_Format(PyExc_TypeError,
@@ -144,7 +144,7 @@ _parse_fastcall_args(PyObject *const *args, Py_ssize_t nargs,
         }
     }
 
-    if (!input_found && input_required) {
+    if (!data_found && data_required) {
         PyErr_Format(PyExc_TypeError,
             "%s() missing required argument 'data'", funcname);
         return -1;
@@ -152,7 +152,7 @@ _parse_fastcall_args(PyObject *const *args, Py_ssize_t nargs,
     return 0;
 
 error:
-    if (input_found) {
+    if (data_found) {
         PyBuffer_Release(buf);
     }
     return -1;
