@@ -5,7 +5,7 @@ on: [push]
 jobs:
   build_wheels:
     name: Build ${{ matrix.archs }} ${{ matrix.build }} wheels on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    runs-on: "${{ matrix.os }}${{ (startsWith(matrix.archs, 'aarch64') || startsWith(matrix.archs, 'armv7l')) && '-arm' || '' }}"
     strategy:
       matrix:
         os: [ubuntu-22.04]
