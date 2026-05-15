@@ -1,9 +1,14 @@
 name: build
 
-on: [push]
+on:
+  workflow_run:
+    workflows: ["test"]
+    types:
+      - completed
 
 jobs:
   build_wheels:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     name: Build ${{ matrix.archs }} ${{ matrix.build }} wheels on ${{ matrix.os }}
     runs-on: "${{ matrix.os }}${{ (startsWith(matrix.archs, 'aarch64') || startsWith(matrix.archs, 'armv7l')) && '-arm' || '' }}"
     strategy:
@@ -41,6 +46,7 @@ jobs:
 
       - uses: actions/checkout@v6
         with:
+          ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
           submodules: recursive
 
@@ -58,7 +64,7 @@ jobs:
 
       - name: Enable CPython pre-release wheels
         shell: bash
-        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        if: ${{ !startsWith(github.event.workflow_run.head_branch, 'v') }}
         run: |
             echo "CIBW_ENABLE=$CIBW_ENABLE cpython-prerelease" >> "$GITHUB_ENV"
 
@@ -76,6 +82,7 @@ jobs:
 
 
   build_sdist:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     name: Build sdist
     runs-on: ubuntu-24.04
     strategy:
@@ -84,6 +91,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
           submodules: recursive
 
@@ -108,7 +116,7 @@ jobs:
     name: Upload to Test PyPI
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-24.04
-    if: github.event_name == 'push' && github.repository == 'ifduyue/python-xxhash' && !startsWith(github.ref, 'refs/tags/v')
+    if: ${{ github.repository == 'ifduyue/python-xxhash' && !startsWith(github.event.workflow_run.head_branch, 'v') }}
     permissions:
       id-token: write
     environment:
@@ -131,12 +139,12 @@ jobs:
     name: Upload to PyPI
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-24.04
-    if: github.event_name == 'push' && github.repository == 'ifduyue/python-xxhash' && startsWith(github.ref, 'refs/tags/v')
+    if: ${{ github.repository == 'ifduyue/python-xxhash' && startsWith(github.event.workflow_run.head_branch, 'v') }}
+    permissions:
+      id-token: write
     environment:
       name: pypi
       url: https://pypi.org/project/xxhash/
-    permissions:
-      id-token: write
     steps:
       - uses: actions/download-artifact@v8
         with:
@@ -145,7 +153,6 @@ jobs:
           merge-multiple: true
 
       - name: Upload to PyPI
-        if: startsWith(github.ref, 'refs/tags/v')
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           skip-existing: true

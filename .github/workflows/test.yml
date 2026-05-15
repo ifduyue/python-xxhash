@@ -33,7 +33,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: python -m pip install -U pip 'setuptools>=45' pytest
+        run: python -m pip install -U pip 'setuptools>=45' pytest pyright
 
       - name: Run tests
         run: |
