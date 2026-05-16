@@ -33,6 +33,17 @@
 
 #include "xxhash.h"
 
+/* Per-object critical section for free-threaded Python (3.13+).
+ * Py_BEGIN_CRITICAL_SECTION uses the PyObject's built-in ob_mutex.
+ * On Python < 3.13, macros expand to nothing (GIL protects us). */
+#if PY_VERSION_HEX >= 0x030d0000
+#  define XXH_CRITICAL_SECTION(op)  Py_BEGIN_CRITICAL_SECTION(op)
+#  define XXH_END_CRITICAL_SECTION()  Py_END_CRITICAL_SECTION()
+#else
+#  define XXH_CRITICAL_SECTION(op)
+#  define XXH_END_CRITICAL_SECTION()
+#endif
+
 #define TOSTRING(x) #x
 #define VALUE_TO_STRING(x) TOSTRING(x)
 #define XXHASH_VERSION XXH_VERSION_MAJOR.XXH_VERSION_MINOR.XXH_VERSION_RELEASE
@@ -450,18 +461,13 @@ static PyTypeObject PYXXH32Type;
 
 static void PYXXH32_dealloc(PYXXH32Object *self)
 {
-    if (self->xxhash_state)
+    XXH_CRITICAL_SECTION(self);
+    if (self->xxhash_state) {
         XXH32_freeState(self->xxhash_state);
+        self->xxhash_state = NULL;
+    }
+    XXH_END_CRITICAL_SECTION();
     PyObject_Del(self);
-}
-
-static void PYXXH32_do_update(PYXXH32Object *self, Py_buffer *buf)
-{
-    Py_BEGIN_ALLOW_THREADS
-    XXH32_update(self->xxhash_state, buf->buf, buf->len);
-    Py_END_ALLOW_THREADS
-
-    PyBuffer_Release(buf);
 }
 
 static PyObject *
@@ -491,11 +497,20 @@ PYXXH32_vectorcall(PyObject *type, PyObject *const *args,
         PyBuffer_Release(&buf);
             return PyErr_NoMemory();
     }
+    XXH_CRITICAL_SECTION(self);
     self->seed = seed;
     XXH32_reset(self->xxhash_state, seed);
 
-    if (buf.obj)
-        PYXXH32_do_update(self, &buf);
+    if (buf.obj) {
+        Py_BEGIN_ALLOW_THREADS
+        XXH32_update(self->xxhash_state, buf.buf, buf.len);
+        Py_END_ALLOW_THREADS
+    }
+    XXH_END_CRITICAL_SECTION();
+
+    if (buf.obj) {
+        PyBuffer_Release(&buf);
+    }
     return (PyObject *)self;
 }
 
@@ -508,6 +523,7 @@ static PyObject *PYXXH32_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
     if ((self = PyObject_New(PYXXH32Object, &PYXXH32Type)) == NULL) {
         return NULL;
     }
+
 
     if ((self->xxhash_state = XXH32_createState()) == NULL) {
         Py_DECREF(self);
@@ -592,11 +608,20 @@ static int PYXXH32_init(PYXXH32Object *self, PyObject *args, PyObject *kwargs)
             return -1;
     }
 
+    XXH_CRITICAL_SECTION(self);
     self->seed = seed;
     XXH32_reset(self->xxhash_state, seed);
 
-    if (buf.obj)
-        PYXXH32_do_update(self, &buf);
+    if (buf.obj) {
+        Py_BEGIN_ALLOW_THREADS
+        XXH32_update(self->xxhash_state, buf.buf, buf.len);
+        Py_END_ALLOW_THREADS
+    }
+    XXH_END_CRITICAL_SECTION();
+
+    if (buf.obj) {
+        PyBuffer_Release(&buf);
+    }
     return 0;
 }
 
@@ -649,7 +674,10 @@ static PyObject *PYXXH32_update(PYXXH32Object *self, PyObject *const *args,
     Py_buffer buf;
     if (_get_buffer_or_str(arg, &buf) < 0)
         return NULL;
-    PYXXH32_do_update(self, &buf);
+    Py_BEGIN_ALLOW_THREADS
+    XXH32_update(self->xxhash_state, buf.buf, buf.len);
+    Py_END_ALLOW_THREADS
+    PyBuffer_Release(&buf);
     Py_RETURN_NONE;
 }
 
@@ -666,7 +694,9 @@ static PyObject *PYXXH32_digest(PYXXH32Object *self)
     char retbuf[XXH32_DIGESTSIZE];
     XXH32_hash_t intdigest;
 
+    XXH_CRITICAL_SECTION(self);
     intdigest = XXH32_digest(self->xxhash_state);
+    XXH_END_CRITICAL_SECTION();
     XXH32_canonicalFromHash((XXH32_canonical_t *)retbuf, intdigest);
 
     return PyBytes_FromStringAndSize(retbuf, sizeof(retbuf));
@@ -684,7 +714,9 @@ static PyObject *PYXXH32_hexdigest(PYXXH32Object *self)
     char retbuf[XXH32_DIGESTSIZE * 2];
     int i, j;
 
+    XXH_CRITICAL_SECTION(self);
     intdigest = XXH32_digest(self->xxhash_state);
+    XXH_END_CRITICAL_SECTION();
     XXH32_canonicalFromHash((XXH32_canonical_t *)digest, intdigest);
 
     for (i = j = 0; i < XXH32_DIGESTSIZE; i++) {
@@ -708,7 +740,10 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH32_intdigest(PYXXH32Object *self)
 {
-    XXH32_hash_t digest = XXH32_digest(self->xxhash_state);
+    XXH32_hash_t digest;
+    XXH_CRITICAL_SECTION(self);
+    digest = XXH32_digest(self->xxhash_state);
+    XXH_END_CRITICAL_SECTION();
     return PyLong_FromUnsignedLong(digest);
 }
 
@@ -731,8 +766,10 @@ static PyObject *PYXXH32_copy(PYXXH32Object *self)
         return NULL;
     }
 
+    XXH_CRITICAL_SECTION(self);
     p->seed = self->seed;
     XXH32_copyState(p->xxhash_state, self->xxhash_state);
+    XXH_END_CRITICAL_SECTION();
 
     return (PyObject *)p;
 }
@@ -744,7 +781,9 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH32_reset(PYXXH32Object *self)
 {
+    XXH_CRITICAL_SECTION(self);
     XXH32_reset(self->xxhash_state, self->seed);
+    XXH_END_CRITICAL_SECTION();
     Py_RETURN_NONE;
 }
 
@@ -894,18 +933,13 @@ static PyTypeObject PYXXH64Type;
 
 static void PYXXH64_dealloc(PYXXH64Object *self)
 {
-    if (self->xxhash_state)
+    XXH_CRITICAL_SECTION(self);
+    if (self->xxhash_state) {
         XXH64_freeState(self->xxhash_state);
+        self->xxhash_state = NULL;
+    }
+    XXH_END_CRITICAL_SECTION();
     PyObject_Del(self);
-}
-
-static void PYXXH64_do_update(PYXXH64Object *self, Py_buffer *buf)
-{
-    Py_BEGIN_ALLOW_THREADS
-    XXH64_update(self->xxhash_state, buf->buf, buf->len);
-    Py_END_ALLOW_THREADS
-
-    PyBuffer_Release(buf);
 }
 
 static PyObject *
@@ -935,11 +969,20 @@ PYXXH64_vectorcall(PyObject *type, PyObject *const *args,
         PyBuffer_Release(&buf);
             return PyErr_NoMemory();
     }
+    XXH_CRITICAL_SECTION(self);
     self->seed = seed;
     XXH64_reset(self->xxhash_state, seed);
 
-    if (buf.obj)
-        PYXXH64_do_update(self, &buf);
+    if (buf.obj) {
+        Py_BEGIN_ALLOW_THREADS
+        XXH64_update(self->xxhash_state, buf.buf, buf.len);
+        Py_END_ALLOW_THREADS
+    }
+    XXH_END_CRITICAL_SECTION();
+
+    if (buf.obj) {
+        PyBuffer_Release(&buf);
+    }
     return (PyObject *)self;
 }
 static PyObject *PYXXH64_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
@@ -949,6 +992,7 @@ static PyObject *PYXXH64_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
     if ((self = PyObject_New(PYXXH64Object, &PYXXH64Type)) == NULL) {
         return NULL;
     }
+
 
     if ((self->xxhash_state = XXH64_createState()) == NULL) {
         Py_DECREF(self);
@@ -1013,11 +1057,20 @@ static int PYXXH64_init(PYXXH64Object *self, PyObject *args, PyObject *kwargs)
             return -1;
     }
 
+    XXH_CRITICAL_SECTION(self);
     self->seed = seed;
     XXH64_reset(self->xxhash_state, seed);
 
-    if (buf.obj)
-        PYXXH64_do_update(self, &buf);
+    if (buf.obj) {
+        Py_BEGIN_ALLOW_THREADS
+        XXH64_update(self->xxhash_state, buf.buf, buf.len);
+        Py_END_ALLOW_THREADS
+    }
+    XXH_END_CRITICAL_SECTION();
+
+    if (buf.obj) {
+        PyBuffer_Release(&buf);
+    }
     return 0;
 }
 
@@ -1070,7 +1123,10 @@ static PyObject *PYXXH64_update(PYXXH64Object *self, PyObject *const *args,
     Py_buffer buf;
     if (_get_buffer_or_str(arg, &buf) < 0)
         return NULL;
-    PYXXH64_do_update(self, &buf);
+    Py_BEGIN_ALLOW_THREADS
+    XXH64_update(self->xxhash_state, buf.buf, buf.len);
+    Py_END_ALLOW_THREADS
+    PyBuffer_Release(&buf);
     Py_RETURN_NONE;
 }
 
@@ -1086,7 +1142,9 @@ static PyObject *PYXXH64_digest(PYXXH64Object *self)
     char retbuf[XXH64_DIGESTSIZE];
     XXH64_hash_t intdigest;
 
+    XXH_CRITICAL_SECTION(self);
     intdigest = XXH64_digest(self->xxhash_state);
+    XXH_END_CRITICAL_SECTION();
     XXH64_canonicalFromHash((XXH64_canonical_t *)retbuf, intdigest);
 
     return PyBytes_FromStringAndSize(retbuf, sizeof(retbuf));
@@ -1104,7 +1162,9 @@ static PyObject *PYXXH64_hexdigest(PYXXH64Object *self)
     char retbuf[XXH64_DIGESTSIZE * 2];
     int i, j;
 
+    XXH_CRITICAL_SECTION(self);
     intdigest = XXH64_digest(self->xxhash_state);
+    XXH_END_CRITICAL_SECTION();
     XXH64_canonicalFromHash((XXH64_canonical_t *)digest, intdigest);
 
     for (i = j = 0; i < XXH64_DIGESTSIZE; i++) {
@@ -1129,7 +1189,10 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH64_intdigest(PYXXH64Object *self)
 {
-    XXH64_hash_t digest = XXH64_digest(self->xxhash_state);
+    XXH64_hash_t digest;
+    XXH_CRITICAL_SECTION(self);
+    digest = XXH64_digest(self->xxhash_state);
+    XXH_END_CRITICAL_SECTION();
     return PyLong_FromUnsignedLongLong(digest);
 }
 
@@ -1152,8 +1215,10 @@ static PyObject *PYXXH64_copy(PYXXH64Object *self)
         return NULL;
     }
 
+    XXH_CRITICAL_SECTION(self);
     p->seed = self->seed;
     XXH64_copyState(p->xxhash_state, self->xxhash_state);
+    XXH_END_CRITICAL_SECTION();
 
     return (PyObject *)p;
 }
@@ -1165,7 +1230,9 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH64_reset(PYXXH64Object *self)
 {
+    XXH_CRITICAL_SECTION(self);
     XXH64_reset(self->xxhash_state, self->seed);
+    XXH_END_CRITICAL_SECTION();
     Py_RETURN_NONE;
 }
 
@@ -1314,18 +1381,13 @@ static PyTypeObject PYXXH3_64Type;
 
 static void PYXXH3_64_dealloc(PYXXH3_64Object *self)
 {
-    if (self->xxhash_state)
+    XXH_CRITICAL_SECTION(self);
+    if (self->xxhash_state) {
         XXH3_freeState(self->xxhash_state);
+        self->xxhash_state = NULL;
+    }
+    XXH_END_CRITICAL_SECTION();
     PyObject_Del(self);
-}
-
-static void PYXXH3_64_do_update(PYXXH3_64Object *self, Py_buffer *buf)
-{
-    Py_BEGIN_ALLOW_THREADS
-    XXH3_64bits_update(self->xxhash_state, buf->buf, buf->len);
-    Py_END_ALLOW_THREADS
-
-    PyBuffer_Release(buf);
 }
 
 static PyObject *
@@ -1355,11 +1417,20 @@ PYXXH3_64_vectorcall(PyObject *type, PyObject *const *args,
         PyBuffer_Release(&buf);
             return PyErr_NoMemory();
     }
+    XXH_CRITICAL_SECTION(self);
     self->seed = seed;
     XXH3_64bits_reset_withSeed(self->xxhash_state, seed);
 
-    if (buf.obj)
-        PYXXH3_64_do_update(self, &buf);
+    if (buf.obj) {
+        Py_BEGIN_ALLOW_THREADS
+        XXH3_64bits_update(self->xxhash_state, buf.buf, buf.len);
+        Py_END_ALLOW_THREADS
+    }
+    XXH_END_CRITICAL_SECTION();
+
+    if (buf.obj) {
+        PyBuffer_Release(&buf);
+    }
     return (PyObject *)self;
 }
 static PyObject *PYXXH3_64_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
@@ -1369,6 +1440,7 @@ static PyObject *PYXXH3_64_new(PyTypeObject *type, PyObject *args, PyObject *kwa
     if ((self = PyObject_New(PYXXH3_64Object, &PYXXH3_64Type)) == NULL) {
         return NULL;
     }
+
 
     if ((self->xxhash_state = XXH3_createState()) == NULL) {
         Py_DECREF(self);
@@ -1433,11 +1505,20 @@ static int PYXXH3_64_init(PYXXH3_64Object *self, PyObject *args, PyObject *kwarg
             return -1;
     }
 
+    XXH_CRITICAL_SECTION(self);
     self->seed = seed;
     XXH3_64bits_reset_withSeed(self->xxhash_state, seed);
 
-    if (buf.obj)
-        PYXXH3_64_do_update(self, &buf);
+    if (buf.obj) {
+        Py_BEGIN_ALLOW_THREADS
+        XXH3_64bits_update(self->xxhash_state, buf.buf, buf.len);
+        Py_END_ALLOW_THREADS
+    }
+    XXH_END_CRITICAL_SECTION();
+
+    if (buf.obj) {
+        PyBuffer_Release(&buf);
+    }
     return 0;
 }
 
@@ -1490,7 +1571,10 @@ static PyObject *PYXXH3_64_update(PYXXH3_64Object *self, PyObject *const *args,
     Py_buffer buf;
     if (_get_buffer_or_str(arg, &buf) < 0)
         return NULL;
-    PYXXH3_64_do_update(self, &buf);
+    Py_BEGIN_ALLOW_THREADS
+    XXH3_64bits_update(self->xxhash_state, buf.buf, buf.len);
+    Py_END_ALLOW_THREADS
+    PyBuffer_Release(&buf);
     Py_RETURN_NONE;
 }
 
@@ -1506,7 +1590,9 @@ static PyObject *PYXXH3_64_digest(PYXXH3_64Object *self)
     char retbuf[XXH64_DIGESTSIZE];
     XXH64_hash_t intdigest;
 
+    XXH_CRITICAL_SECTION(self);
     intdigest = XXH3_64bits_digest(self->xxhash_state);
+    XXH_END_CRITICAL_SECTION();
     XXH64_canonicalFromHash((XXH64_canonical_t *)retbuf, intdigest);
 
     return PyBytes_FromStringAndSize(retbuf, sizeof(retbuf));
@@ -1524,8 +1610,9 @@ static PyObject *PYXXH3_64_hexdigest(PYXXH3_64Object *self)
     char retbuf[XXH64_DIGESTSIZE * 2];
     int i, j;
 
-
+    XXH_CRITICAL_SECTION(self);
     intdigest = XXH3_64bits_digest(self->xxhash_state);
+    XXH_END_CRITICAL_SECTION();
     XXH64_canonicalFromHash((XXH64_canonical_t *)digest, intdigest);
 
     for (i = j = 0; i < XXH64_DIGESTSIZE; i++) {
@@ -1550,7 +1637,10 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH3_64_intdigest(PYXXH3_64Object *self)
 {
-    XXH64_hash_t intdigest = XXH3_64bits_digest(self->xxhash_state);
+    XXH64_hash_t intdigest;
+    XXH_CRITICAL_SECTION(self);
+    intdigest = XXH3_64bits_digest(self->xxhash_state);
+    XXH_END_CRITICAL_SECTION();
     return PyLong_FromUnsignedLongLong(intdigest);
 }
 
@@ -1573,6 +1663,7 @@ static PyObject *PYXXH3_64_copy(PYXXH3_64Object *self)
         return NULL;
     }
 
+    XXH_CRITICAL_SECTION(self);
     p->seed = self->seed;
     XXH3_copyState(p->xxhash_state, self->xxhash_state);
 #if XXH_VERSION_NUMBER < 704
@@ -1582,6 +1673,7 @@ static PyObject *PYXXH3_64_copy(PYXXH3_64Object *self)
     if (p->xxhash_state->secret == &self->xxhash_state->customSecret[0])
         p->xxhash_state->secret = &p->xxhash_state->customSecret[0];
 #endif
+    XXH_END_CRITICAL_SECTION();
 
     return (PyObject *)p;
 }
@@ -1593,7 +1685,9 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH3_64_reset(PYXXH3_64Object *self)
 {
+    XXH_CRITICAL_SECTION(self);
     XXH3_64bits_reset_withSeed(self->xxhash_state, self->seed);
+    XXH_END_CRITICAL_SECTION();
     Py_RETURN_NONE;
 }
 
@@ -1743,18 +1837,13 @@ static PyTypeObject PYXXH3_128Type;
 
 static void PYXXH3_128_dealloc(PYXXH3_128Object *self)
 {
-    if (self->xxhash_state)
+    XXH_CRITICAL_SECTION(self);
+    if (self->xxhash_state) {
         XXH3_freeState(self->xxhash_state);
+        self->xxhash_state = NULL;
+    }
+    XXH_END_CRITICAL_SECTION();
     PyObject_Del(self);
-}
-
-static void PYXXH3_128_do_update(PYXXH3_128Object *self, Py_buffer *buf)
-{
-    Py_BEGIN_ALLOW_THREADS
-    XXH3_128bits_update(self->xxhash_state, buf->buf, buf->len);
-    Py_END_ALLOW_THREADS
-
-    PyBuffer_Release(buf);
 }
 
 static PyObject *
@@ -1784,11 +1873,20 @@ PYXXH3_128_vectorcall(PyObject *type, PyObject *const *args,
         PyBuffer_Release(&buf);
             return PyErr_NoMemory();
     }
+    XXH_CRITICAL_SECTION(self);
     self->seed = seed;
     XXH3_128bits_reset_withSeed(self->xxhash_state, seed);
 
-    if (buf.obj)
-        PYXXH3_128_do_update(self, &buf);
+    if (buf.obj) {
+        Py_BEGIN_ALLOW_THREADS
+        XXH3_128bits_update(self->xxhash_state, buf.buf, buf.len);
+        Py_END_ALLOW_THREADS
+    }
+    XXH_END_CRITICAL_SECTION();
+
+    if (buf.obj) {
+        PyBuffer_Release(&buf);
+    }
     return (PyObject *)self;
 }
 static PyObject *PYXXH3_128_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
@@ -1798,6 +1896,7 @@ static PyObject *PYXXH3_128_new(PyTypeObject *type, PyObject *args, PyObject *kw
     if ((self = PyObject_New(PYXXH3_128Object, &PYXXH3_128Type)) == NULL) {
         return NULL;
     }
+
 
     if ((self->xxhash_state = XXH3_createState()) == NULL) {
         Py_DECREF(self);
@@ -1862,11 +1961,20 @@ static int PYXXH3_128_init(PYXXH3_128Object *self, PyObject *args, PyObject *kwa
             return -1;
     }
 
+    XXH_CRITICAL_SECTION(self);
     self->seed = seed;
     XXH3_128bits_reset_withSeed(self->xxhash_state, seed);
 
-    if (buf.obj)
-        PYXXH3_128_do_update(self, &buf);
+    if (buf.obj) {
+        Py_BEGIN_ALLOW_THREADS
+        XXH3_128bits_update(self->xxhash_state, buf.buf, buf.len);
+        Py_END_ALLOW_THREADS
+    }
+    XXH_END_CRITICAL_SECTION();
+
+    if (buf.obj) {
+        PyBuffer_Release(&buf);
+    }
     return 0;
 }
 
@@ -1919,7 +2027,10 @@ static PyObject *PYXXH3_128_update(PYXXH3_128Object *self, PyObject *const *args
     Py_buffer buf;
     if (_get_buffer_or_str(arg, &buf) < 0)
         return NULL;
-    PYXXH3_128_do_update(self, &buf);
+    Py_BEGIN_ALLOW_THREADS
+    XXH3_128bits_update(self->xxhash_state, buf.buf, buf.len);
+    Py_END_ALLOW_THREADS
+    PyBuffer_Release(&buf);
     Py_RETURN_NONE;
 }
 
@@ -1935,7 +2046,9 @@ static PyObject *PYXXH3_128_digest(PYXXH3_128Object *self)
     char retbuf[XXH128_DIGESTSIZE];
     XXH128_hash_t intdigest;
 
+    XXH_CRITICAL_SECTION(self);
     intdigest = XXH3_128bits_digest(self->xxhash_state);
+    XXH_END_CRITICAL_SECTION();
     XXH128_canonicalFromHash((XXH128_canonical_t *)retbuf, intdigest);
 
     return PyBytes_FromStringAndSize(retbuf, sizeof(retbuf));
@@ -1953,7 +2066,9 @@ static PyObject *PYXXH3_128_hexdigest(PYXXH3_128Object *self)
     char retbuf[XXH128_DIGESTSIZE * 2];
     int i, j;
 
+    XXH_CRITICAL_SECTION(self);
     intdigest = XXH3_128bits_digest(self->xxhash_state);
+    XXH_END_CRITICAL_SECTION();
     XXH128_canonicalFromHash((XXH128_canonical_t *)digest, intdigest);
 
     for (i = j = 0; i < XXH128_DIGESTSIZE; i++) {
@@ -1981,7 +2096,9 @@ static PyObject *PYXXH3_128_intdigest(PYXXH3_128Object *self)
     XXH128_hash_t intdigest;
     PyObject *result, *high, *low, *sixtyfour;
 
+    XXH_CRITICAL_SECTION(self);
     intdigest = XXH3_128bits_digest(self->xxhash_state);
+    XXH_END_CRITICAL_SECTION();
 
     sixtyfour = PyLong_FromLong(64);
     low = PyLong_FromUnsignedLongLong(intdigest.low64);
@@ -2020,6 +2137,7 @@ static PyObject *PYXXH3_128_copy(PYXXH3_128Object *self)
         return NULL;
     }
 
+    XXH_CRITICAL_SECTION(self);
     p->seed = self->seed;
     XXH3_copyState(p->xxhash_state, self->xxhash_state);
 #if XXH_VERSION_NUMBER < 704
@@ -2029,6 +2147,7 @@ static PyObject *PYXXH3_128_copy(PYXXH3_128Object *self)
     if (p->xxhash_state->secret == &self->xxhash_state->customSecret[0])
         p->xxhash_state->secret = &p->xxhash_state->customSecret[0];
 #endif
+    XXH_END_CRITICAL_SECTION();
 
     return (PyObject *)p;
 }
@@ -2040,7 +2159,9 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH3_128_reset(PYXXH3_128Object *self)
 {
+    XXH_CRITICAL_SECTION(self);
     XXH3_128bits_reset_withSeed(self->xxhash_state, self->seed);
+    XXH_END_CRITICAL_SECTION();
     Py_RETURN_NONE;
 }
 
