@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2025, Yue Du
+ * Copyright (c) 2014-2026, Yue Du
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
@@ -25,13 +25,74 @@
  */
 
 /* This module provides an interface to xxhash, an extremely fast
- non-cryptographic hash algorithm algorithm */
-
+ non-cryptographic hash algorithm */
 
 #include <Python.h>
 #include <string.h>
 
 #include "xxhash.h"
+
+/* ------------------------------------------------------------------ */
+/*  Lock type & helpers                                               */
+/* ------------------------------------------------------------------ */
+#if PY_VERSION_HEX >= 0x030d0000 /* Python 3.13+: always-on PyMutex (3.15+ style) */
+#  define XXHASH_LOCK_FIELD      PyMutex mutex;
+#  define XXHASH_LOCK_INIT(o)    ((void)((o)->mutex = (PyMutex){0}))
+#  define XXHASH_LOCK_IS_ACTIVE(o)  1
+#  define XXHASH_LOCK_MAYBE_INIT(o, len)  ((void)0)
+#  define XXHASH_LOCK_FINI(o)    ((void)0)
+#  define XXHASH_LOCK_ACQUIRE(o)          PyMutex_Lock(&(o)->mutex)
+#  define XXHASH_LOCK_ACQUIRE_BLOCKING(o) XXHASH_LOCK_ACQUIRE(o)
+#  define XXHASH_LOCK_RELEASE(o)       PyMutex_Unlock(&(o)->mutex)
+#else  /* Python 3.9-3.12: PyThread_type_lock */
+#  define XXHASH_LOCK_FIELD      PyThread_type_lock lock;
+#  define XXHASH_LOCK_INIT(o)    ((o)->lock = NULL)
+#  define XXHASH_LOCK_IS_ACTIVE(o)  ((o)->lock != NULL)
+/* Lazy allocation on first large update */
+#  define XXHASH_LOCK_MAYBE_INIT(o, len)                                 \
+    do {                                                                 \
+        if ((o)->lock == NULL && (len) >= XXHASH_GIL_MINSIZE) {          \
+            (o)->lock = PyThread_allocate_lock();                        \
+            /* fail? lock stays NULL, fall back to non-threaded code. */ \
+        }                                                                \
+    } while (0)
+#  define XXHASH_LOCK_FINI(o)    do { if ((o)->lock)                 \
+                                      PyThread_free_lock((o)->lock); \
+                                  } while (0)
+/* Acquire lock when GIL is already released — simple blocking acquire.
+ * Only acquires if lock has been allocated (lazy init). */
+#  define XXHASH_LOCK_ACQUIRE_BLOCKING(o)                \
+    do {                                                 \
+        if ((o)->lock) {                                 \
+            PyThread_acquire_lock((o)->lock, WAIT_LOCK); \
+        }                                                \
+    } while (0)
+
+/* Acquire lock with the GIL held — non-blocking try first, then release
+ * GIL and block if contested (matches hashlib's ENTER_HASHLIB in 3.9-3.12).
+ * Only acquires if lock has been allocated (lazy init). */
+#  define XXHASH_LOCK_ACQUIRE(o)                                  \
+    do {                                                          \
+        if ((o)->lock) {                                          \
+            if (!PyThread_acquire_lock((o)->lock, NOWAIT_LOCK)) { \
+                /* Lock contested – release GIL while waiting. */ \
+                Py_BEGIN_ALLOW_THREADS                            \
+                PyThread_acquire_lock((o)->lock, WAIT_LOCK);      \
+                Py_END_ALLOW_THREADS                              \
+            }                                                     \
+        }                                                         \
+    } while (0)
+
+#  define XXHASH_LOCK_RELEASE(o)              \
+    do {                                      \
+        if ((o)->lock) {                      \
+            PyThread_release_lock((o)->lock); \
+        }                                     \
+    } while (0)
+#endif
+
+/* Data size threshold for releasing the GIL during hash. */
+#define XXHASH_GIL_MINSIZE  65536
 
 #define TOSTRING(x) #x
 #define VALUE_TO_STRING(x) TOSTRING(x)
@@ -44,14 +105,13 @@
 #define XXH128_DIGESTSIZE 16
 #define XXH128_BLOCKSIZE 64
 
-
-
 #ifndef Py_ALWAYS_INLINE
 #  define Py_ALWAYS_INLINE
 #endif
 
+/* Hex lookup table for hexdigest(). */
 /* Get a buffer from an object. Rejects str with hashlib-compatible error. */
-static Py_ALWAYS_INLINE int
+static inline Py_ALWAYS_INLINE int
 _get_buffer_or_str(PyObject *obj, Py_buffer *buf)
 {
     if (obj == Py_None) {
@@ -64,6 +124,24 @@ _get_buffer_or_str(PyObject *obj, Py_buffer *buf)
             "Strings must be encoded before hashing");
         return -1;
     }
+    /* Fast path: bypass PyObject_GetBuffer dispatch for bytes objects.
+     * For PyBUF_SIMPLE this is equivalent to PyBuffer_FillInfo(...).
+     * PyBuffer_Release will DECREF buf->obj (bytes has no releaseproc). */
+    if (PyBytes_Check(obj)) {
+        buf->buf = PyBytes_AS_STRING(obj);
+        buf->len = PyBytes_GET_SIZE(obj);
+        buf->obj = (PyObject *)obj;
+        Py_INCREF(obj);
+        buf->readonly = 1;
+        buf->itemsize = 1;
+        buf->format = NULL;
+        buf->ndim = 1;
+        buf->shape = NULL;
+        buf->strides = NULL;
+        buf->suboffsets = NULL;
+        buf->internal = NULL;
+        return 0;
+    }
     if (PyObject_GetBuffer(obj, buf, PyBUF_SIMPLE) < 0)
         return -1;
     return 0;
@@ -74,7 +152,7 @@ _get_buffer_or_str(PyObject *obj, Py_buffer *buf)
  * keyword 'seed', with proper error reporting for unknown keywords,
  * duplicate arguments, and too many positional args.
  * Returns 0 on success, -1 on error with exception set. */
-static Py_ALWAYS_INLINE int
+static inline int
 _parse_fastcall_args(PyObject *const *args, Py_ssize_t nargs,
                      PyObject *kwnames, const char *funcname,
                      int data_required,
@@ -173,12 +251,20 @@ static PyObject *xxh32_digest(PyObject *self, PyObject *const *args,
         return NULL;
     seed = (XXH32_hash_t)raw_seed;
 
-    XXH32_hash_t intdigest = XXH32(buf.buf, buf.len, seed);
+    XXH32_hash_t intdigest;
+    if (buf.len > XXHASH_GIL_MINSIZE) {
+        Py_BEGIN_ALLOW_THREADS
+        intdigest = XXH32(buf.buf, buf.len, seed);
+        Py_END_ALLOW_THREADS
+    } else {
+        intdigest = XXH32(buf.buf, buf.len, seed);
+    }
     PyBuffer_Release(&buf);
 
-    char retbuf[XXH32_DIGESTSIZE];
-    XXH32_canonicalFromHash((XXH32_canonical_t *)retbuf, intdigest);
-    return PyBytes_FromStringAndSize(retbuf, sizeof(retbuf));
+    PyObject *ret = PyBytes_FromStringAndSize(NULL, XXH32_DIGESTSIZE);
+    if (ret == NULL) return NULL;
+    XXH32_canonicalFromHash((XXH32_canonical_t *)PyBytes_AS_STRING(ret), intdigest);
+    return ret;
 }
 static PyObject *xxh32_intdigest(PyObject *self, PyObject *const *args,
                                   Py_ssize_t nargs, PyObject *kwnames)
@@ -190,7 +276,14 @@ static PyObject *xxh32_intdigest(PyObject *self, PyObject *const *args,
         return NULL;
     seed = (XXH32_hash_t)raw_seed;
 
-    XXH32_hash_t intdigest = XXH32(buf.buf, buf.len, seed);
+    XXH32_hash_t intdigest;
+    if (buf.len > XXHASH_GIL_MINSIZE) {
+        Py_BEGIN_ALLOW_THREADS
+        intdigest = XXH32(buf.buf, buf.len, seed);
+        Py_END_ALLOW_THREADS
+    } else {
+        intdigest = XXH32(buf.buf, buf.len, seed);
+    }
     PyBuffer_Release(&buf);
 
     return PyLong_FromUnsignedLong(intdigest);
@@ -205,25 +298,32 @@ static PyObject *xxh32_hexdigest(PyObject *self, PyObject *const *args,
         return NULL;
     seed = (XXH32_hash_t)raw_seed;
 
-    XXH32_hash_t intdigest = XXH32(buf.buf, buf.len, seed);
+    XXH32_hash_t intdigest;
+    if (buf.len > XXHASH_GIL_MINSIZE) {
+        Py_BEGIN_ALLOW_THREADS
+        intdigest = XXH32(buf.buf, buf.len, seed);
+        Py_END_ALLOW_THREADS
+    } else {
+        intdigest = XXH32(buf.buf, buf.len, seed);
+    }
     PyBuffer_Release(&buf);
 
     char digest[XXH32_DIGESTSIZE];
     XXH32_canonicalFromHash((XXH32_canonical_t *)digest, intdigest);
 
-    char retbuf[XXH32_DIGESTSIZE * 2];
-    int i, j;
-    for (i = j = 0; i < XXH32_DIGESTSIZE; i++) {
+    PyObject *ret = PyUnicode_New(XXH32_DIGESTSIZE * 2, 127);
+    if (ret == NULL) return NULL;
+    Py_UCS1 *b = PyUnicode_1BYTE_DATA(ret);
+    for (Py_ssize_t i = 0, j = 0; i < XXH32_DIGESTSIZE; i++) {
         unsigned char c;
         c = (digest[i] >> 4) & 0xf;
         c = (c > 9) ? c + 'a' - 10 : c + '0';
-        retbuf[j++] = c;
+        b[j++] = c;
         c = (digest[i] & 0xf);
         c = (c > 9) ? c + 'a' - 10 : c + '0';
-        retbuf[j++] = c;
+        b[j++] = c;
     }
-
-    return PyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
+    return ret;
 }
 
 /* XXH64 */
@@ -237,12 +337,20 @@ static PyObject *xxh64_digest(PyObject *self, PyObject *const *args,
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
 
-    XXH64_hash_t intdigest = XXH64(buf.buf, buf.len, seed);
+    XXH64_hash_t intdigest;
+    if (buf.len > XXHASH_GIL_MINSIZE) {
+        Py_BEGIN_ALLOW_THREADS
+        intdigest = XXH64(buf.buf, buf.len, seed);
+        Py_END_ALLOW_THREADS
+    } else {
+        intdigest = XXH64(buf.buf, buf.len, seed);
+    }
     PyBuffer_Release(&buf);
 
-    char retbuf[XXH64_DIGESTSIZE];
-    XXH64_canonicalFromHash((XXH64_canonical_t *)retbuf, intdigest);
-    return PyBytes_FromStringAndSize(retbuf, sizeof(retbuf));
+    PyObject *ret = PyBytes_FromStringAndSize(NULL, XXH64_DIGESTSIZE);
+    if (ret == NULL) return NULL;
+    XXH64_canonicalFromHash((XXH64_canonical_t *)PyBytes_AS_STRING(ret), intdigest);
+    return ret;
 }
 static PyObject *xxh64_intdigest(PyObject *self, PyObject *const *args,
                                   Py_ssize_t nargs, PyObject *kwnames)
@@ -254,7 +362,14 @@ static PyObject *xxh64_intdigest(PyObject *self, PyObject *const *args,
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
 
-    XXH64_hash_t intdigest = XXH64(buf.buf, buf.len, seed);
+    XXH64_hash_t intdigest;
+    if (buf.len > XXHASH_GIL_MINSIZE) {
+        Py_BEGIN_ALLOW_THREADS
+        intdigest = XXH64(buf.buf, buf.len, seed);
+        Py_END_ALLOW_THREADS
+    } else {
+        intdigest = XXH64(buf.buf, buf.len, seed);
+    }
     PyBuffer_Release(&buf);
 
     return PyLong_FromUnsignedLongLong(intdigest);
@@ -269,25 +384,32 @@ static PyObject *xxh64_hexdigest(PyObject *self, PyObject *const *args,
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
 
-    XXH64_hash_t intdigest = XXH64(buf.buf, buf.len, seed);
+    XXH64_hash_t intdigest;
+    if (buf.len > XXHASH_GIL_MINSIZE) {
+        Py_BEGIN_ALLOW_THREADS
+        intdigest = XXH64(buf.buf, buf.len, seed);
+        Py_END_ALLOW_THREADS
+    } else {
+        intdigest = XXH64(buf.buf, buf.len, seed);
+    }
     PyBuffer_Release(&buf);
 
     char digest[XXH64_DIGESTSIZE];
     XXH64_canonicalFromHash((XXH64_canonical_t *)digest, intdigest);
 
-    char retbuf[XXH64_DIGESTSIZE * 2];
-    int i, j;
-    for (i = j = 0; i < XXH64_DIGESTSIZE; i++) {
+    PyObject *ret = PyUnicode_New(XXH64_DIGESTSIZE * 2, 127);
+    if (ret == NULL) return NULL;
+    Py_UCS1 *b = PyUnicode_1BYTE_DATA(ret);
+    for (Py_ssize_t i = 0, j = 0; i < XXH64_DIGESTSIZE; i++) {
         unsigned char c;
         c = (digest[i] >> 4) & 0xf;
         c = (c > 9) ? c + 'a' - 10 : c + '0';
-        retbuf[j++] = c;
+        b[j++] = c;
         c = (digest[i] & 0xf);
         c = (c > 9) ? c + 'a' - 10 : c + '0';
-        retbuf[j++] = c;
+        b[j++] = c;
     }
-
-    return PyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
+    return ret;
 }
 
 /* XXH3_64 */
@@ -301,12 +423,20 @@ static PyObject *xxh3_64_digest(PyObject *self, PyObject *const *args,
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
 
-    XXH64_hash_t intdigest = XXH3_64bits_withSeed(buf.buf, buf.len, seed);
+    XXH64_hash_t intdigest;
+    if (buf.len > XXHASH_GIL_MINSIZE) {
+        Py_BEGIN_ALLOW_THREADS
+        intdigest = XXH3_64bits_withSeed(buf.buf, buf.len, seed);
+        Py_END_ALLOW_THREADS
+    } else {
+        intdigest = XXH3_64bits_withSeed(buf.buf, buf.len, seed);
+    }
     PyBuffer_Release(&buf);
 
-    char retbuf[XXH64_DIGESTSIZE];
-    XXH64_canonicalFromHash((XXH64_canonical_t *)retbuf, intdigest);
-    return PyBytes_FromStringAndSize(retbuf, sizeof(retbuf));
+    PyObject *ret = PyBytes_FromStringAndSize(NULL, XXH64_DIGESTSIZE);
+    if (ret == NULL) return NULL;
+    XXH64_canonicalFromHash((XXH64_canonical_t *)PyBytes_AS_STRING(ret), intdigest);
+    return ret;
 }
 static PyObject *xxh3_64_intdigest(PyObject *self, PyObject *const *args,
                                   Py_ssize_t nargs, PyObject *kwnames)
@@ -318,7 +448,14 @@ static PyObject *xxh3_64_intdigest(PyObject *self, PyObject *const *args,
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
 
-    XXH64_hash_t intdigest = XXH3_64bits_withSeed(buf.buf, buf.len, seed);
+    XXH64_hash_t intdigest;
+    if (buf.len > XXHASH_GIL_MINSIZE) {
+        Py_BEGIN_ALLOW_THREADS
+        intdigest = XXH3_64bits_withSeed(buf.buf, buf.len, seed);
+        Py_END_ALLOW_THREADS
+    } else {
+        intdigest = XXH3_64bits_withSeed(buf.buf, buf.len, seed);
+    }
     PyBuffer_Release(&buf);
 
     return PyLong_FromUnsignedLongLong(intdigest);
@@ -333,25 +470,32 @@ static PyObject *xxh3_64_hexdigest(PyObject *self, PyObject *const *args,
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
 
-    XXH64_hash_t intdigest = XXH3_64bits_withSeed(buf.buf, buf.len, seed);
+    XXH64_hash_t intdigest;
+    if (buf.len > XXHASH_GIL_MINSIZE) {
+        Py_BEGIN_ALLOW_THREADS
+        intdigest = XXH3_64bits_withSeed(buf.buf, buf.len, seed);
+        Py_END_ALLOW_THREADS
+    } else {
+        intdigest = XXH3_64bits_withSeed(buf.buf, buf.len, seed);
+    }
     PyBuffer_Release(&buf);
 
     char digest[XXH64_DIGESTSIZE];
     XXH64_canonicalFromHash((XXH64_canonical_t *)digest, intdigest);
 
-    char retbuf[XXH64_DIGESTSIZE * 2];
-    int i, j;
-    for (i = j = 0; i < XXH64_DIGESTSIZE; i++) {
+    PyObject *ret = PyUnicode_New(XXH64_DIGESTSIZE * 2, 127);
+    if (ret == NULL) return NULL;
+    Py_UCS1 *b = PyUnicode_1BYTE_DATA(ret);
+    for (Py_ssize_t i = 0, j = 0; i < XXH64_DIGESTSIZE; i++) {
         unsigned char c;
         c = (digest[i] >> 4) & 0xf;
         c = (c > 9) ? c + 'a' - 10 : c + '0';
-        retbuf[j++] = c;
+        b[j++] = c;
         c = (digest[i] & 0xf);
         c = (c > 9) ? c + 'a' - 10 : c + '0';
-        retbuf[j++] = c;
+        b[j++] = c;
     }
-
-    return PyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
+    return ret;
 }
 
 /* XXH3_128 */
@@ -365,12 +509,20 @@ static PyObject *xxh3_128_digest(PyObject *self, PyObject *const *args,
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
 
-    XXH128_hash_t intdigest = XXH3_128bits_withSeed(buf.buf, buf.len, seed);
+    XXH128_hash_t intdigest;
+    if (buf.len > XXHASH_GIL_MINSIZE) {
+        Py_BEGIN_ALLOW_THREADS
+        intdigest = XXH3_128bits_withSeed(buf.buf, buf.len, seed);
+        Py_END_ALLOW_THREADS
+    } else {
+        intdigest = XXH3_128bits_withSeed(buf.buf, buf.len, seed);
+    }
     PyBuffer_Release(&buf);
 
-    char retbuf[XXH128_DIGESTSIZE];
-    XXH128_canonicalFromHash((XXH128_canonical_t *)retbuf, intdigest);
-    return PyBytes_FromStringAndSize(retbuf, sizeof(retbuf));
+    PyObject *ret = PyBytes_FromStringAndSize(NULL, XXH128_DIGESTSIZE);
+    if (ret == NULL) return NULL;
+    XXH128_canonicalFromHash((XXH128_canonical_t *)PyBytes_AS_STRING(ret), intdigest);
+    return ret;
 }
 static PyObject *xxh3_128_intdigest(PyObject *self, PyObject *const *args,
                                      Py_ssize_t nargs, PyObject *kwnames)
@@ -382,7 +534,14 @@ static PyObject *xxh3_128_intdigest(PyObject *self, PyObject *const *args,
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
 
-    XXH128_hash_t intdigest = XXH3_128bits_withSeed(buf.buf, buf.len, seed);
+    XXH128_hash_t intdigest;
+    if (buf.len > XXHASH_GIL_MINSIZE) {
+        Py_BEGIN_ALLOW_THREADS
+        intdigest = XXH3_128bits_withSeed(buf.buf, buf.len, seed);
+        Py_END_ALLOW_THREADS
+    } else {
+        intdigest = XXH3_128bits_withSeed(buf.buf, buf.len, seed);
+    }
     PyBuffer_Release(&buf);
 
     PyObject *sixtyfour = PyLong_FromLong(64);
@@ -412,25 +571,32 @@ static PyObject *xxh3_128_hexdigest(PyObject *self, PyObject *const *args,
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
 
-    XXH128_hash_t intdigest = XXH3_128bits_withSeed(buf.buf, buf.len, seed);
+    XXH128_hash_t intdigest;
+    if (buf.len > XXHASH_GIL_MINSIZE) {
+        Py_BEGIN_ALLOW_THREADS
+        intdigest = XXH3_128bits_withSeed(buf.buf, buf.len, seed);
+        Py_END_ALLOW_THREADS
+    } else {
+        intdigest = XXH3_128bits_withSeed(buf.buf, buf.len, seed);
+    }
     PyBuffer_Release(&buf);
 
     char digest[XXH128_DIGESTSIZE];
     XXH128_canonicalFromHash((XXH128_canonical_t *)digest, intdigest);
 
-    char retbuf[XXH128_DIGESTSIZE * 2];
-    int i, j;
-    for (i = j = 0; i < XXH128_DIGESTSIZE; i++) {
+    PyObject *ret = PyUnicode_New(XXH128_DIGESTSIZE * 2, 127);
+    if (ret == NULL) return NULL;
+    Py_UCS1 *b = PyUnicode_1BYTE_DATA(ret);
+    for (Py_ssize_t i = 0, j = 0; i < XXH128_DIGESTSIZE; i++) {
         unsigned char c;
         c = (digest[i] >> 4) & 0xf;
         c = (c > 9) ? c + 'a' - 10 : c + '0';
-        retbuf[j++] = c;
+        b[j++] = c;
         c = (digest[i] & 0xf);
         c = (c > 9) ? c + 'a' - 10 : c + '0';
-        retbuf[j++] = c;
+        b[j++] = c;
     }
-
-    return PyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
+    return ret;
 }
 
 /*****************************************************************************
@@ -444,25 +610,50 @@ typedef struct {
     /* Type-specific fields go here. */
     XXH32_state_t *xxhash_state;
     XXH32_hash_t seed;
+    XXHASH_LOCK_FIELD
 } PYXXH32Object;
-
-static PyTypeObject PYXXH32Type;
 
 static void PYXXH32_dealloc(PYXXH32Object *self)
 {
     if (self->xxhash_state)
         XXH32_freeState(self->xxhash_state);
-    PyObject_Del(self);
+    XXHASH_LOCK_FINI(self);
+    PyTypeObject *tp = Py_TYPE(self);
+    tp->tp_free((PyObject *)self);
+    Py_DECREF(tp);
 }
 
-static void PYXXH32_do_update(PYXXH32Object *self, Py_buffer *buf)
-{
-    Py_BEGIN_ALLOW_THREADS
-    XXH32_update(self->xxhash_state, buf->buf, buf->len);
-    Py_END_ALLOW_THREADS
-
-    PyBuffer_Release(buf);
+/* Macro to generate _do_update for each hash type.
+ * Matches CPython 3.9-3.12 md5 pattern: release GIL first (for large data),
+ * then acquire lock, hash, release lock, re-acquire GIL.
+ * For small data, acquire lock with GIL held (try-then-block if contested). */
+#define XXHASH_DO_UPDATE(type, update_fn)                                     \
+static inline Py_ALWAYS_INLINE void                                           \
+PY##type##_do_update(PY##type##Object *self, Py_buffer *buf)                  \
+{                                                                             \
+    XXHASH_LOCK_MAYBE_INIT(self, buf->len);                                   \
+    if (XXHASH_LOCK_IS_ACTIVE(self)) {                                        \
+        if (buf->len > XXHASH_GIL_MINSIZE) {                                  \
+            /* Release GIL first, then acquire lock. */                       \
+            Py_BEGIN_ALLOW_THREADS                                            \
+            XXHASH_LOCK_ACQUIRE_BLOCKING(self);                               \
+            update_fn(self->xxhash_state, buf->buf, buf->len);                \
+            XXHASH_LOCK_RELEASE(self);                                        \
+            Py_END_ALLOW_THREADS                                              \
+        } else {                                                              \
+            /* Acquire lock with GIL held. */                                 \
+            XXHASH_LOCK_ACQUIRE(self);                                        \
+            update_fn(self->xxhash_state, buf->buf, buf->len);                \
+            XXHASH_LOCK_RELEASE(self);                                        \
+        }                                                                     \
+    } else {                                                                  \
+        /* No lock: hash directly, no GIL release. */                         \
+        update_fn(self->xxhash_state, buf->buf, buf->len);                    \
+    }                                                                         \
+    PyBuffer_Release(buf);                                                    \
 }
+
+XXHASH_DO_UPDATE(XXH32, XXH32_update)
 
 static PyObject *
 PYXXH32_vectorcall(PyObject *type, PyObject *const *args,
@@ -482,20 +673,31 @@ PYXXH32_vectorcall(PyObject *type, PyObject *const *args,
         ((PyTypeObject *)type)->tp_alloc((PyTypeObject *)type, 0);
     if (self == NULL) {
         PyBuffer_Release(&buf);
-            return NULL;
+        return NULL;
     }
+
+    XXHASH_LOCK_INIT(self);
 
     self->xxhash_state = XXH32_createState();
     if (self->xxhash_state == NULL) {
         Py_DECREF(self);
         PyBuffer_Release(&buf);
-            return PyErr_NoMemory();
+        return PyErr_NoMemory();
     }
     self->seed = seed;
     XXH32_reset(self->xxhash_state, seed);
 
-    if (buf.obj)
-        PYXXH32_do_update(self, &buf);
+    if (buf.obj) {
+        /* Constructor: no concurrent access possible, skip locking. */
+        if (buf.len > XXHASH_GIL_MINSIZE) {
+            Py_BEGIN_ALLOW_THREADS
+            XXH32_update(self->xxhash_state, buf.buf, buf.len);
+            Py_END_ALLOW_THREADS
+        } else {
+            XXH32_update(self->xxhash_state, buf.buf, buf.len);
+        }
+        PyBuffer_Release(&buf);
+    }
     return (PyObject *)self;
 }
 
@@ -505,9 +707,11 @@ static PyObject *PYXXH32_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
 {
     PYXXH32Object *self;
 
-    if ((self = PyObject_New(PYXXH32Object, &PYXXH32Type)) == NULL) {
+    if ((self = (PYXXH32Object *)type->tp_alloc(type, 0)) == NULL) {
         return NULL;
     }
+
+    XXHASH_LOCK_INIT(self);
 
     if ((self->xxhash_state = XXH32_createState()) == NULL) {
         Py_DECREF(self);
@@ -521,84 +725,106 @@ static PyObject *PYXXH32_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
     return (PyObject *)self;
 }
 
-
-/* Check kwargs for unknown keys. Returns 0 if all known, -1 with TypeError. */
-static Py_ALWAYS_INLINE int
-_check_kwargs(PyObject *kwargs)
+/* Shared helper for parsing __init__ arguments (old-style args+kwargs).
+ * Handles positional and keyword 'data' and 'seed', validates keywords,
+ * and detects duplicate/multiple values.
+ * Returns 0 on success, -1 on error.
+ * On success *data_obj is set (or NULL) and *seed is populated. */
+static int
+_parse_init_args(PyObject *args, PyObject *kwargs,
+                 PyObject **data_obj, unsigned long long *seed,
+                 const char *funcname)
 {
-    if (!kwargs)
-        return 0;
-    Py_ssize_t pos = 0;
-    PyObject *key, *val;
-    while (PyDict_Next(kwargs, &pos, &key, &val)) {
-        if (PyUnicode_CompareWithASCIIString(key, "data") == 0 ||
-            PyUnicode_CompareWithASCIIString(key, "seed") == 0)
-            continue;
-        PyErr_Format(PyExc_TypeError,
-            "'%U' is an invalid keyword argument for this function",
-            key);
-        return -1;
-    }
-    return 0;
-}
-static int PYXXH32_init(PYXXH32Object *self, PyObject *args, PyObject *kwargs)
-{
-    XXH32_hash_t seed = 0;
-    PyObject *data_obj = NULL;
-    Py_buffer buf = {NULL, NULL};
     Py_ssize_t nargs = PyTuple_GET_SIZE(args);
 
-    if (_check_kwargs(kwargs) < 0)
-        return -1;
+    if (!kwargs) {
+        /* fast path: no keywords */
+    } else {
+        Py_ssize_t pos = 0;
+        PyObject *key, *val;
+        while (PyDict_Next(kwargs, &pos, &key, &val)) {
+            if (PyUnicode_CompareWithASCIIString(key, "data") == 0 ||
+                PyUnicode_CompareWithASCIIString(key, "seed") == 0)
+                continue;
+            PyErr_Format(PyExc_TypeError,
+                "'%U' is an invalid keyword argument for this function", key);
+            return -1;
+        }
+    }
+
+    *data_obj = NULL;
+    *seed = 0;
 
     if (nargs >= 1) {
-        data_obj = PyTuple_GET_ITEM(args, 0);
+        *data_obj = PyTuple_GET_ITEM(args, 0);
         if (kwargs && PyDict_GetItemString(kwargs, "data")) {
-            PyErr_SetString(PyExc_TypeError,
-                "__init__() got multiple values for argument 'data'");
+            PyErr_Format(PyExc_TypeError,
+                "%s() got multiple values for argument 'data'", funcname);
             return -1;
         }
     }
     if (nargs >= 2) {
-        seed = (XXH32_hash_t)PyLong_AsUnsignedLongMask(PyTuple_GET_ITEM(args, 1));
+        *seed = PyLong_AsUnsignedLongLongMask(PyTuple_GET_ITEM(args, 1));
         if (PyErr_Occurred()) return -1;
         if (kwargs && PyDict_GetItemString(kwargs, "seed")) {
-            PyErr_SetString(PyExc_TypeError,
-                "__init__() got multiple values for argument 'seed'");
+            PyErr_Format(PyExc_TypeError,
+                "%s() got multiple values for argument 'seed'", funcname);
             return -1;
         }
     }
     if (nargs > 2) {
-        PyErr_SetString(PyExc_TypeError,
-            "__init__() takes at most 2 positional arguments");
+        PyErr_Format(PyExc_TypeError,
+            "%s() takes at most 2 positional arguments (%zd given)",
+            funcname, nargs);
         return -1;
     }
 
     if (kwargs) {
         PyObject *val = PyDict_GetItemString(kwargs, "data");
         if (val) {
-            if (data_obj) return -1; /* unreachable, caught above */
-            data_obj = val;
+            if (*data_obj) return -1; /* unreachable, caught above */
+            *data_obj = val;
         }
         val = PyDict_GetItemString(kwargs, "seed");
         if (val) {
-            seed = (XXH32_hash_t)PyLong_AsUnsignedLongMask(val);
+            *seed = PyLong_AsUnsignedLongLongMask(val);
             if (PyErr_Occurred()) return -1;
         }
     }
-
-    if (data_obj) {
-        if (_get_buffer_or_str(data_obj, &buf) < 0)
-            return -1;
-    }
-
-    self->seed = seed;
-    XXH32_reset(self->xxhash_state, seed);
-
-    if (buf.obj)
-        PYXXH32_do_update(self, &buf);
     return 0;
 }
+
+/* Macro to generate __init__ for each hash type. */
+#define XXHASH_INIT(type, reset_fn, update_fn, seed_cast)                     \
+static int PY##type##_init(PY##type##Object *self, PyObject *args,            \
+                           PyObject *kwargs)                                  \
+{                                                                             \
+    unsigned long long seed_val = 0;                                          \
+    PyObject *data_obj = NULL;                                                \
+    Py_buffer buf = {NULL, NULL};                                             \
+                                                                              \
+    if (_parse_init_args(args, kwargs, &data_obj, &seed_val,                  \
+                         "__init__()") < 0)                                   \
+        return -1;                                                            \
+                                                                              \
+    if (data_obj) {                                                           \
+        if (_get_buffer_or_str(data_obj, &buf) < 0)                           \
+            return -1;                                                        \
+    }                                                                         \
+                                                                              \
+    XXHASH_LOCK_ACQUIRE(self);                                                \
+    self->seed = (seed_cast)seed_val;                                         \
+    reset_fn(self->xxhash_state, self->seed);                                 \
+                                                                              \
+    if (buf.obj) {                                                            \
+        update_fn(self->xxhash_state, buf.buf, buf.len);                      \
+        PyBuffer_Release(&buf);                                               \
+    }                                                                         \
+    XXHASH_LOCK_RELEASE(self);                                                \
+    return 0;                                                                 \
+}
+
+XXHASH_INIT(XXH32, XXH32_reset, XXH32_update, XXH32_hash_t)
 
 PyDoc_STRVAR(
     PYXXH32_update_doc,
@@ -653,7 +879,6 @@ static PyObject *PYXXH32_update(PYXXH32Object *self, PyObject *const *args,
     Py_RETURN_NONE;
 }
 
-
 PyDoc_STRVAR(
     PYXXH32_digest_doc,
     "digest() -> string\n\n"
@@ -663,13 +888,16 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH32_digest(PYXXH32Object *self)
 {
-    char retbuf[XXH32_DIGESTSIZE];
     XXH32_hash_t intdigest;
 
+    XXHASH_LOCK_ACQUIRE(self);
     intdigest = XXH32_digest(self->xxhash_state);
-    XXH32_canonicalFromHash((XXH32_canonical_t *)retbuf, intdigest);
+    XXHASH_LOCK_RELEASE(self);
 
-    return PyBytes_FromStringAndSize(retbuf, sizeof(retbuf));
+    PyObject *ret = PyBytes_FromStringAndSize(NULL, XXH32_DIGESTSIZE);
+    if (ret == NULL) return NULL;
+    XXH32_canonicalFromHash((XXH32_canonical_t *)PyBytes_AS_STRING(ret), intdigest);
+    return ret;
 }
 
 PyDoc_STRVAR(
@@ -681,23 +909,25 @@ static PyObject *PYXXH32_hexdigest(PYXXH32Object *self)
 {
     XXH32_hash_t intdigest;
     char digest[XXH32_DIGESTSIZE];
-    char retbuf[XXH32_DIGESTSIZE * 2];
-    int i, j;
 
+    XXHASH_LOCK_ACQUIRE(self);
     intdigest = XXH32_digest(self->xxhash_state);
+    XXHASH_LOCK_RELEASE(self);
     XXH32_canonicalFromHash((XXH32_canonical_t *)digest, intdigest);
 
-    for (i = j = 0; i < XXH32_DIGESTSIZE; i++) {
+    PyObject *ret = PyUnicode_New(XXH32_DIGESTSIZE * 2, 127);
+    if (ret == NULL) return NULL;
+    Py_UCS1 *b = PyUnicode_1BYTE_DATA(ret);
+    for (Py_ssize_t i = 0, j = 0; i < XXH32_DIGESTSIZE; i++) {
         unsigned char c;
         c = (digest[i] >> 4) & 0xf;
         c = (c > 9) ? c + 'a' - 10 : c + '0';
-        retbuf[j++] = c;
+        b[j++] = c;
         c = (digest[i] & 0xf);
         c = (c > 9) ? c + 'a' - 10 : c + '0';
-        retbuf[j++] = c;
+        b[j++] = c;
     }
-
-    return PyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
+    return ret;
 }
 
 PyDoc_STRVAR(
@@ -708,7 +938,9 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH32_intdigest(PYXXH32Object *self)
 {
+    XXHASH_LOCK_ACQUIRE(self);
     XXH32_hash_t digest = XXH32_digest(self->xxhash_state);
+    XXHASH_LOCK_RELEASE(self);
     return PyLong_FromUnsignedLong(digest);
 }
 
@@ -721,9 +953,11 @@ static PyObject *PYXXH32_copy(PYXXH32Object *self)
 {
     PYXXH32Object *p;
 
-    if ((p = PyObject_New(PYXXH32Object, &PYXXH32Type)) == NULL) {
+    if ((p = (PYXXH32Object *)Py_TYPE(self)->tp_alloc(Py_TYPE(self), 0)) == NULL) {
         return NULL;
     }
+
+    XXHASH_LOCK_INIT(p);
 
     if ((p->xxhash_state = XXH32_createState()) == NULL) {
         Py_DECREF(p);
@@ -731,8 +965,10 @@ static PyObject *PYXXH32_copy(PYXXH32Object *self)
         return NULL;
     }
 
+    XXHASH_LOCK_ACQUIRE(self);
     p->seed = self->seed;
     XXH32_copyState(p->xxhash_state, self->xxhash_state);
+    XXHASH_LOCK_RELEASE(self);
 
     return (PyObject *)p;
 }
@@ -744,7 +980,9 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH32_reset(PYXXH32Object *self)
 {
+    XXHASH_LOCK_ACQUIRE(self);
     XXH32_reset(self->xxhash_state, self->seed);
+    XXHASH_LOCK_RELEASE(self);
     Py_RETURN_NONE;
 }
 
@@ -828,58 +1066,26 @@ PyDoc_STRVAR(
     "intdigest() -- return the current digest as an integer\n"
     "copy() -- return a copy of the current xxh32 object");
 
-static PyTypeObject PYXXH32Type = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    "xxhash.xxh32",                /* tp_name */
-    sizeof(PYXXH32Object),         /* tp_basicsize */
-    0,                             /* tp_itemsize */
-    (destructor)PYXXH32_dealloc,   /* tp_dealloc */
-    0,                             /* tp_print */
-    0,                             /* tp_getattr */
-    0,                             /* tp_setattr */
-    0,                             /* tp_compare */
-    0,                             /* tp_repr */
-    0,                             /* tp_as_number */
-    0,                             /* tp_as_sequence */
-    0,                             /* tp_as_mapping */
-    0,                             /* tp_hash */
-    0,                             /* tp_call */
-    0,                             /* tp_str */
-    0,                             /* tp_getattro */
-    0,                             /* tp_setattro */
-    0,                             /* tp_as_buffer */
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_VECTORCALL,  /* tp_flags */
-    PYXXH32Type_doc,               /* tp_doc */
-    0,                             /* tp_traverse */
-    0,                             /* tp_clear */
-    0,                             /* tp_richcompare */
-    0,                             /* tp_weaklistoffset */
-    0,                             /* tp_iter */
-    0,                             /* tp_iternext */
-    PYXXH32_methods,               /* tp_methods */
-    0,                             /* tp_members */
-    PYXXH32_getseters,             /* tp_getset */
-    0,                             /* tp_base */
-    0,                             /* tp_dict */
-    0,                             /* tp_descr_get */
-    0,                             /* tp_descr_set */
-    0,                             /* tp_dictoffset */
-    (initproc)PYXXH32_init,        /* tp_init */
-    0,                             /* tp_alloc */
-    PYXXH32_new,                   /* tp_new */
-    0,                             /* tp_free */
-    0,                             /* tp_is_gc */
-    0,                             /* tp_bases */
-    0,                             /* tp_mro */
-    0,                             /* tp_cache */
-    0,                             /* tp_subclasses */
-    0,                             /* tp_weaklist */
-    0,                             /* tp_del */
-    0,                             /* tp_version_tag */
-    0,                             /* tp_finalize */
-    PYXXH32_vectorcall,            /* tp_vectorcall */
+static PyType_Slot XXH32Type_slots[] = {
+    {Py_tp_dealloc, PYXXH32_dealloc},
+    {Py_tp_doc, (void *)PYXXH32Type_doc},
+    {Py_tp_methods, PYXXH32_methods},
+    {Py_tp_getset, PYXXH32_getseters},
+    {Py_tp_init, PYXXH32_init},
+    {Py_tp_new, PYXXH32_new},
+    {0, NULL},
 };
 
+static PyType_Spec XXH32Type_spec = {
+    .name = "xxhash.xxh32",
+    .basicsize = sizeof(PYXXH32Object),
+    .flags = Py_TPFLAGS_DEFAULT
+#if PY_VERSION_HEX >= 0x030c0000
+           | Py_TPFLAGS_IMMUTABLETYPE
+#endif
+    ,
+    .slots = XXH32Type_slots,
+};
 
 /* XXH64 */
 
@@ -888,25 +1094,20 @@ typedef struct {
     /* Type-specific fields go here. */
     XXH64_state_t *xxhash_state;
     XXH64_hash_t seed;
+    XXHASH_LOCK_FIELD
 } PYXXH64Object;
-
-static PyTypeObject PYXXH64Type;
 
 static void PYXXH64_dealloc(PYXXH64Object *self)
 {
     if (self->xxhash_state)
         XXH64_freeState(self->xxhash_state);
-    PyObject_Del(self);
+    XXHASH_LOCK_FINI(self);
+    PyTypeObject *tp = Py_TYPE(self);
+    tp->tp_free((PyObject *)self);
+    Py_DECREF(tp);
 }
 
-static void PYXXH64_do_update(PYXXH64Object *self, Py_buffer *buf)
-{
-    Py_BEGIN_ALLOW_THREADS
-    XXH64_update(self->xxhash_state, buf->buf, buf->len);
-    Py_END_ALLOW_THREADS
-
-    PyBuffer_Release(buf);
-}
+XXHASH_DO_UPDATE(XXH64, XXH64_update)
 
 static PyObject *
 PYXXH64_vectorcall(PyObject *type, PyObject *const *args,
@@ -926,29 +1127,42 @@ PYXXH64_vectorcall(PyObject *type, PyObject *const *args,
         ((PyTypeObject *)type)->tp_alloc((PyTypeObject *)type, 0);
     if (self == NULL) {
         PyBuffer_Release(&buf);
-            return NULL;
+        return NULL;
     }
+
+    XXHASH_LOCK_INIT(self);
 
     self->xxhash_state = XXH64_createState();
     if (self->xxhash_state == NULL) {
         Py_DECREF(self);
         PyBuffer_Release(&buf);
-            return PyErr_NoMemory();
+        return PyErr_NoMemory();
     }
     self->seed = seed;
     XXH64_reset(self->xxhash_state, seed);
 
-    if (buf.obj)
-        PYXXH64_do_update(self, &buf);
+    if (buf.obj) {
+        /* Constructor: no concurrent access possible, skip locking. */
+        if (buf.len > XXHASH_GIL_MINSIZE) {
+            Py_BEGIN_ALLOW_THREADS
+            XXH64_update(self->xxhash_state, buf.buf, buf.len);
+            Py_END_ALLOW_THREADS
+        } else {
+            XXH64_update(self->xxhash_state, buf.buf, buf.len);
+        }
+        PyBuffer_Release(&buf);
+    }
     return (PyObject *)self;
 }
 static PyObject *PYXXH64_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
     PYXXH64Object *self;
 
-    if ((self = PyObject_New(PYXXH64Object, &PYXXH64Type)) == NULL) {
+    if ((self = (PYXXH64Object *)type->tp_alloc(type, 0)) == NULL) {
         return NULL;
     }
+
+    XXHASH_LOCK_INIT(self);
 
     if ((self->xxhash_state = XXH64_createState()) == NULL) {
         Py_DECREF(self);
@@ -962,64 +1176,7 @@ static PyObject *PYXXH64_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
     return (PyObject *)self;
 }
 
-static int PYXXH64_init(PYXXH64Object *self, PyObject *args, PyObject *kwargs)
-{
-    XXH64_hash_t seed = 0;
-    PyObject *data_obj = NULL;
-    Py_buffer buf = {NULL, NULL};
-    Py_ssize_t nargs = PyTuple_GET_SIZE(args);
-
-    if (_check_kwargs(kwargs) < 0)
-        return -1;
-
-    if (nargs >= 1) {
-        data_obj = PyTuple_GET_ITEM(args, 0);
-        if (kwargs && PyDict_GetItemString(kwargs, "data")) {
-            PyErr_SetString(PyExc_TypeError,
-                "__init__() got multiple values for argument 'data'");
-            return -1;
-        }
-    }
-    if (nargs >= 2) {
-        seed = PyLong_AsUnsignedLongLongMask(PyTuple_GET_ITEM(args, 1));
-        if (PyErr_Occurred()) return -1;
-        if (kwargs && PyDict_GetItemString(kwargs, "seed")) {
-            PyErr_SetString(PyExc_TypeError,
-                "__init__() got multiple values for argument 'seed'");
-            return -1;
-        }
-    }
-    if (nargs > 2) {
-        PyErr_SetString(PyExc_TypeError,
-            "__init__() takes at most 2 positional arguments");
-        return -1;
-    }
-
-    if (kwargs) {
-        PyObject *val = PyDict_GetItemString(kwargs, "data");
-        if (val) {
-            if (data_obj) return -1; /* unreachable, caught above */
-            data_obj = val;
-        }
-        val = PyDict_GetItemString(kwargs, "seed");
-        if (val) {
-            seed = PyLong_AsUnsignedLongLongMask(val);
-            if (PyErr_Occurred()) return -1;
-        }
-    }
-
-    if (data_obj) {
-        if (_get_buffer_or_str(data_obj, &buf) < 0)
-            return -1;
-    }
-
-    self->seed = seed;
-    XXH64_reset(self->xxhash_state, seed);
-
-    if (buf.obj)
-        PYXXH64_do_update(self, &buf);
-    return 0;
-}
+XXHASH_INIT(XXH64, XXH64_reset, XXH64_update, XXH64_hash_t)
 
 PyDoc_STRVAR(
     PYXXH64_update_doc,
@@ -1083,13 +1240,16 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH64_digest(PYXXH64Object *self)
 {
-    char retbuf[XXH64_DIGESTSIZE];
     XXH64_hash_t intdigest;
 
+    XXHASH_LOCK_ACQUIRE(self);
     intdigest = XXH64_digest(self->xxhash_state);
-    XXH64_canonicalFromHash((XXH64_canonical_t *)retbuf, intdigest);
+    XXHASH_LOCK_RELEASE(self);
 
-    return PyBytes_FromStringAndSize(retbuf, sizeof(retbuf));
+    PyObject *ret = PyBytes_FromStringAndSize(NULL, XXH64_DIGESTSIZE);
+    if (ret == NULL) return NULL;
+    XXH64_canonicalFromHash((XXH64_canonical_t *)PyBytes_AS_STRING(ret), intdigest);
+    return ret;
 }
 
 PyDoc_STRVAR(
@@ -1101,25 +1261,26 @@ static PyObject *PYXXH64_hexdigest(PYXXH64Object *self)
 {
     XXH64_hash_t intdigest;
     char digest[XXH64_DIGESTSIZE];
-    char retbuf[XXH64_DIGESTSIZE * 2];
-    int i, j;
 
+    XXHASH_LOCK_ACQUIRE(self);
     intdigest = XXH64_digest(self->xxhash_state);
+    XXHASH_LOCK_RELEASE(self);
     XXH64_canonicalFromHash((XXH64_canonical_t *)digest, intdigest);
 
-    for (i = j = 0; i < XXH64_DIGESTSIZE; i++) {
+    PyObject *ret = PyUnicode_New(XXH64_DIGESTSIZE * 2, 127);
+    if (ret == NULL) return NULL;
+    Py_UCS1 *b = PyUnicode_1BYTE_DATA(ret);
+    for (Py_ssize_t i = 0, j = 0; i < XXH64_DIGESTSIZE; i++) {
         unsigned char c;
         c = (digest[i] >> 4) & 0xf;
         c = (c > 9) ? c + 'a' - 10 : c + '0';
-        retbuf[j++] = c;
+        b[j++] = c;
         c = (digest[i] & 0xf);
         c = (c > 9) ? c + 'a' - 10 : c + '0';
-        retbuf[j++] = c;
+        b[j++] = c;
     }
-
-    return PyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
+    return ret;
 }
-
 
 PyDoc_STRVAR(
     PYXXH64_intdigest_doc,
@@ -1129,7 +1290,9 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH64_intdigest(PYXXH64Object *self)
 {
+    XXHASH_LOCK_ACQUIRE(self);
     XXH64_hash_t digest = XXH64_digest(self->xxhash_state);
+    XXHASH_LOCK_RELEASE(self);
     return PyLong_FromUnsignedLongLong(digest);
 }
 
@@ -1142,9 +1305,11 @@ static PyObject *PYXXH64_copy(PYXXH64Object *self)
 {
     PYXXH64Object *p;
 
-    if ((p = PyObject_New(PYXXH64Object, &PYXXH64Type)) == NULL) {
+    if ((p = (PYXXH64Object *)Py_TYPE(self)->tp_alloc(Py_TYPE(self), 0)) == NULL) {
         return NULL;
     }
+
+    XXHASH_LOCK_INIT(p);
 
     if ((p->xxhash_state = XXH64_createState()) == NULL) {
         Py_DECREF(p);
@@ -1152,8 +1317,10 @@ static PyObject *PYXXH64_copy(PYXXH64Object *self)
         return NULL;
     }
 
+    XXHASH_LOCK_ACQUIRE(self);
     p->seed = self->seed;
     XXH64_copyState(p->xxhash_state, self->xxhash_state);
+    XXHASH_LOCK_RELEASE(self);
 
     return (PyObject *)p;
 }
@@ -1165,7 +1332,9 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH64_reset(PYXXH64Object *self)
 {
+    XXHASH_LOCK_ACQUIRE(self);
     XXH64_reset(self->xxhash_state, self->seed);
+    XXHASH_LOCK_RELEASE(self);
     Py_RETURN_NONE;
 }
 
@@ -1249,56 +1418,25 @@ PyDoc_STRVAR(
     "intdigest() -- return the current digest as an integer\n"
     "copy() -- return a copy of the current xxh64 object");
 
-static PyTypeObject PYXXH64Type = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    "xxhash.xxh64",                /* tp_name */
-    sizeof(PYXXH64Object),         /* tp_basicsize */
-    0,                             /* tp_itemsize */
-    (destructor)PYXXH64_dealloc,   /* tp_dealloc */
-    0,                             /* tp_print */
-    0,                             /* tp_getattr */
-    0,                             /* tp_setattr */
-    0,                             /* tp_compare */
-    0,                             /* tp_repr */
-    0,                             /* tp_as_number */
-    0,                             /* tp_as_sequence */
-    0,                             /* tp_as_mapping */
-    0,                             /* tp_hash */
-    0,                             /* tp_call */
-    0,                             /* tp_str */
-    0,                             /* tp_getattro */
-    0,                             /* tp_setattro */
-    0,                             /* tp_as_buffer */
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_VECTORCALL,  /* tp_flags */
-    PYXXH64Type_doc,               /* tp_doc */
-    0,                             /* tp_traverse */
-    0,                             /* tp_clear */
-    0,                             /* tp_richcompare */
-    0,                             /* tp_weaklistoffset */
-    0,                             /* tp_iter */
-    0,                             /* tp_iternext */
-    PYXXH64_methods,               /* tp_methods */
-    0,                             /* tp_members */
-    PYXXH64_getseters,             /* tp_getset */
-    0,                             /* tp_base */
-    0,                             /* tp_dict */
-    0,                             /* tp_descr_get */
-    0,                             /* tp_descr_set */
-    0,                             /* tp_dictoffset */
-    (initproc)PYXXH64_init,        /* tp_init */
-    0,                             /* tp_alloc */
-    PYXXH64_new,                   /* tp_new */
-    0,                             /* tp_free */
-    0,                             /* tp_is_gc */
-    0,                             /* tp_bases */
-    0,                             /* tp_mro */
-    0,                             /* tp_cache */
-    0,                             /* tp_subclasses */
-    0,                             /* tp_weaklist */
-    0,                             /* tp_del */
-    0,                             /* tp_version_tag */
-    0,                             /* tp_finalize */
-    PYXXH64_vectorcall,            /* tp_vectorcall */
+static PyType_Slot XXH64Type_slots[] = {
+    {Py_tp_dealloc, PYXXH64_dealloc},
+    {Py_tp_doc, (void *)PYXXH64Type_doc},
+    {Py_tp_methods, PYXXH64_methods},
+    {Py_tp_getset, PYXXH64_getseters},
+    {Py_tp_init, PYXXH64_init},
+    {Py_tp_new, PYXXH64_new},
+    {0, NULL},
+};
+
+static PyType_Spec XXH64Type_spec = {
+    .name = "xxhash.xxh64",
+    .basicsize = sizeof(PYXXH64Object),
+    .flags = Py_TPFLAGS_DEFAULT
+#if PY_VERSION_HEX >= 0x030c0000
+           | Py_TPFLAGS_IMMUTABLETYPE
+#endif
+    ,
+    .slots = XXH64Type_slots,
 };
 
 /* XXH3_64 */
@@ -1308,25 +1446,20 @@ typedef struct {
     /* Type-specific fields go here. */
     XXH3_state_t *xxhash_state;
     XXH64_hash_t seed;
+    XXHASH_LOCK_FIELD
 } PYXXH3_64Object;
-
-static PyTypeObject PYXXH3_64Type;
 
 static void PYXXH3_64_dealloc(PYXXH3_64Object *self)
 {
     if (self->xxhash_state)
         XXH3_freeState(self->xxhash_state);
-    PyObject_Del(self);
+    XXHASH_LOCK_FINI(self);
+    PyTypeObject *tp = Py_TYPE(self);
+    tp->tp_free((PyObject *)self);
+    Py_DECREF(tp);
 }
 
-static void PYXXH3_64_do_update(PYXXH3_64Object *self, Py_buffer *buf)
-{
-    Py_BEGIN_ALLOW_THREADS
-    XXH3_64bits_update(self->xxhash_state, buf->buf, buf->len);
-    Py_END_ALLOW_THREADS
-
-    PyBuffer_Release(buf);
-}
+XXHASH_DO_UPDATE(XXH3_64, XXH3_64bits_update)
 
 static PyObject *
 PYXXH3_64_vectorcall(PyObject *type, PyObject *const *args,
@@ -1346,29 +1479,42 @@ PYXXH3_64_vectorcall(PyObject *type, PyObject *const *args,
         ((PyTypeObject *)type)->tp_alloc((PyTypeObject *)type, 0);
     if (self == NULL) {
         PyBuffer_Release(&buf);
-            return NULL;
+        return NULL;
     }
+
+    XXHASH_LOCK_INIT(self);
 
     self->xxhash_state = XXH3_createState();
     if (self->xxhash_state == NULL) {
         Py_DECREF(self);
         PyBuffer_Release(&buf);
-            return PyErr_NoMemory();
+        return PyErr_NoMemory();
     }
     self->seed = seed;
     XXH3_64bits_reset_withSeed(self->xxhash_state, seed);
 
-    if (buf.obj)
-        PYXXH3_64_do_update(self, &buf);
+    if (buf.obj) {
+        /* Constructor: no concurrent access possible, skip locking. */
+        if (buf.len > XXHASH_GIL_MINSIZE) {
+            Py_BEGIN_ALLOW_THREADS
+            XXH3_64bits_update(self->xxhash_state, buf.buf, buf.len);
+            Py_END_ALLOW_THREADS
+        } else {
+            XXH3_64bits_update(self->xxhash_state, buf.buf, buf.len);
+        }
+        PyBuffer_Release(&buf);
+    }
     return (PyObject *)self;
 }
 static PyObject *PYXXH3_64_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
     PYXXH3_64Object *self;
 
-    if ((self = PyObject_New(PYXXH3_64Object, &PYXXH3_64Type)) == NULL) {
+    if ((self = (PYXXH3_64Object *)type->tp_alloc(type, 0)) == NULL) {
         return NULL;
     }
+
+    XXHASH_LOCK_INIT(self);
 
     if ((self->xxhash_state = XXH3_createState()) == NULL) {
         Py_DECREF(self);
@@ -1382,64 +1528,7 @@ static PyObject *PYXXH3_64_new(PyTypeObject *type, PyObject *args, PyObject *kwa
     return (PyObject *)self;
 }
 
-static int PYXXH3_64_init(PYXXH3_64Object *self, PyObject *args, PyObject *kwargs)
-{
-    XXH64_hash_t seed = 0;
-    PyObject *data_obj = NULL;
-    Py_buffer buf = {NULL, NULL};
-    Py_ssize_t nargs = PyTuple_GET_SIZE(args);
-
-    if (_check_kwargs(kwargs) < 0)
-        return -1;
-
-    if (nargs >= 1) {
-        data_obj = PyTuple_GET_ITEM(args, 0);
-        if (kwargs && PyDict_GetItemString(kwargs, "data")) {
-            PyErr_SetString(PyExc_TypeError,
-                "__init__() got multiple values for argument 'data'");
-            return -1;
-        }
-    }
-    if (nargs >= 2) {
-        seed = PyLong_AsUnsignedLongLongMask(PyTuple_GET_ITEM(args, 1));
-        if (PyErr_Occurred()) return -1;
-        if (kwargs && PyDict_GetItemString(kwargs, "seed")) {
-            PyErr_SetString(PyExc_TypeError,
-                "__init__() got multiple values for argument 'seed'");
-            return -1;
-        }
-    }
-    if (nargs > 2) {
-        PyErr_SetString(PyExc_TypeError,
-            "__init__() takes at most 2 positional arguments");
-        return -1;
-    }
-
-    if (kwargs) {
-        PyObject *val = PyDict_GetItemString(kwargs, "data");
-        if (val) {
-            if (data_obj) return -1; /* unreachable, caught above */
-            data_obj = val;
-        }
-        val = PyDict_GetItemString(kwargs, "seed");
-        if (val) {
-            seed = PyLong_AsUnsignedLongLongMask(val);
-            if (PyErr_Occurred()) return -1;
-        }
-    }
-
-    if (data_obj) {
-        if (_get_buffer_or_str(data_obj, &buf) < 0)
-            return -1;
-    }
-
-    self->seed = seed;
-    XXH3_64bits_reset_withSeed(self->xxhash_state, seed);
-
-    if (buf.obj)
-        PYXXH3_64_do_update(self, &buf);
-    return 0;
-}
+XXHASH_INIT(XXH3_64, XXH3_64bits_reset_withSeed, XXH3_64bits_update, XXH64_hash_t)
 
 PyDoc_STRVAR(
     PYXXH3_64_update_doc,
@@ -1503,13 +1592,16 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH3_64_digest(PYXXH3_64Object *self)
 {
-    char retbuf[XXH64_DIGESTSIZE];
     XXH64_hash_t intdigest;
 
+    XXHASH_LOCK_ACQUIRE(self);
     intdigest = XXH3_64bits_digest(self->xxhash_state);
-    XXH64_canonicalFromHash((XXH64_canonical_t *)retbuf, intdigest);
+    XXHASH_LOCK_RELEASE(self);
 
-    return PyBytes_FromStringAndSize(retbuf, sizeof(retbuf));
+    PyObject *ret = PyBytes_FromStringAndSize(NULL, XXH64_DIGESTSIZE);
+    if (ret == NULL) return NULL;
+    XXH64_canonicalFromHash((XXH64_canonical_t *)PyBytes_AS_STRING(ret), intdigest);
+    return ret;
 }
 
 PyDoc_STRVAR(
@@ -1521,26 +1613,26 @@ static PyObject *PYXXH3_64_hexdigest(PYXXH3_64Object *self)
 {
     XXH64_hash_t intdigest;
     char digest[XXH64_DIGESTSIZE];
-    char retbuf[XXH64_DIGESTSIZE * 2];
-    int i, j;
 
-
+    XXHASH_LOCK_ACQUIRE(self);
     intdigest = XXH3_64bits_digest(self->xxhash_state);
+    XXHASH_LOCK_RELEASE(self);
     XXH64_canonicalFromHash((XXH64_canonical_t *)digest, intdigest);
 
-    for (i = j = 0; i < XXH64_DIGESTSIZE; i++) {
+    PyObject *ret = PyUnicode_New(XXH64_DIGESTSIZE * 2, 127);
+    if (ret == NULL) return NULL;
+    Py_UCS1 *b = PyUnicode_1BYTE_DATA(ret);
+    for (Py_ssize_t i = 0, j = 0; i < XXH64_DIGESTSIZE; i++) {
         unsigned char c;
         c = (digest[i] >> 4) & 0xf;
         c = (c > 9) ? c + 'a' - 10 : c + '0';
-        retbuf[j++] = c;
+        b[j++] = c;
         c = (digest[i] & 0xf);
         c = (c > 9) ? c + 'a' - 10 : c + '0';
-        retbuf[j++] = c;
+        b[j++] = c;
     }
-
-    return PyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
+    return ret;
 }
-
 
 PyDoc_STRVAR(
     PYXXH3_64_intdigest_doc,
@@ -1550,7 +1642,9 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH3_64_intdigest(PYXXH3_64Object *self)
 {
+    XXHASH_LOCK_ACQUIRE(self);
     XXH64_hash_t intdigest = XXH3_64bits_digest(self->xxhash_state);
+    XXHASH_LOCK_RELEASE(self);
     return PyLong_FromUnsignedLongLong(intdigest);
 }
 
@@ -1563,9 +1657,11 @@ static PyObject *PYXXH3_64_copy(PYXXH3_64Object *self)
 {
     PYXXH3_64Object *p;
 
-    if ((p = PyObject_New(PYXXH3_64Object, &PYXXH3_64Type)) == NULL) {
+    if ((p = (PYXXH3_64Object *)Py_TYPE(self)->tp_alloc(Py_TYPE(self), 0)) == NULL) {
         return NULL;
     }
+
+    XXHASH_LOCK_INIT(p);
 
     if ((p->xxhash_state = XXH3_createState()) == NULL) {
         Py_DECREF(p);
@@ -1573,6 +1669,7 @@ static PyObject *PYXXH3_64_copy(PYXXH3_64Object *self)
         return NULL;
     }
 
+    XXHASH_LOCK_ACQUIRE(self);
     p->seed = self->seed;
     XXH3_copyState(p->xxhash_state, self->xxhash_state);
 #if XXH_VERSION_NUMBER < 704
@@ -1582,6 +1679,7 @@ static PyObject *PYXXH3_64_copy(PYXXH3_64Object *self)
     if (p->xxhash_state->secret == &self->xxhash_state->customSecret[0])
         p->xxhash_state->secret = &p->xxhash_state->customSecret[0];
 #endif
+    XXHASH_LOCK_RELEASE(self);
 
     return (PyObject *)p;
 }
@@ -1593,7 +1691,9 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH3_64_reset(PYXXH3_64Object *self)
 {
+    XXHASH_LOCK_ACQUIRE(self);
     XXH3_64bits_reset_withSeed(self->xxhash_state, self->seed);
+    XXHASH_LOCK_RELEASE(self);
     Py_RETURN_NONE;
 }
 
@@ -1677,58 +1777,26 @@ PyDoc_STRVAR(
     "intdigest() -- return the current digest as an integer\n"
     "copy() -- return a copy of the current xxh64 object");
 
-static PyTypeObject PYXXH3_64Type = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    "xxhash.xxh3_64",                /* tp_name */
-    sizeof(PYXXH3_64Object),         /* tp_basicsize */
-    0,                             /* tp_itemsize */
-    (destructor)PYXXH3_64_dealloc,   /* tp_dealloc */
-    0,                             /* tp_print */
-    0,                             /* tp_getattr */
-    0,                             /* tp_setattr */
-    0,                             /* tp_compare */
-    0,                             /* tp_repr */
-    0,                             /* tp_as_number */
-    0,                             /* tp_as_sequence */
-    0,                             /* tp_as_mapping */
-    0,                             /* tp_hash */
-    0,                             /* tp_call */
-    0,                             /* tp_str */
-    0,                             /* tp_getattro */
-    0,                             /* tp_setattro */
-    0,                             /* tp_as_buffer */
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_VECTORCALL,  /* tp_flags */
-    PYXXH3_64Type_doc,               /* tp_doc */
-    0,                             /* tp_traverse */
-    0,                             /* tp_clear */
-    0,                             /* tp_richcompare */
-    0,                             /* tp_weaklistoffset */
-    0,                             /* tp_iter */
-    0,                             /* tp_iternext */
-    PYXXH3_64_methods,               /* tp_methods */
-    0,                             /* tp_members */
-    PYXXH3_64_getseters,             /* tp_getset */
-    0,                             /* tp_base */
-    0,                             /* tp_dict */
-    0,                             /* tp_descr_get */
-    0,                             /* tp_descr_set */
-    0,                             /* tp_dictoffset */
-    (initproc)PYXXH3_64_init,        /* tp_init */
-    0,                             /* tp_alloc */
-    PYXXH3_64_new,                   /* tp_new */
-    0,                             /* tp_free */
-    0,                             /* tp_is_gc */
-    0,                             /* tp_bases */
-    0,                             /* tp_mro */
-    0,                             /* tp_cache */
-    0,                             /* tp_subclasses */
-    0,                             /* tp_weaklist */
-    0,                             /* tp_del */
-    0,                             /* tp_version_tag */
-    0,                             /* tp_finalize */
-    PYXXH3_64_vectorcall,            /* tp_vectorcall */
+static PyType_Slot XXH3_64Type_slots[] = {
+    {Py_tp_dealloc, PYXXH3_64_dealloc},
+    {Py_tp_doc, (void *)PYXXH3_64Type_doc},
+    {Py_tp_methods, PYXXH3_64_methods},
+    {Py_tp_getset, PYXXH3_64_getseters},
+    {Py_tp_init, PYXXH3_64_init},
+    {Py_tp_new, PYXXH3_64_new},
+    {0, NULL},
 };
 
+static PyType_Spec XXH3_64Type_spec = {
+    .name = "xxhash.xxh3_64",
+    .basicsize = sizeof(PYXXH3_64Object),
+    .flags = Py_TPFLAGS_DEFAULT
+#if PY_VERSION_HEX >= 0x030c0000
+           | Py_TPFLAGS_IMMUTABLETYPE
+#endif
+    ,
+    .slots = XXH3_64Type_slots,
+};
 
 /* XXH3_128 */
 
@@ -1737,25 +1805,20 @@ typedef struct {
     /* Type-specific fields go here. */
     XXH3_state_t *xxhash_state;
     XXH64_hash_t seed;
+    XXHASH_LOCK_FIELD
 } PYXXH3_128Object;
-
-static PyTypeObject PYXXH3_128Type;
 
 static void PYXXH3_128_dealloc(PYXXH3_128Object *self)
 {
     if (self->xxhash_state)
         XXH3_freeState(self->xxhash_state);
-    PyObject_Del(self);
+    XXHASH_LOCK_FINI(self);
+    PyTypeObject *tp = Py_TYPE(self);
+    tp->tp_free((PyObject *)self);
+    Py_DECREF(tp);
 }
 
-static void PYXXH3_128_do_update(PYXXH3_128Object *self, Py_buffer *buf)
-{
-    Py_BEGIN_ALLOW_THREADS
-    XXH3_128bits_update(self->xxhash_state, buf->buf, buf->len);
-    Py_END_ALLOW_THREADS
-
-    PyBuffer_Release(buf);
-}
+XXHASH_DO_UPDATE(XXH3_128, XXH3_128bits_update)
 
 static PyObject *
 PYXXH3_128_vectorcall(PyObject *type, PyObject *const *args,
@@ -1775,29 +1838,42 @@ PYXXH3_128_vectorcall(PyObject *type, PyObject *const *args,
         ((PyTypeObject *)type)->tp_alloc((PyTypeObject *)type, 0);
     if (self == NULL) {
         PyBuffer_Release(&buf);
-            return NULL;
+        return NULL;
     }
+
+    XXHASH_LOCK_INIT(self);
 
     self->xxhash_state = XXH3_createState();
     if (self->xxhash_state == NULL) {
         Py_DECREF(self);
         PyBuffer_Release(&buf);
-            return PyErr_NoMemory();
+        return PyErr_NoMemory();
     }
     self->seed = seed;
     XXH3_128bits_reset_withSeed(self->xxhash_state, seed);
 
-    if (buf.obj)
-        PYXXH3_128_do_update(self, &buf);
+    if (buf.obj) {
+        /* Constructor: no concurrent access possible, skip locking. */
+        if (buf.len > XXHASH_GIL_MINSIZE) {
+            Py_BEGIN_ALLOW_THREADS
+            XXH3_128bits_update(self->xxhash_state, buf.buf, buf.len);
+            Py_END_ALLOW_THREADS
+        } else {
+            XXH3_128bits_update(self->xxhash_state, buf.buf, buf.len);
+        }
+        PyBuffer_Release(&buf);
+    }
     return (PyObject *)self;
 }
 static PyObject *PYXXH3_128_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
     PYXXH3_128Object *self;
 
-    if ((self = PyObject_New(PYXXH3_128Object, &PYXXH3_128Type)) == NULL) {
+    if ((self = (PYXXH3_128Object *)type->tp_alloc(type, 0)) == NULL) {
         return NULL;
     }
+
+    XXHASH_LOCK_INIT(self);
 
     if ((self->xxhash_state = XXH3_createState()) == NULL) {
         Py_DECREF(self);
@@ -1811,64 +1887,7 @@ static PyObject *PYXXH3_128_new(PyTypeObject *type, PyObject *args, PyObject *kw
     return (PyObject *)self;
 }
 
-static int PYXXH3_128_init(PYXXH3_128Object *self, PyObject *args, PyObject *kwargs)
-{
-    XXH64_hash_t seed = 0;
-    PyObject *data_obj = NULL;
-    Py_buffer buf = {NULL, NULL};
-    Py_ssize_t nargs = PyTuple_GET_SIZE(args);
-
-    if (_check_kwargs(kwargs) < 0)
-        return -1;
-
-    if (nargs >= 1) {
-        data_obj = PyTuple_GET_ITEM(args, 0);
-        if (kwargs && PyDict_GetItemString(kwargs, "data")) {
-            PyErr_SetString(PyExc_TypeError,
-                "__init__() got multiple values for argument 'data'");
-            return -1;
-        }
-    }
-    if (nargs >= 2) {
-        seed = PyLong_AsUnsignedLongLongMask(PyTuple_GET_ITEM(args, 1));
-        if (PyErr_Occurred()) return -1;
-        if (kwargs && PyDict_GetItemString(kwargs, "seed")) {
-            PyErr_SetString(PyExc_TypeError,
-                "__init__() got multiple values for argument 'seed'");
-            return -1;
-        }
-    }
-    if (nargs > 2) {
-        PyErr_SetString(PyExc_TypeError,
-            "__init__() takes at most 2 positional arguments");
-        return -1;
-    }
-
-    if (kwargs) {
-        PyObject *val = PyDict_GetItemString(kwargs, "data");
-        if (val) {
-            if (data_obj) return -1; /* unreachable, caught above */
-            data_obj = val;
-        }
-        val = PyDict_GetItemString(kwargs, "seed");
-        if (val) {
-            seed = PyLong_AsUnsignedLongLongMask(val);
-            if (PyErr_Occurred()) return -1;
-        }
-    }
-
-    if (data_obj) {
-        if (_get_buffer_or_str(data_obj, &buf) < 0)
-            return -1;
-    }
-
-    self->seed = seed;
-    XXH3_128bits_reset_withSeed(self->xxhash_state, seed);
-
-    if (buf.obj)
-        PYXXH3_128_do_update(self, &buf);
-    return 0;
-}
+XXHASH_INIT(XXH3_128, XXH3_128bits_reset_withSeed, XXH3_128bits_update, XXH64_hash_t)
 
 PyDoc_STRVAR(
     PYXXH3_128_update_doc,
@@ -1932,13 +1951,16 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH3_128_digest(PYXXH3_128Object *self)
 {
-    char retbuf[XXH128_DIGESTSIZE];
     XXH128_hash_t intdigest;
 
+    XXHASH_LOCK_ACQUIRE(self);
     intdigest = XXH3_128bits_digest(self->xxhash_state);
-    XXH128_canonicalFromHash((XXH128_canonical_t *)retbuf, intdigest);
+    XXHASH_LOCK_RELEASE(self);
 
-    return PyBytes_FromStringAndSize(retbuf, sizeof(retbuf));
+    PyObject *ret = PyBytes_FromStringAndSize(NULL, XXH128_DIGESTSIZE);
+    if (ret == NULL) return NULL;
+    XXH128_canonicalFromHash((XXH128_canonical_t *)PyBytes_AS_STRING(ret), intdigest);
+    return ret;
 }
 
 PyDoc_STRVAR(
@@ -1950,25 +1972,26 @@ static PyObject *PYXXH3_128_hexdigest(PYXXH3_128Object *self)
 {
     XXH128_hash_t intdigest;
     char digest[XXH128_DIGESTSIZE];
-    char retbuf[XXH128_DIGESTSIZE * 2];
-    int i, j;
 
+    XXHASH_LOCK_ACQUIRE(self);
     intdigest = XXH3_128bits_digest(self->xxhash_state);
+    XXHASH_LOCK_RELEASE(self);
     XXH128_canonicalFromHash((XXH128_canonical_t *)digest, intdigest);
 
-    for (i = j = 0; i < XXH128_DIGESTSIZE; i++) {
+    PyObject *ret = PyUnicode_New(XXH128_DIGESTSIZE * 2, 127);
+    if (ret == NULL) return NULL;
+    Py_UCS1 *b = PyUnicode_1BYTE_DATA(ret);
+    for (Py_ssize_t i = 0, j = 0; i < XXH128_DIGESTSIZE; i++) {
         unsigned char c;
         c = (digest[i] >> 4) & 0xf;
         c = (c > 9) ? c + 'a' - 10 : c + '0';
-        retbuf[j++] = c;
+        b[j++] = c;
         c = (digest[i] & 0xf);
         c = (c > 9) ? c + 'a' - 10 : c + '0';
-        retbuf[j++] = c;
+        b[j++] = c;
     }
-
-    return PyUnicode_FromStringAndSize(retbuf, sizeof(retbuf));
+    return ret;
 }
-
 
 PyDoc_STRVAR(
     PYXXH3_128_intdigest_doc,
@@ -1981,7 +2004,9 @@ static PyObject *PYXXH3_128_intdigest(PYXXH3_128Object *self)
     XXH128_hash_t intdigest;
     PyObject *result, *high, *low, *sixtyfour;
 
+    XXHASH_LOCK_ACQUIRE(self);
     intdigest = XXH3_128bits_digest(self->xxhash_state);
+    XXHASH_LOCK_RELEASE(self);
 
     sixtyfour = PyLong_FromLong(64);
     low = PyLong_FromUnsignedLongLong(intdigest.low64);
@@ -2010,9 +2035,11 @@ static PyObject *PYXXH3_128_copy(PYXXH3_128Object *self)
 {
     PYXXH3_128Object *p;
 
-    if ((p = PyObject_New(PYXXH3_128Object, &PYXXH3_128Type)) == NULL) {
+    if ((p = (PYXXH3_128Object *)Py_TYPE(self)->tp_alloc(Py_TYPE(self), 0)) == NULL) {
         return NULL;
     }
+
+    XXHASH_LOCK_INIT(p);
 
     if ((p->xxhash_state = XXH3_createState()) == NULL) {
         Py_DECREF(p);
@@ -2020,6 +2047,7 @@ static PyObject *PYXXH3_128_copy(PYXXH3_128Object *self)
         return NULL;
     }
 
+    XXHASH_LOCK_ACQUIRE(self);
     p->seed = self->seed;
     XXH3_copyState(p->xxhash_state, self->xxhash_state);
 #if XXH_VERSION_NUMBER < 704
@@ -2029,6 +2057,7 @@ static PyObject *PYXXH3_128_copy(PYXXH3_128Object *self)
     if (p->xxhash_state->secret == &self->xxhash_state->customSecret[0])
         p->xxhash_state->secret = &p->xxhash_state->customSecret[0];
 #endif
+    XXHASH_LOCK_RELEASE(self);
 
     return (PyObject *)p;
 }
@@ -2040,7 +2069,9 @@ PyDoc_STRVAR(
 
 static PyObject *PYXXH3_128_reset(PYXXH3_128Object *self)
 {
+    XXHASH_LOCK_ACQUIRE(self);
     XXH3_128bits_reset_withSeed(self->xxhash_state, self->seed);
+    XXHASH_LOCK_RELEASE(self);
     Py_RETURN_NONE;
 }
 
@@ -2124,56 +2155,25 @@ PyDoc_STRVAR(
     "intdigest() -- return the current digest as an integer\n"
     "copy() -- return a copy of the current xxh3_128 object");
 
-static PyTypeObject PYXXH3_128Type = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    "xxhash.xxh3_128",                /* tp_name */
-    sizeof(PYXXH3_128Object),         /* tp_basicsize */
-    0,                             /* tp_itemsize */
-    (destructor)PYXXH3_128_dealloc,   /* tp_dealloc */
-    0,                             /* tp_print */
-    0,                             /* tp_getattr */
-    0,                             /* tp_setattr */
-    0,                             /* tp_compare */
-    0,                             /* tp_repr */
-    0,                             /* tp_as_number */
-    0,                             /* tp_as_sequence */
-    0,                             /* tp_as_mapping */
-    0,                             /* tp_hash */
-    0,                             /* tp_call */
-    0,                             /* tp_str */
-    0,                             /* tp_getattro */
-    0,                             /* tp_setattro */
-    0,                             /* tp_as_buffer */
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_VECTORCALL,  /* tp_flags */
-    PYXXH3_128Type_doc,               /* tp_doc */
-    0,                             /* tp_traverse */
-    0,                             /* tp_clear */
-    0,                             /* tp_richcompare */
-    0,                             /* tp_weaklistoffset */
-    0,                             /* tp_iter */
-    0,                             /* tp_iternext */
-    PYXXH3_128_methods,               /* tp_methods */
-    0,                             /* tp_members */
-    PYXXH3_128_getseters,             /* tp_getset */
-    0,                             /* tp_base */
-    0,                             /* tp_dict */
-    0,                             /* tp_descr_get */
-    0,                             /* tp_descr_set */
-    0,                             /* tp_dictoffset */
-    (initproc)PYXXH3_128_init,        /* tp_init */
-    0,                             /* tp_alloc */
-    PYXXH3_128_new,                   /* tp_new */
-    0,                             /* tp_free */
-    0,                             /* tp_is_gc */
-    0,                             /* tp_bases */
-    0,                             /* tp_mro */
-    0,                             /* tp_cache */
-    0,                             /* tp_subclasses */
-    0,                             /* tp_weaklist */
-    0,                             /* tp_del */
-    0,                             /* tp_version_tag */
-    0,                             /* tp_finalize */
-    PYXXH3_128_vectorcall,            /* tp_vectorcall */
+static PyType_Slot XXH3_128Type_slots[] = {
+    {Py_tp_dealloc, PYXXH3_128_dealloc},
+    {Py_tp_doc, (void *)PYXXH3_128Type_doc},
+    {Py_tp_methods, PYXXH3_128_methods},
+    {Py_tp_getset, PYXXH3_128_getseters},
+    {Py_tp_init, PYXXH3_128_init},
+    {Py_tp_new, PYXXH3_128_new},
+    {0, NULL},
+};
+
+static PyType_Spec XXH3_128Type_spec = {
+    .name = "xxhash.xxh3_128",
+    .basicsize = sizeof(PYXXH3_128Object),
+    .flags = Py_TPFLAGS_DEFAULT
+#if PY_VERSION_HEX >= 0x030c0000
+           | Py_TPFLAGS_IMMUTABLETYPE
+#endif
+    ,
+    .slots = XXH3_128Type_slots,
 };
 
 /*****************************************************************************
@@ -2182,16 +2182,43 @@ static PyTypeObject PYXXH3_128Type = {
 
 static int _exec(PyObject *module)
 {
-    if (
-        PyModule_AddType(module, &PYXXH32Type) < 0 ||
-        PyModule_AddType(module, &PYXXH64Type) < 0 ||
-        PyModule_AddType(module, &PYXXH3_64Type) < 0 ||
-        PyModule_AddType(module, &PYXXH3_128Type) < 0
-    ) {
-        return -1;
+    /* Build heap types from specs (bound to module for sub-interpreter safety). */
+    PyObject *xxh32_type = PyType_FromModuleAndSpec(module, &XXH32Type_spec, NULL);
+    if (!xxh32_type) return -1;
+    ((PyTypeObject *)xxh32_type)->tp_vectorcall = PYXXH32_vectorcall;
+    if (PyModule_AddType(module, (PyTypeObject *)xxh32_type) < 0) {
+        Py_DECREF(xxh32_type); return -1;
     }
+    Py_DECREF(xxh32_type);
+
+    PyObject *xxh64_type = PyType_FromModuleAndSpec(module, &XXH64Type_spec, NULL);
+    if (!xxh64_type) return -1;
+    ((PyTypeObject *)xxh64_type)->tp_vectorcall = PYXXH64_vectorcall;
+    if (PyModule_AddType(module, (PyTypeObject *)xxh64_type) < 0) {
+        Py_DECREF(xxh64_type); return -1;
+    }
+    Py_DECREF(xxh64_type);
+
+    PyObject *xxh3_64_type = PyType_FromModuleAndSpec(module, &XXH3_64Type_spec, NULL);
+    if (!xxh3_64_type) return -1;
+    ((PyTypeObject *)xxh3_64_type)->tp_vectorcall = PYXXH3_64_vectorcall;
+    if (PyModule_AddType(module, (PyTypeObject *)xxh3_64_type) < 0) {
+        Py_DECREF(xxh3_64_type); return -1;
+    }
+    Py_DECREF(xxh3_64_type);
+
+    PyObject *xxh3_128_type = PyType_FromModuleAndSpec(module, &XXH3_128Type_spec, NULL);
+    if (!xxh3_128_type) return -1;
+    ((PyTypeObject *)xxh3_128_type)->tp_vectorcall = PYXXH3_128_vectorcall;
+    if (PyModule_AddType(module, (PyTypeObject *)xxh3_128_type) < 0) {
+        Py_DECREF(xxh3_128_type); return -1;
+    }
+    Py_DECREF(xxh3_128_type);
 
     if (PyModule_AddStringConstant(module, "XXHASH_VERSION", VALUE_TO_STRING(XXHASH_VERSION)) < 0)
+        return -1;
+
+    if (PyModule_AddIntConstant(module, "_GIL_MINSIZE", XXHASH_GIL_MINSIZE) < 0)
         return -1;
 
     return 0;
@@ -2199,7 +2226,11 @@ static int _exec(PyObject *module)
 
 static PyModuleDef_Slot slots[] = {
     {Py_mod_exec, _exec},
-#ifdef Py_GIL_DISABLED
+#if PY_VERSION_HEX >= 0x030c0000  /* Python 3.12+: sub-interpreter support */
+    {Py_mod_multiple_interpreters, Py_MOD_PER_INTERPRETER_GIL_SUPPORTED},
+#endif
+#if PY_VERSION_HEX >= 0x030d0000
+    /* Python 3.13+: module is thread-safe with per-object lock */
     {Py_mod_gil, Py_MOD_GIL_NOT_USED},
 #endif
     {0, NULL}
@@ -2221,7 +2252,6 @@ static PyMethodDef methods[] = {
     {NULL, NULL, 0, NULL}
 };
 
-
 static struct PyModuleDef moduledef = {
     PyModuleDef_HEAD_INIT,
     "_xxhash",
@@ -2233,7 +2263,6 @@ static struct PyModuleDef moduledef = {
     NULL,
     NULL
 };
-
 
 PyMODINIT_FUNC
 PyInit__xxhash(void)

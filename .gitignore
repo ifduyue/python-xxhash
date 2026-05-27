@@ -2,7 +2,7 @@
 *.so
 *.o
 __pycache__/
-build
+/build/
+/dist/
 /xxhash.egg-info/
 /xxhash/version.py
-.dmypy.json
