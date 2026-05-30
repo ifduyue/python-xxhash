@@ -362,188 +362,163 @@ _parse_init_args(PyObject *args, PyObject *kwargs,
 
 /* Generic one-shot compute: returns bytes / int / str depending on return_type.
  * return_type: 0=digest (bytes), 1=intdigest (int), 2=hexdigest (str) */
-#define XXHASH_ONESHOT_RET_DIGEST    0
-#define XXHASH_ONESHOT_RET_INTDIGEST 1
-#define XXHASH_ONESHOT_RET_HEXDIGEST 2
+/* ------------------------------------------------------------------ */
+/*  Oneshot: hexdigest helper                                           */
+/* ------------------------------------------------------------------ */
 
-/* Dispatch table for XXH32/XXH64 — direct hash (no streaming). */
-typedef struct {
-    unsigned char digest_size;
-    void (*canonical)(void *dst, ...); /* cast at call site */
-    PyObject *(*int_result)(XXH64_hash_t h, XXH128_hash_t h128, int is128);
-} XXH_OneshotDispatch;
-
-/* Forward declaration of the main one-shot dispatcher. */
+/* Format digest bytes as a lowercase hex string. */
 static PyObject *
-_xxhash_oneshot(XXH_Algo algo, Py_buffer *buf, XXH64_hash_t seed, int return_type)
+_xxhash_hexdigest_from_bytes(const unsigned char *digest, Py_ssize_t ds)
 {
-    if (return_type == XXHASH_ONESHOT_RET_INTDIGEST && algo == XXH_ALGO_XXH3_128) {
-        /* XXH128 intdigest: combine low64 + (high64 << 64) */
-        XXH128_hash_t h;
-        {
-            if (buf->len > XXHASH_GIL_MINSIZE) {
-                Py_BEGIN_ALLOW_THREADS
-                h = XXH3_128bits_withSeed(buf->buf, buf->len, seed);
-                Py_END_ALLOW_THREADS
-            } else {
-                h = XXH3_128bits_withSeed(buf->buf, buf->len, seed);
-            }
-        }
-
-        PyObject *sixtyfour = PyLong_FromLong(64);
-        PyObject *low  = PyLong_FromUnsignedLongLong(h.low64);
-        PyObject *high = PyLong_FromUnsignedLongLong(h.high64);
-        PyObject *result = NULL;
-
-        if (sixtyfour && low && high) {
-            PyObject *shifted = PyNumber_Lshift(high, sixtyfour);
-            if (shifted) {
-                result = PyNumber_Add(shifted, low);
-                Py_DECREF(shifted);
-            }
-        }
-        Py_XDECREF(high);
-        Py_XDECREF(low);
-        Py_XDECREF(sixtyfour);
-        return result;
+    PyObject *ret = PyUnicode_New(ds * 2, 127);
+    if (ret == NULL) return NULL;
+    Py_UCS1 *b = PyUnicode_1BYTE_DATA(ret);
+    for (Py_ssize_t i = 0; i < ds; i++) {
+        unsigned char c;
+        c = (digest[i] >> 4) & 0xf;
+        b[i * 2] = (c > 9) ? c + 'a' - 10 : c + '0';
+        c = digest[i] & 0xf;
+        b[i * 2 + 1] = (c > 9) ? c + 'a' - 10 : c + '0';
     }
-
-    XXH64_hash_t h64 = 0;
-    char digest[16];  /* max 16 bytes (XXH128) */
-    unsigned char ds = XXH_ALGO_TABLE[algo].digest_size;
-
-    switch (algo) {
-        case XXH_ALGO_XXH32: {
-            XXH32_hash_t r;
-            if (buf->len > XXHASH_GIL_MINSIZE) {
-                Py_BEGIN_ALLOW_THREADS
-                r = XXH32(buf->buf, buf->len, (XXH32_hash_t)seed);
-                Py_END_ALLOW_THREADS
-            } else {
-                r = XXH32(buf->buf, buf->len, (XXH32_hash_t)seed);
-            }
-            if (return_type == XXHASH_ONESHOT_RET_INTDIGEST)
-                return PyLong_FromUnsignedLong(r);
-            XXH32_canonicalFromHash((XXH32_canonical_t *)digest, r);
-            break;
-        }
-        case XXH_ALGO_XXH64: {
-            XXH64_hash_t r;
-            if (buf->len > XXHASH_GIL_MINSIZE) {
-                Py_BEGIN_ALLOW_THREADS
-                r = XXH64(buf->buf, buf->len, seed);
-                Py_END_ALLOW_THREADS
-            } else {
-                r = XXH64(buf->buf, buf->len, seed);
-            }
-            if (return_type == XXHASH_ONESHOT_RET_INTDIGEST)
-                return PyLong_FromUnsignedLongLong(r);
-            h64 = r;
-            XXH64_canonicalFromHash((XXH64_canonical_t *)digest, r);
-            break;
-        }
-        case XXH_ALGO_XXH3_64: {
-            XXH64_hash_t r;
-            if (buf->len > XXHASH_GIL_MINSIZE) {
-                Py_BEGIN_ALLOW_THREADS
-                r = XXH3_64bits_withSeed(buf->buf, buf->len, seed);
-                Py_END_ALLOW_THREADS
-            } else {
-                r = XXH3_64bits_withSeed(buf->buf, buf->len, seed);
-            }
-            if (return_type == XXHASH_ONESHOT_RET_INTDIGEST)
-                return PyLong_FromUnsignedLongLong(r);
-            h64 = r;
-            XXH64_canonicalFromHash((XXH64_canonical_t *)digest, r);
-            break;
-        }
-        case XXH_ALGO_XXH3_128: {
-            XXH128_hash_t r;
-            if (buf->len > XXHASH_GIL_MINSIZE) {
-                Py_BEGIN_ALLOW_THREADS
-                r = XXH3_128bits_withSeed(buf->buf, buf->len, seed);
-                Py_END_ALLOW_THREADS
-            } else {
-                r = XXH3_128bits_withSeed(buf->buf, buf->len, seed);
-            }
-            if (return_type == XXHASH_ONESHOT_RET_INTDIGEST) {
-                /* handled above, unreachable */
-                return NULL;
-            }
-            XXH128_canonicalFromHash((XXH128_canonical_t *)digest, r);
-            break;
-        }
-    }
-
-    if (return_type == XXHASH_ONESHOT_RET_DIGEST) {
-        return PyBytes_FromStringAndSize(digest, ds);
-    } else {
-        /* hexdigest */
-        PyObject *ret = PyUnicode_New(ds * 2, 127);
-        if (ret == NULL) return NULL;
-        Py_UCS1 *b = PyUnicode_1BYTE_DATA(ret);
-        for (Py_ssize_t i = 0, j = 0; i < ds; i++) {
-            unsigned char c;
-            c = (digest[i] >> 4) & 0xf;
-            c = (c > 9) ? c + 'a' - 10 : c + '0';
-            b[j++] = c;
-            c = (digest[i] & 0xf);
-            c = (c > 9) ? c + 'a' - 10 : c + '0';
-            b[j++] = c;
-        }
-        return ret;
-    }
+    return ret;
 }
 
-/* Thin wrappers for each one-shot function, keeping the public API stable.
- * The ret_type parameter is lowercase for the C function name, but the
- * XXHASH_RET_##ret_type helper macro maps it to the uppercase constant. */
-#define XXHASH_RET_digest    XXHASH_ONESHOT_RET_DIGEST
-#define XXHASH_RET_intdigest XXHASH_ONESHOT_RET_INTDIGEST
-#define XXHASH_RET_hexdigest XXHASH_ONESHOT_RET_HEXDIGEST
+/* ------------------------------------------------------------------ */
+/*  XXH3_128 intdigest: low64 + (high64 << 64) as a Python int        */
+/* ------------------------------------------------------------------ */
 
-#define DEFINE_ONESHOT(name, algo, ret_type)                                   \
+static PyObject *
+_xxhash_xxh128_intdigest_result(XXH128_hash_t h)
+{
+    PyObject *sixtyfour = PyLong_FromLong(64);
+    PyObject *low  = PyLong_FromUnsignedLongLong(h.low64);
+    PyObject *high = PyLong_FromUnsignedLongLong(h.high64);
+    PyObject *result = NULL;
+    if (sixtyfour && low && high) {
+        PyObject *shifted = PyNumber_Lshift(high, sixtyfour);
+        if (shifted) {
+            result = PyNumber_Add(shifted, low);
+            Py_DECREF(shifted);
+        }
+    }
+    Py_XDECREF(high);
+    Py_XDECREF(low);
+    Py_XDECREF(sixtyfour);
+    return result;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Oneshot function macros — fully specialized per algo + return     */
+/*  type, eliminating the generic switch dispatch.                    */
+/* ------------------------------------------------------------------ */
+
+/* Run xxhash computation, releasing the GIL for large inputs.
+ * seed_expr is the seed value expression (e.g. "(XXH32_hash_t)seed" or just "seed"). */
+#define XXHASH_GIL_RELEASE(buf, seed_expr, hash_var, xxh_func)                \
+    do {                                                                       \
+        if ((buf).len > XXHASH_GIL_MINSIZE) {                                  \
+            Py_BEGIN_ALLOW_THREADS                                             \
+            (hash_var) = xxh_func((buf).buf, (buf).len, (seed_expr));          \
+            Py_END_ALLOW_THREADS                                               \
+        } else {                                                               \
+            (hash_var) = xxh_func((buf).buf, (buf).len, (seed_expr));          \
+        }                                                                      \
+    } while (0)
+
+#define DEFINE_ONESHOT_INT(name, seed_expr, xxh_func, hash_type, int_conv)   \
 static PyObject *                                                              \
-xxh##name##_##ret_type(PyObject *self, PyObject *const *args,                  \
-                        Py_ssize_t nargs, PyObject *kwnames)                   \
+xxh##name##_intdigest(PyObject *self, PyObject *const *args,                   \
+                       Py_ssize_t nargs, PyObject *kwnames)                    \
 {                                                                              \
     XXH64_hash_t seed = 0;                                                     \
     Py_buffer buf;                                                             \
     unsigned long long raw_seed;                                               \
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxh" #name "_" #ret_type,  \
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxh" #name "_intdigest",  \
                              1, &buf, &raw_seed) < 0)                          \
         return NULL;                                                           \
     seed = (XXH64_hash_t)raw_seed;                                             \
-    PyObject *result = _xxhash_oneshot(algo, &buf, seed,                       \
-                                       XXHASH_RET_##ret_type);                 \
+    hash_type h;                                                               \
+    XXHASH_GIL_RELEASE(buf, seed_expr, h, xxh_func);                           \
     PyBuffer_Release(&buf);                                                    \
-    return result;                                                             \
+    return int_conv(h);                                                        \
 }
 
-/* XXH32 */
-DEFINE_ONESHOT(32, XXH_ALGO_XXH32, digest)
-DEFINE_ONESHOT(32, XXH_ALGO_XXH32, intdigest)
-DEFINE_ONESHOT(32, XXH_ALGO_XXH32, hexdigest)
+#define DEFINE_ONESHOT_DH(name, seed_expr, xxh_func, hash_type,               \
+                           canon_func, canon_type, ds)                         \
+/* digest */                                                                    \
+static PyObject *                                                              \
+xxh##name##_digest(PyObject *self, PyObject *const *args,                      \
+                    Py_ssize_t nargs, PyObject *kwnames)                       \
+{                                                                              \
+    XXH64_hash_t seed = 0;                                                     \
+    Py_buffer buf;                                                             \
+    unsigned long long raw_seed;                                               \
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxh" #name "_digest",     \
+                             1, &buf, &raw_seed) < 0)                          \
+        return NULL;                                                           \
+    seed = (XXH64_hash_t)raw_seed;                                             \
+    hash_type h;                                                               \
+    XXHASH_GIL_RELEASE(buf, seed_expr, h, xxh_func);                           \
+    unsigned char digest[ds];                                                  \
+    canon_func((canon_type *)digest, h);                                       \
+    PyBuffer_Release(&buf);                                                    \
+    return PyBytes_FromStringAndSize((char *)digest, ds);                      \
+}                                                                              \
+/* hexdigest */                                                                 \
+static PyObject *                                                              \
+xxh##name##_hexdigest(PyObject *self, PyObject *const *args,                   \
+                       Py_ssize_t nargs, PyObject *kwnames)                    \
+{                                                                              \
+    XXH64_hash_t seed = 0;                                                     \
+    Py_buffer buf;                                                             \
+    unsigned long long raw_seed;                                               \
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxh" #name "_hexdigest", \
+                             1, &buf, &raw_seed) < 0)                          \
+        return NULL;                                                           \
+    seed = (XXH64_hash_t)raw_seed;                                             \
+    hash_type h;                                                               \
+    XXHASH_GIL_RELEASE(buf, seed_expr, h, xxh_func);                           \
+    unsigned char digest[ds];                                                  \
+    canon_func((canon_type *)digest, h);                                       \
+    PyBuffer_Release(&buf);                                                    \
+    return _xxhash_hexdigest_from_bytes(digest, ds);                           \
+}
+
+/* XXH32 — seed is truncated to uint32_t at call site */
+DEFINE_ONESHOT_INT(32,  (XXH32_hash_t)seed,  XXH32,               XXH32_hash_t, PyLong_FromUnsignedLong)
+DEFINE_ONESHOT_DH( 32,  (XXH32_hash_t)seed,  XXH32,               XXH32_hash_t, XXH32_canonicalFromHash, XXH32_canonical_t, 4)
 
 /* XXH64 */
-DEFINE_ONESHOT(64, XXH_ALGO_XXH64, digest)
-DEFINE_ONESHOT(64, XXH_ALGO_XXH64, intdigest)
-DEFINE_ONESHOT(64, XXH_ALGO_XXH64, hexdigest)
+DEFINE_ONESHOT_INT(64,  seed,  XXH64,               XXH64_hash_t, PyLong_FromUnsignedLongLong)
+DEFINE_ONESHOT_DH( 64,  seed,  XXH64,               XXH64_hash_t, XXH64_canonicalFromHash, XXH64_canonical_t, 8)
 
 /* XXH3_64 */
-DEFINE_ONESHOT(3_64, XXH_ALGO_XXH3_64, digest)
-DEFINE_ONESHOT(3_64, XXH_ALGO_XXH3_64, intdigest)
-DEFINE_ONESHOT(3_64, XXH_ALGO_XXH3_64, hexdigest)
+DEFINE_ONESHOT_INT(3_64,  seed,  XXH3_64bits_withSeed, XXH64_hash_t, PyLong_FromUnsignedLongLong)
+DEFINE_ONESHOT_DH( 3_64,  seed,  XXH3_64bits_withSeed, XXH64_hash_t, XXH64_canonicalFromHash, XXH64_canonical_t, 8)
 
-/* XXH3_128 */
-DEFINE_ONESHOT(3_128, XXH_ALGO_XXH3_128, digest)
-DEFINE_ONESHOT(3_128, XXH_ALGO_XXH3_128, intdigest)
-DEFINE_ONESHOT(3_128, XXH_ALGO_XXH3_128, hexdigest)
+/* XXH3_128 — intdigest uses special big-integer construction */
+static PyObject *
+xxh3_128_intdigest(PyObject *self, PyObject *const *args,
+                    Py_ssize_t nargs, PyObject *kwnames)
+{
+    XXH64_hash_t seed = 0;
+    Py_buffer buf;
+    unsigned long long raw_seed;
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxh3_128_intdigest",
+                             1, &buf, &raw_seed) < 0)
+        return NULL;
+    seed = (XXH64_hash_t)raw_seed;
+    XXH128_hash_t h;
+    XXHASH_GIL_RELEASE(buf, seed, h, XXH3_128bits_withSeed);
+    PyBuffer_Release(&buf);
+    return _xxhash_xxh128_intdigest_result(h);
+}
 
-#undef XXHASH_RET_digest
-#undef XXHASH_RET_intdigest
-#undef XXHASH_RET_hexdigest
-#undef DEFINE_ONESHOT
+DEFINE_ONESHOT_DH(3_128, seed, XXH3_128bits_withSeed, XXH128_hash_t, XXH128_canonicalFromHash, XXH128_canonical_t, 16)
+
+#undef XXHASH_GIL_RELEASE
+#undef DEFINE_ONESHOT_INT
+#undef DEFINE_ONESHOT_DH
 
 /*****************************************************************************
  * Shared type methods — single set shared by all algorithms                 *
