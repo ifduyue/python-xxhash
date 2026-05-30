@@ -134,7 +134,7 @@ typedef struct {
         XXH3_state_t  *xxh3;
     } state;
     XXH_Algo algo;
-    XXH64_hash_t seed;       /* XXH32 seed stored in XXH64 for uniformity */
+    XXH64_hash_t seed;       /* stored as XXH64 for uniformity across all algorithms */
     XXHASH_LOCK_FIELD
 } XXHASHObject;
 
