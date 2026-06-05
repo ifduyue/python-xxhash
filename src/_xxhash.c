@@ -1082,6 +1082,9 @@ XXHASH_copy(XXHASHObject *self)
     XXHASH_LOCK_ACQUIRE(self);
     XXH_DISPATCH(self, copy_state)(dst, _xxhash_state_ptr(self));
 #if XXH_VERSION_NUMBER < 704
+    // v0.7.3 and earlier have a bug where states reset with a seed
+    // will have a wild pointer to the original state when copied,
+    // causing a use-after-free if the original is freed.
     if (self->algo >= XXH_ALGO_XXH3_64) {
         XXH3_state_t *d = p->state.xxh3;
         XXH3_state_t *s = self->state.xxh3;
