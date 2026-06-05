@@ -718,7 +718,7 @@ _xxhash_reset_state(XXHASHObject *self)
  * Matches CPython 3.9-3.12 md5 pattern: release GIL first (for large data),
  * then acquire lock, hash, release lock, re-acquire GIL.
  * For small data, acquire lock with GIL held (try-then-block if contested). */
-static Py_ALWAYS_INLINE void
+static inline Py_ALWAYS_INLINE void
 _xxhash_do_update(XXHASHObject *self, Py_buffer *buf)
 {
     void *state = _xxhash_state_ptr(self);
@@ -823,29 +823,30 @@ static void XXHASH_dealloc(XXHASHObject *self)
 }
 
 /* ------------------------------------------------------------------ */
+/*  tp_repr                                                            */
+/* ------------------------------------------------------------------ */
+
+static PyObject *
+XXHASH_repr(XXHASHObject *self)
+{
+    /* Match CPython _hashlib: <md5 _hashlib.HASH object> */
+    return PyUnicode_FromFormat("<%s %s object>",
+                                XXH_ALGO_TABLE[self->algo].name,
+                                Py_TYPE(self)->tp_name);
+}
+
+/* ------------------------------------------------------------------ */
 /*  tp_new                                                             */
 /* ------------------------------------------------------------------ */
 
 static PyObject *
 XXHASH_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
-    XXHASHObject *self;
-
-    if ((self = (XXHASHObject *)type->tp_alloc(type, 0)) == NULL) {
-        return NULL;
-    }
-
-    XXHASH_LOCK_INIT(self);
-    self->algo = XXH_ALGO_XXH32; /* default, will be overridden by __init__ */
-    self->seed = 0;
-    self->state.xxh32 = NULL;
-
-    if (_xxhash_init_state(self) < 0) {
-        Py_DECREF(self);
-        return NULL;
-    }
-
-    return (PyObject *)self;
+    /* Match CPython _hashlib.HASH: direct construction is forbidden.
+     * Only factory functions (xxh32(), xxh64(), etc.) may create instances. */
+    return PyErr_Format(PyExc_TypeError,
+                        "cannot create '%.100s' instances",
+                        type->tp_name);
 }
 
 /* ------------------------------------------------------------------ */
@@ -1227,11 +1228,12 @@ static PyType_Slot XXHASHType_slots[] = {
     {Py_tp_getset, XXHASH_getseters},
     {Py_tp_init, XXHASH_init},
     {Py_tp_new, XXHASH_new},
+    {Py_tp_repr, XXHASH_repr},
     {0, NULL},
 };
 
 static PyType_Spec XXHASHType_spec = {
-    .name = "xxhash.xxhash",
+    .name = "_xxhash.HASH",
     .basicsize = sizeof(XXHASHObject),
     .flags = Py_TPFLAGS_DEFAULT
 #if PY_VERSION_HEX >= 0x030c0000
