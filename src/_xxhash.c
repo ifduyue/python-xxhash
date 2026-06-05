@@ -919,7 +919,7 @@ xxh3_128_construct(PyObject *module, PyObject *const *args,
 PyDoc_STRVAR(
     XXHASH_update_doc,
     "update (data)\n\n"
-    "Update the xxh32 object with bytes-like data. Repeated calls are\n"
+    "Update the xxhash object with bytes-like data. Repeated calls are\n"
     "equivalent to a single call with the concatenation of all the arguments.");
 
 static PyObject *
