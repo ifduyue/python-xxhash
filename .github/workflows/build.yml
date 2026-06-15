@@ -32,6 +32,9 @@ jobs:
           - os: macos-15-intel
             archs: "x86_64_iphonesimulator"
             platform: "ios"
+          - os: ubuntu-24.04
+            archs: "wasm32"
+            platform: "pyodide"
 
     steps:
       - name: Disable git autocrlf
