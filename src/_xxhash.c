@@ -831,11 +831,24 @@ XXHASH_repr(XXHASHObject *self)
 static PyObject *
 XXHASH_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
-    /* Match CPython _hashlib.HASH: direct construction is forbidden.
-     * Only factory functions (xxh32(), xxh64(), etc.) may create instances. */
-    return PyErr_Format(PyExc_TypeError,
-                        "cannot create '%.100s' instances",
-                        type->tp_name);
+    /* Determine algo from type name ("xxhash.xxh32" -> XXH_ALGO_XXH32, etc.).
+     * On CPython 3.9+ this path is normally bypassed by tp_vectorcall;
+     * on PyPy (no vectorcall support) tp_new + tp_init is the primary path. */
+    const char *name = type->tp_name;
+    XXH_Algo algo;
+    if (strcmp(name, "xxhash.xxh32") == 0)
+        algo = XXH_ALGO_XXH32;
+    else if (strcmp(name, "xxhash.xxh64") == 0)
+        algo = XXH_ALGO_XXH64;
+    else if (strcmp(name, "xxhash.xxh3_64") == 0)
+        algo = XXH_ALGO_XXH3_64;
+    else
+        algo = XXH_ALGO_XXH3_128;
+
+    /* Allocate and init state with defaults; tp_init will set the real seed
+     * and data.  This is the standard CPython pattern: tp_new allocates,
+     * tp_init initializes. */
+    return _xxhash_new(type, algo, NULL, 0, 0);
 }
 
 /* ------------------------------------------------------------------ */
