@@ -135,12 +135,12 @@ An optional seed (default is 0) can be used to alter the result predictably:
 .. code-block:: python
 
     >>> import xxhash
-    >>> xxhash.xxh64('xxhash').hexdigest()
+    >>> xxhash.xxh64(b'xxhash').hexdigest()
     '32dd38952c4bc720'
-    >>> xxhash.xxh64('xxhash', seed=20141025).hexdigest()
+    >>> xxhash.xxh64(b'xxhash', seed=20141025).hexdigest()
     'b559b98d844e0635'
     >>> x = xxhash.xxh64(seed=20141025)
-    >>> x.update('xxhash')
+    >>> x.update(b'xxhash')
     >>> x.hexdigest()
     'b559b98d844e0635'
     >>> x.intdigest()
@@ -152,22 +152,22 @@ defined behavior, it's better not to make it happen:
 
 .. code-block:: python
 
-    >>> xxhash.xxh32('I want an unsigned 32-bit seed!', seed=0).hexdigest()
+    >>> xxhash.xxh32(b'I want an unsigned 32-bit seed!', seed=0).hexdigest()
     'f7a35af8'
-    >>> xxhash.xxh32('I want an unsigned 32-bit seed!', seed=2**32).hexdigest()
+    >>> xxhash.xxh32(b'I want an unsigned 32-bit seed!', seed=2**32).hexdigest()
     'f7a35af8'
-    >>> xxhash.xxh32('I want an unsigned 32-bit seed!', seed=1).hexdigest()
+    >>> xxhash.xxh32(b'I want an unsigned 32-bit seed!', seed=1).hexdigest()
     'd8d4b4ba'
-    >>> xxhash.xxh32('I want an unsigned 32-bit seed!', seed=2**32+1).hexdigest()
+    >>> xxhash.xxh32(b'I want an unsigned 32-bit seed!', seed=2**32+1).hexdigest()
     'd8d4b4ba'
     >>>
-    >>> xxhash.xxh64('I want an unsigned 64-bit seed!', seed=0).hexdigest()
+    >>> xxhash.xxh64(b'I want an unsigned 64-bit seed!', seed=0).hexdigest()
     'd4cb0a70a2b8c7c1'
-    >>> xxhash.xxh64('I want an unsigned 64-bit seed!', seed=2**64).hexdigest()
+    >>> xxhash.xxh64(b'I want an unsigned 64-bit seed!', seed=2**64).hexdigest()
     'd4cb0a70a2b8c7c1'
-    >>> xxhash.xxh64('I want an unsigned 64-bit seed!', seed=1).hexdigest()
+    >>> xxhash.xxh64(b'I want an unsigned 64-bit seed!', seed=1).hexdigest()
     'ce5087f12470d961'
-    >>> xxhash.xxh64('I want an unsigned 64-bit seed!', seed=2**64+1).hexdigest()
+    >>> xxhash.xxh64(b'I want an unsigned 64-bit seed!', seed=2**64+1).hexdigest()
     'ce5087f12470d961'
 
 
@@ -204,27 +204,27 @@ so we can avoid allocating XXH32/64 state on heap:
 .. code-block:: python
 
     >>> import xxhash
-    >>> xxhash.xxh64('a').digest() == xxhash.xxh64_digest('a')
+    >>> xxhash.xxh64(b'a').digest() == xxhash.xxh64_digest(b'a')
     True
-    >>> xxhash.xxh64('a').intdigest() == xxhash.xxh64_intdigest('a')
+    >>> xxhash.xxh64(b'a').intdigest() == xxhash.xxh64_intdigest(b'a')
     True
-    >>> xxhash.xxh64('a').hexdigest() == xxhash.xxh64_hexdigest('a')
+    >>> xxhash.xxh64(b'a').hexdigest() == xxhash.xxh64_hexdigest(b'a')
     True
-    >>> xxhash.xxh64_hexdigest('xxhash', seed=20141025)
+    >>> xxhash.xxh64_hexdigest(b'xxhash', seed=20141025)
     'b559b98d844e0635'
-    >>> xxhash.xxh64_intdigest('xxhash', seed=20141025)
-    13067679811253438005L
-    >>> xxhash.xxh64_digest('xxhash', seed=20141025)
-    '\xb5Y\xb9\x8d\x84N\x065'
+    >>> xxhash.xxh64_intdigest(b'xxhash', seed=20141025)
+    13067679811253438005
+    >>> xxhash.xxh64_digest(b'xxhash', seed=20141025)
+    b'\xb5Y\xb9\x8d\x84N\x065'
 
 .. code-block:: python
 
     In [1]: import xxhash
 
-    In [2]: %timeit xxhash.xxh64_hexdigest('xxhash')
+    In [2]: %timeit xxhash.xxh64_hexdigest(b'xxhash')
     268 ns ± 24.1 ns per loop (mean ± std. dev. of 7 runs, 1000000 loops each)
 
-    In [3]: %timeit xxhash.xxh64('xxhash').hexdigest()
+    In [3]: %timeit xxhash.xxh64(b'xxhash').hexdigest()
     416 ns ± 17.3 ns per loop (mean ± std. dev. of 7 runs, 1000000 loops each)
 
 
