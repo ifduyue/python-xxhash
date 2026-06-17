@@ -993,13 +993,15 @@ static PyObject *
 XXHASH_digest(XXHASHObject *self)
 {
     unsigned char ds = XXH_ALGO_TABLE[self->algo].digest_size;
-    char digest[16];  /* max 16 bytes (XXH128) */
+    PyObject *ret = PyBytes_FromStringAndSize(NULL, ds);
+    if (ret == NULL)
+        return NULL;
 
     XXHASH_LOCK_ACQUIRE(self);
-    XXH_DISPATCH_CALL(self, digest, digest);
+    XXH_DISPATCH_CALL(self, digest, PyBytes_AS_STRING(ret));
     XXHASH_LOCK_RELEASE(self);
 
-    return PyBytes_FromStringAndSize(digest, ds);
+    return ret;
 }
 
 /* ------------------------------------------------------------------ */
