@@ -664,7 +664,7 @@ PYXXH32_vectorcall(PyObject *type, PyObject *const *args,
     Py_buffer buf;
     unsigned long long raw_seed;
 
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxhash.xxh32()", 0,
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxhash.xxh32", 0,
                              &buf, &raw_seed) < 0)
         return NULL;
     seed = (XXH32_hash_t)raw_seed;
@@ -1118,7 +1118,7 @@ PYXXH64_vectorcall(PyObject *type, PyObject *const *args,
     Py_buffer buf;
     unsigned long long raw_seed;
 
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxhash.xxh64()", 0,
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxhash.xxh64", 0,
                              &buf, &raw_seed) < 0)
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
@@ -1470,7 +1470,7 @@ PYXXH3_64_vectorcall(PyObject *type, PyObject *const *args,
     Py_buffer buf;
     unsigned long long raw_seed;
 
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxhash.xxh3_64()", 0,
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxhash.xxh3_64", 0,
                              &buf, &raw_seed) < 0)
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
@@ -1829,7 +1829,7 @@ PYXXH3_128_vectorcall(PyObject *type, PyObject *const *args,
     Py_buffer buf;
     unsigned long long raw_seed;
 
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxhash.xxh3_128()", 0,
+    if (_parse_fastcall_args(args, nargs, kwnames, "xxhash.xxh3_128", 0,
                              &buf, &raw_seed) < 0)
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
