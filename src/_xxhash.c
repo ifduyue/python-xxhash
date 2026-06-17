@@ -33,8 +33,6 @@
  * are all the same HASH type differentiated only by the digest context. */
 
 #include <Python.h>
-#include <string.h>
-
 #include "xxhash.h"
 
 /* ------------------------------------------------------------------ */
@@ -306,10 +304,7 @@ _xxhash_state_ptr(XXHASHObject *self)
 #define XXH_DISPATCH_CALL(self, field, ...)                                    \
     (XXH_DISPATCH[(self)->algo].field(_xxhash_state_ptr(self), ##__VA_ARGS__))
 
-/* Module state (currently unused but reserved for future use). */
-typedef struct {
-    int _placeholder;
-} XXHASH_ModuleState;
+/* No per-module state needed — each algo has its own heap type. */
 
 /* ------------------------------------------------------------------ */
 /*  Buffer / argument helpers                                         */
@@ -1125,16 +1120,10 @@ XXHASH_get_name(XXHASHObject *self, void *closure)
 static PyObject *
 XXHASH_get_seed(XXHASHObject *self, void *closure)
 {
-    switch (self->algo) {
-        case XXH_ALGO_XXH32:
-            return PyLong_FromUnsignedLong((XXH32_hash_t)self->seed);
-        case XXH_ALGO_XXH64:
-        case XXH_ALGO_XXH3_64:
-        case XXH_ALGO_XXH3_128:
-            return PyLong_FromUnsignedLongLong(self->seed);
-        default:
-            return NULL;
-    }
+    /* XXH32 truncates seed to 32 bits; the stored seed reflects the raw input. */
+    if (self->algo == XXH_ALGO_XXH32)
+        return PyLong_FromUnsignedLong((XXH32_hash_t)self->seed);
+    return PyLong_FromUnsignedLongLong(self->seed);
 }
 
 static PyGetSetDef XXHASH_getseters[] = {
@@ -1312,7 +1301,7 @@ static struct PyModuleDef moduledef = {
     PyModuleDef_HEAD_INIT,
     "_xxhash",
     NULL,
-    sizeof(XXHASH_ModuleState),
+    0,
     methods,
     slots,
     NULL,  /* m_traverse */
