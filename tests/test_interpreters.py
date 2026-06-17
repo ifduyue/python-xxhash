@@ -157,18 +157,19 @@ assert xxhash.xxh128_digest is xxhash.xxh3_128_digest
 class TestSubinterpreterIsolation(_SubinterpreterTestCase):
 
     def test_immutable_type(self):
-        """Hash types are immutable inside subinterpreters (3.12+)."""
+        """The single xxhash type is immutable inside subinterpreters (3.12+).
+        The constructors (xxh32, xxh64, xxh3_64, xxh3_128) are functions,
+        not types, so we get the type from a constructed instance."""
         self._run("""\
 import sys, xxhash
-types = [xxhash.xxh32, xxhash.xxh64, xxhash.xxh3_64, xxhash.xxh3_128]
-for t in types:
-    if sys.version_info >= (3, 12):
-        try:
-            t.newattr = 42
-            raise AssertionError('type should be immutable')
-        except TypeError:
-            pass
-        assert t.__flags__ & (1 << 8), 'immutable flag not set'
+t = type(xxhash.xxh32())
+if sys.version_info >= (3, 12):
+    try:
+        t.newattr = 42
+        raise AssertionError('type should be immutable')
+    except TypeError:
+        pass
+    assert t.__flags__ & (1 << 8), 'immutable flag not set'
 """)
 
     def test_module_dict_not_shared(self):
@@ -352,15 +353,14 @@ assert actual == expected, f"mismatch: {actual} != {expected}"
         interp = ci.create()
         interp.exec(self._preamble() + """\
 import sys, xxhash
-types = [xxhash.xxh32, xxhash.xxh64, xxhash.xxh3_64, xxhash.xxh3_128]
-for t in types:
-    if sys.version_info >= (3, 12):
-        assert t.__flags__ & (1 << 8), 'immutable flag not set'
-        try:
-            t.newattr = 42
-            raise AssertionError('type should be immutable')
-        except TypeError:
-            pass
+t = type(xxhash.xxh32())
+if sys.version_info >= (3, 12):
+    assert t.__flags__ & (1 << 8), 'immutable flag not set'
+    try:
+        t.newattr = 42
+        raise AssertionError('type should be immutable')
+    except TypeError:
+        pass
 """)
         interp.close()
 
