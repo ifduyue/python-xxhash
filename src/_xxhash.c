@@ -306,9 +306,9 @@ _xxhash_state_ptr(XXHASHObject *self)
 #define XXH_DISPATCH_CALL(self, field, ...)                                    \
     (XXH_DISPATCH[(self)->algo].field(_xxhash_state_ptr(self), ##__VA_ARGS__))
 
-/* Module state: holds the heap type. */
+/* Module state (currently unused but reserved for future use). */
 typedef struct {
-    PyTypeObject *xxhash_type;
+    int _placeholder;
 } XXHASH_ModuleState;
 
 /* ------------------------------------------------------------------ */
@@ -778,9 +778,9 @@ _xxhash_new(PyTypeObject *type, XXH_Algo algo,
     return (PyObject *)self;
 }
 
-/* Thin wrapper: construct from fastcall args (data, seed). */
-static PyObject *
-_xxhash_new_from_args(PyObject *module, XXH_Algo algo,
+/* Construct from fastcall args (data, seed). */
+static inline Py_ALWAYS_INLINE PyObject *
+_xxhash_new_from_args(PyTypeObject *type, XXH_Algo algo,
                       PyObject *const *args, Py_ssize_t nargs,
                       PyObject *kwnames)
 {
@@ -788,16 +788,10 @@ _xxhash_new_from_args(PyObject *module, XXH_Algo algo,
     Py_buffer buf = {NULL, NULL};
     unsigned long long raw_seed;
 
-    /* Build a descriptive funcname for error messages. */
-    const char *funcname = XXH_ALGO_TABLE[algo].name;
-
-    if (_parse_fastcall_args(args, nargs, kwnames, funcname, 0,
+    if (_parse_fastcall_args(args, nargs, kwnames, type->tp_name, 0,
                              &buf, &raw_seed) < 0)
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
-
-    XXHASH_ModuleState *state = (XXHASH_ModuleState *)PyModule_GetState(module);
-    PyTypeObject *type = state->xxhash_type;
 
     PyObject *obj = _xxhash_new(type, algo,
                                 buf.obj ? buf.buf : NULL,
@@ -882,36 +876,24 @@ XXHASH_init(XXHASHObject *self, PyObject *args, PyObject *kwargs)
 }
 
 /* ------------------------------------------------------------------ */
-/*  Public constructors (module-level functions, one per algo)         */
+/*  Vectorcall constructors  —  one per algo, hardcoded for fast path  */
 /* ------------------------------------------------------------------ */
 
-static PyObject *
-xxh32_construct(PyObject *module, PyObject *const *args,
-                Py_ssize_t nargs, PyObject *kwnames)
-{
-    return _xxhash_new_from_args(module, XXH_ALGO_XXH32, args, nargs, kwnames);
+#define DEFINE_XXHASH_VECTORCALL(name, ALGO)                                   \
+static PyObject *                                                               \
+xxhash_##name##_vectorcall(PyObject *type, PyObject *const *args,               \
+                            size_t nargsf, PyObject *kwnames)                   \
+{                                                                               \
+    return _xxhash_new_from_args((PyTypeObject *)type, XXH_ALGO_##ALGO,         \
+                                  args, PyVectorcall_NARGS(nargsf), kwnames);   \
 }
 
-static PyObject *
-xxh64_construct(PyObject *module, PyObject *const *args,
-                Py_ssize_t nargs, PyObject *kwnames)
-{
-    return _xxhash_new_from_args(module, XXH_ALGO_XXH64, args, nargs, kwnames);
-}
+DEFINE_XXHASH_VECTORCALL(xxh32, XXH32)
+DEFINE_XXHASH_VECTORCALL(xxh64, XXH64)
+DEFINE_XXHASH_VECTORCALL(xxh3_64, XXH3_64)
+DEFINE_XXHASH_VECTORCALL(xxh3_128, XXH3_128)
 
-static PyObject *
-xxh3_64_construct(PyObject *module, PyObject *const *args,
-                  Py_ssize_t nargs, PyObject *kwnames)
-{
-    return _xxhash_new_from_args(module, XXH_ALGO_XXH3_64, args, nargs, kwnames);
-}
-
-static PyObject *
-xxh3_128_construct(PyObject *module, PyObject *const *args,
-                   Py_ssize_t nargs, PyObject *kwnames)
-{
-    return _xxhash_new_from_args(module, XXH_ALGO_XXH3_128, args, nargs, kwnames);
-}
+#undef DEFINE_XXHASH_VECTORCALL
 
 /* ------------------------------------------------------------------ */
 /*  update                                                             */
@@ -1235,16 +1217,29 @@ static PyType_Slot XXHASHType_slots[] = {
     {0, NULL},
 };
 
-static PyType_Spec XXHASHType_spec = {
-    .name = "_xxhash.HASH",
-    .basicsize = sizeof(XXHASHObject),
-    .flags = Py_TPFLAGS_DEFAULT
+/* Shared flags: ImmutableType on 3.12+ for sub-interpreter safety. */
 #if PY_VERSION_HEX >= 0x030c0000
-           | Py_TPFLAGS_IMMUTABLETYPE
+#  define XXHASH_TYPE_FLAGS  (Py_TPFLAGS_DEFAULT | Py_TPFLAGS_IMMUTABLETYPE)
+#else
+#  define XXHASH_TYPE_FLAGS  Py_TPFLAGS_DEFAULT
 #endif
-    ,
-    .slots = XXHASHType_slots,
-};
+
+/* Per-algo type specs — same implementation, different name + vectorcall. */
+#define DEFINE_XXHASH_TYPE_SPEC(n)                                              \
+static PyType_Spec xxhash_##n##_spec = {                                        \
+    .name = "xxhash." #n,                                                       \
+    .basicsize = sizeof(XXHASHObject),                                          \
+    .flags = XXHASH_TYPE_FLAGS,                                                  \
+    .slots = XXHASHType_slots,                                                  \
+}
+
+DEFINE_XXHASH_TYPE_SPEC(xxh32);
+DEFINE_XXHASH_TYPE_SPEC(xxh64);
+DEFINE_XXHASH_TYPE_SPEC(xxh3_64);
+DEFINE_XXHASH_TYPE_SPEC(xxh3_128);
+
+#undef DEFINE_XXHASH_TYPE_SPEC
+
 
 /****************************************************************************
  * Module Init **************************************************************
@@ -1252,68 +1247,28 @@ static PyType_Spec XXHASHType_spec = {
 
 static int _exec(PyObject *module)
 {
-    /* Create the single heap type bound to this module (sub-interpreter safe). */
-    PyObject *xxhash_type = PyType_FromModuleAndSpec(module, &XXHASHType_spec, NULL);
-    if (!xxhash_type) return -1;
-
-    /* Store in module state for constructor functions. */
-    XXHASH_ModuleState *modstate = (XXHASH_ModuleState *)PyModule_GetState(module);
-    modstate->xxhash_type = (PyTypeObject *)xxhash_type;
-
-    /* Module-level function definitions for the four constructors.
-     * Each is added with METH_FASTCALL | METH_KEYWORDS so Python sees them as
-     * functions, not types — but they return type instances. */
-    static PyMethodDef xxh32_def = {
-        "xxh32", (PyCFunction)xxh32_construct,
-        METH_FASTCALL | METH_KEYWORDS,
-        "xxh32(data=..., seed=0) -> xxhash object\n\nCompute XXH32 hash."
-    };
-    static PyMethodDef xxh64_def = {
-        "xxh64", (PyCFunction)xxh64_construct,
-        METH_FASTCALL | METH_KEYWORDS,
-        "xxh64(data=..., seed=0) -> xxhash object\n\nCompute XXH64 hash."
-    };
-    static PyMethodDef xxh3_64_def = {
-        "xxh3_64", (PyCFunction)xxh3_64_construct,
-        METH_FASTCALL | METH_KEYWORDS,
-        "xxh3_64(data=..., seed=0) -> xxhash object\n\nCompute XXH3_64 hash."
-    };
-    static PyMethodDef xxh3_128_def = {
-        "xxh3_128", (PyCFunction)xxh3_128_construct,
-        METH_FASTCALL | METH_KEYWORDS,
-        "xxh3_128(data=..., seed=0) -> xxhash object\n\nCompute XXH3_128 hash."
-    };
-
-    /* Add type to module — shares the same name as the module for discoverability.
-     * We add both the type and constructor functions to the module. */
-    if (PyModule_AddType(module, (PyTypeObject *)xxhash_type) < 0) {
-        Py_DECREF(xxhash_type); return -1;
-    }
-
-    /* Add constructor functions. These are also accessible directly:
-     *   import xxhash
-     *   xxhash.xxh32(data)  # function, not type
-     */
-#define ADD_CONSTRUCTOR(name)                                                  \
+    /* Create one heap type per algorithm (sub-interpreter safe via
+     * PyType_FromModuleAndSpec). Each shares the same method tables
+     * but has its own name and tp_vectorcall hardcoding the algo. */
+#define CREATE_XXHASH_TYPE(name, ALGO)                                         \
     do {                                                                       \
-        PyObject *func = PyCFunction_NewEx(& name##_def, module, NULL);        \
-        if (!func) { Py_DECREF(xxhash_type); return -1; }                      \
-        if (PyModule_AddObject(module, #name, func) < 0) {                     \
-            Py_DECREF(func); Py_DECREF(xxhash_type); return -1;                \
+        PyObject *t = PyType_FromModuleAndSpec(module,                         \
+                                   &xxhash_##name##_spec, NULL);               \
+        if (!t) return -1;                                                     \
+        ((PyTypeObject *)t)->tp_vectorcall = xxhash_##name##_vectorcall;        \
+        if (PyModule_AddType(module, (PyTypeObject *)t) < 0) {                 \
+            Py_DECREF(t); return -1;                                           \
         }                                                                      \
+        /* PyModule_AddType increfs; drop our ref. */                          \
+        Py_DECREF(t);                                                          \
     } while (0)
 
-    ADD_CONSTRUCTOR(xxh32);
-    ADD_CONSTRUCTOR(xxh64);
-    ADD_CONSTRUCTOR(xxh3_64);
-    ADD_CONSTRUCTOR(xxh3_128);
+    CREATE_XXHASH_TYPE(xxh32,   XXH32);
+    CREATE_XXHASH_TYPE(xxh64,   XXH64);
+    CREATE_XXHASH_TYPE(xxh3_64,  XXH3_64);
+    CREATE_XXHASH_TYPE(xxh3_128, XXH3_128);
 
-#undef ADD_CONSTRUCTOR
-
-    /* There's still a DECREF for xxhash_type since PyModule_AddType increfs it.
-     * PyModule_AddObject for constructors also increfs the function objects
-     * (they own themselves through PyCFunction_NewEx), so no extra DECREF needed. */
-    Py_DECREF(xxhash_type);
+#undef CREATE_XXHASH_TYPE
 
     if (PyModule_AddStringConstant(module, "XXHASH_VERSION", VALUE_TO_STRING(XXHASH_VERSION)) < 0)
         return -1;
