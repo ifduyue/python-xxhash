@@ -1148,8 +1148,9 @@ XXHASH_get_seed(XXHASHObject *self, void *closure)
         case XXH_ALGO_XXH3_64:
         case XXH_ALGO_XXH3_128:
             return PyLong_FromUnsignedLongLong(self->seed);
+        default:
+            return NULL;
     }
-    return NULL;
 }
 
 static PyGetSetDef XXHASH_getseters[] = {
