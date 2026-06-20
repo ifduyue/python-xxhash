@@ -853,58 +853,63 @@ static int PY##type##_init(PY##type##Object *self, PyObject *args,            \
 
 XXHASH_INIT(XXH32, XXH32_reset, XXH32_update, XXH32_hash_t)
 
-PyDoc_STRVAR(
-    PYXXH32_update_doc,
-    "update (data)\n\n"
-    "Update the xxh32 object with bytes-like data. Repeated calls are\n"
-    "equivalent to a single call with the concatenation of all the arguments.");
-
-static PyObject *PYXXH32_update(PYXXH32Object *self, PyObject *const *args,
-                                 Py_ssize_t nargs, PyObject *kwnames)
-{
-    PyObject *arg = NULL;
-
-    /* validate keywords first */
-    if (kwnames) {
-        Py_ssize_t nkw = PyTuple_GET_SIZE(kwnames);
-        for (Py_ssize_t i = 0; i < nkw; i++) {
-            PyObject *key = PyTuple_GET_ITEM(kwnames, i);
-            if (PyUnicode_CompareWithASCIIString(key, "data") == 0) {
-                if (nargs >= 1) {
-                    PyErr_SetString(PyExc_TypeError,
-                        "xxh32.update() got multiple values for argument 'data'");
-                    return NULL;
-                }
-                arg = args[nargs + i];
-            } else {
-                PyErr_Format(PyExc_TypeError,
-                    "'%U' is an invalid keyword argument for 'xxh32.update()'",
-                    key);
-                return NULL;
-            }
-        }
-    }
-
-    if (nargs >= 1) {
-        if (nargs > 1) {
-            PyErr_Format(PyExc_TypeError,
-                "xxh32.update() takes at most 1 positional argument (%zd given)", nargs);
-            return NULL;
-        }
-        arg = args[0];
-    }
-
-    if (!arg) {
-        PyErr_SetString(PyExc_TypeError, "xxh32.update() missing required argument 'data'");
-        return NULL;
-    }
-
-    Py_buffer buf;
-    if (_get_buffer_or_str(arg, &buf) < 0)
-        return NULL;
-    PYXXH32_do_update(self, &buf);
-    Py_RETURN_NONE;
+#define XXHASH_UPDATE_METHOD(prefix, name)                                    \
+PyDoc_STRVAR(                                                                 \
+    PY##prefix##_update_doc,                                                   \
+    "update (data)\n\n"                                                        \
+    "Update the " name " object with bytes-like data. Repeated calls are\n"    \
+    "equivalent to a single call with the concatenation of all the arguments."); \
+                                                                               \
+static PyObject *PY##prefix##_update(PY##prefix##Object *self,                 \
+                                      PyObject *const *args,                   \
+                                      Py_ssize_t nargs, PyObject *kwnames)     \
+{                                                                              \
+    PyObject *arg = NULL;                                                      \
+                                                                               \
+    /* validate keywords first */                                              \
+    if (kwnames) {                                                             \
+        Py_ssize_t nkw = PyTuple_GET_SIZE(kwnames);                            \
+        for (Py_ssize_t i = 0; i < nkw; i++) {                                \
+            PyObject *key = PyTuple_GET_ITEM(kwnames, i);                      \
+            if (PyUnicode_CompareWithASCIIString(key, "data") == 0) {          \
+                if (nargs >= 1) {                                              \
+                    PyErr_SetString(PyExc_TypeError,                           \
+                        name ".update() got multiple values for argument 'data'"); \
+                    return NULL;                                               \
+                }                                                              \
+                arg = args[nargs + i];                                         \
+            } else {                                                           \
+                PyErr_Format(PyExc_TypeError,                                  \
+                    "'%U' is an invalid keyword argument for '" name ".update()'", \
+                    key);                                                      \
+                return NULL;                                                   \
+            }                                                                  \
+        }                                                                      \
+    }                                                                          \
+                                                                               \
+    if (nargs >= 1) {                                                          \
+        if (nargs > 1) {                                                       \
+            PyErr_Format(PyExc_TypeError,                                      \
+                name ".update() takes at most 1 positional argument (%zd given)", nargs); \
+            return NULL;                                                       \
+        }                                                                      \
+        arg = args[0];                                                         \
+    }                                                                          \
+                                                                               \
+    if (!arg) {                                                                \
+        PyErr_SetString(PyExc_TypeError,                                       \
+            name ".update() missing required argument 'data'");                 \
+        return NULL;                                                           \
+    }                                                                          \
+                                                                               \
+    Py_buffer buf;                                                             \
+    if (_get_buffer_or_str(arg, &buf) < 0)                                     \
+        return NULL;                                                           \
+    PY##prefix##_do_update(self, &buf);                                        \
+    Py_RETURN_NONE;                                                            \
 }
+
+XXHASH_UPDATE_METHOD(XXH32, "xxh32")
 
 PyDoc_STRVAR(
     PYXXH32_digest_doc,
@@ -1205,58 +1210,7 @@ static PyObject *PYXXH64_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
 
 XXHASH_INIT(XXH64, XXH64_reset, XXH64_update, XXH64_hash_t)
 
-PyDoc_STRVAR(
-    PYXXH64_update_doc,
-    "update (data)\n\n"
-    "Update the xxh64 object with bytes-like data. Repeated calls are\n"
-    "equivalent to a single call with the concatenation of all the arguments.");
-
-static PyObject *PYXXH64_update(PYXXH64Object *self, PyObject *const *args,
-                                 Py_ssize_t nargs, PyObject *kwnames)
-{
-    PyObject *arg = NULL;
-
-    /* validate keywords first */
-    if (kwnames) {
-        Py_ssize_t nkw = PyTuple_GET_SIZE(kwnames);
-        for (Py_ssize_t i = 0; i < nkw; i++) {
-            PyObject *key = PyTuple_GET_ITEM(kwnames, i);
-            if (PyUnicode_CompareWithASCIIString(key, "data") == 0) {
-                if (nargs >= 1) {
-                    PyErr_SetString(PyExc_TypeError,
-                        "xxh64.update() got multiple values for argument 'data'");
-                    return NULL;
-                }
-                arg = args[nargs + i];
-            } else {
-                PyErr_Format(PyExc_TypeError,
-                    "'%U' is an invalid keyword argument for 'xxh64.update()'",
-                    key);
-                return NULL;
-            }
-        }
-    }
-
-    if (nargs >= 1) {
-        if (nargs > 1) {
-            PyErr_Format(PyExc_TypeError,
-                "xxh64.update() takes at most 1 positional argument (%zd given)", nargs);
-            return NULL;
-        }
-        arg = args[0];
-    }
-
-    if (!arg) {
-        PyErr_SetString(PyExc_TypeError, "xxh64.update() missing required argument 'data'");
-        return NULL;
-    }
-
-    Py_buffer buf;
-    if (_get_buffer_or_str(arg, &buf) < 0)
-        return NULL;
-    PYXXH64_do_update(self, &buf);
-    Py_RETURN_NONE;
-}
+XXHASH_UPDATE_METHOD(XXH64, "xxh64")
 
 PyDoc_STRVAR(
     PYXXH64_digest_doc,
@@ -1557,58 +1511,7 @@ static PyObject *PYXXH3_64_new(PyTypeObject *type, PyObject *args, PyObject *kwa
 
 XXHASH_INIT(XXH3_64, XXH3_64bits_reset_withSeed, XXH3_64bits_update, XXH64_hash_t)
 
-PyDoc_STRVAR(
-    PYXXH3_64_update_doc,
-    "update (data)\n\n"
-    "Update the xxh3_64 object with bytes-like data. Repeated calls are\n"
-    "equivalent to a single call with the concatenation of all the arguments.");
-
-static PyObject *PYXXH3_64_update(PYXXH3_64Object *self, PyObject *const *args,
-                                 Py_ssize_t nargs, PyObject *kwnames)
-{
-    PyObject *arg = NULL;
-
-    /* validate keywords first */
-    if (kwnames) {
-        Py_ssize_t nkw = PyTuple_GET_SIZE(kwnames);
-        for (Py_ssize_t i = 0; i < nkw; i++) {
-            PyObject *key = PyTuple_GET_ITEM(kwnames, i);
-            if (PyUnicode_CompareWithASCIIString(key, "data") == 0) {
-                if (nargs >= 1) {
-                    PyErr_SetString(PyExc_TypeError,
-                        "xxh3_64.update() got multiple values for argument 'data'");
-                    return NULL;
-                }
-                arg = args[nargs + i];
-            } else {
-                PyErr_Format(PyExc_TypeError,
-                    "'%U' is an invalid keyword argument for 'xxh3_64.update()'",
-                    key);
-                return NULL;
-            }
-        }
-    }
-
-    if (nargs >= 1) {
-        if (nargs > 1) {
-            PyErr_Format(PyExc_TypeError,
-                "xxh3_64.update() takes at most 1 positional argument (%zd given)", nargs);
-            return NULL;
-        }
-        arg = args[0];
-    }
-
-    if (!arg) {
-        PyErr_SetString(PyExc_TypeError, "xxh3_64.update() missing required argument 'data'");
-        return NULL;
-    }
-
-    Py_buffer buf;
-    if (_get_buffer_or_str(arg, &buf) < 0)
-        return NULL;
-    PYXXH3_64_do_update(self, &buf);
-    Py_RETURN_NONE;
-}
+XXHASH_UPDATE_METHOD(XXH3_64, "xxh3_64")
 
 PyDoc_STRVAR(
     PYXXH3_64_digest_doc,
@@ -1916,58 +1819,7 @@ static PyObject *PYXXH3_128_new(PyTypeObject *type, PyObject *args, PyObject *kw
 
 XXHASH_INIT(XXH3_128, XXH3_128bits_reset_withSeed, XXH3_128bits_update, XXH64_hash_t)
 
-PyDoc_STRVAR(
-    PYXXH3_128_update_doc,
-    "update (data)\n\n"
-    "Update the xxh3_128 object with bytes-like data. Repeated calls are\n"
-    "equivalent to a single call with the concatenation of all the arguments.");
-
-static PyObject *PYXXH3_128_update(PYXXH3_128Object *self, PyObject *const *args,
-                                 Py_ssize_t nargs, PyObject *kwnames)
-{
-    PyObject *arg = NULL;
-
-    /* validate keywords first */
-    if (kwnames) {
-        Py_ssize_t nkw = PyTuple_GET_SIZE(kwnames);
-        for (Py_ssize_t i = 0; i < nkw; i++) {
-            PyObject *key = PyTuple_GET_ITEM(kwnames, i);
-            if (PyUnicode_CompareWithASCIIString(key, "data") == 0) {
-                if (nargs >= 1) {
-                    PyErr_SetString(PyExc_TypeError,
-                        "xxh3_128.update() got multiple values for argument 'data'");
-                    return NULL;
-                }
-                arg = args[nargs + i];
-            } else {
-                PyErr_Format(PyExc_TypeError,
-                    "'%U' is an invalid keyword argument for 'xxh3_128.update()'",
-                    key);
-                return NULL;
-            }
-        }
-    }
-
-    if (nargs >= 1) {
-        if (nargs > 1) {
-            PyErr_Format(PyExc_TypeError,
-                "xxh3_128.update() takes at most 1 positional argument (%zd given)", nargs);
-            return NULL;
-        }
-        arg = args[0];
-    }
-
-    if (!arg) {
-        PyErr_SetString(PyExc_TypeError, "xxh3_128.update() missing required argument 'data'");
-        return NULL;
-    }
-
-    Py_buffer buf;
-    if (_get_buffer_or_str(arg, &buf) < 0)
-        return NULL;
-    PYXXH3_128_do_update(self, &buf);
-    Py_RETURN_NONE;
-}
+XXHASH_UPDATE_METHOD(XXH3_128, "xxh3_128")
 
 PyDoc_STRVAR(
     PYXXH3_128_digest_doc,
