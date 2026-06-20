@@ -2254,7 +2254,7 @@ static PyModuleDef_Slot slots[] = {
     {Py_mod_multiple_interpreters, Py_MOD_PER_INTERPRETER_GIL_SUPPORTED},
 #endif
 #if PY_VERSION_HEX >= 0x030d0000
-    /* Both variants manage their own synchronisation guarantees:
+    /* Both variants manage their own synchronization guarantees:
      * the thread-safe variant uses a per-object lock; the default
      * variant requires callers not to share streaming hash objects
      * across threads. */
