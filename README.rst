@@ -273,8 +273,9 @@ lock that protects all access to the internal xxHash state:
     >>> h = threadsafe.xxh64()
     >>> # h can now be safely updated from multiple threads
 
-On free-threading (no-GIL) Python builds the default ``xxhash`` module is
-also locked, because there is no GIL to protect the internal state.
+The same two-module split is provided on free-threading (no-GIL) Python
+builds: the default module is unlocked, and ``xxhash.threadsafe`` provides a
+locked variant.
 
 
 Caveats

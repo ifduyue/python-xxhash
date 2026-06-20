@@ -1,5 +1,4 @@
 import os
-import sysconfig
 from pathlib import Path
 
 from setuptools import Extension, setup
@@ -14,12 +13,11 @@ else:
     source = ["src/_xxhash.c", "deps/xxhash/xxhash.c"]
     include_dirs = ["deps/xxhash"]
 
-# In free-threading builds the default module must be thread-safe, because
-# there is no GIL protecting the internal xxHash state.  On regular GIL
-# builds the default module is unlocked for maximum performance; users who
-# need to share a streaming hash object across threads can use
-# xxhash.threadsafe.
-_is_free_threading = bool(sysconfig.get_config_var("Py_GIL_DISABLED"))
+# The default ``xxhash._xxhash`` extension is built without per-object locks
+# for maximum performance.  Users who need to share a streaming hash object
+# across threads can use ``xxhash._xxhash_threadsafe`` (exposed as the public
+# ``xxhash.threadsafe`` submodule), which is compiled from the same source
+# with locking enabled.
 
 _ext_kwargs = {
     "sources": source,
@@ -30,7 +28,6 @@ _ext_kwargs = {
 ext_modules = [
     Extension(
         "_xxhash",
-        define_macros=[("XXHASH_WITH_LOCK", "1")] if _is_free_threading else [],
         **_ext_kwargs,
     ),
     Extension(

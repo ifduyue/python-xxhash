@@ -12,8 +12,9 @@ NEXT
 - Add ``xxhash.threadsafe`` submodule for users who need to share a
   streaming hash object across threads; it provides the same API with a
   per-object lock
-- On free-threading (no-GIL) Python builds the default module remains
-  locked, because there is no GIL to protect the internal xxHash state
+- Both the default module and ``xxhash.threadsafe`` are provided on
+  free-threading (no-GIL) Python builds, matching the API on regular GIL
+  builds
 
 v3.7.0 2025-04-25
 ~~~~~~~~~~~~~~~~~
