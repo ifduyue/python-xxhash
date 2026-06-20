@@ -116,7 +116,7 @@
 #endif
 #define XXHASH_PASTE2(a, b) a ## b
 #define XXHASH_PASTE(a, b) XXHASH_PASTE2(a, b)
-#define XXHASH_PYINIT(name) XXHASH_PASTE(PyInit__, name)
+#define XXHASH_PYINIT(name) XXHASH_PASTE(PyInit_, name)
 
 #define XXH32_DIGESTSIZE 4
 #define XXH32_BLOCKSIZE 16
@@ -2256,13 +2256,11 @@ static PyModuleDef_Slot slots[] = {
     {Py_mod_multiple_interpreters, Py_MOD_PER_INTERPRETER_GIL_SUPPORTED},
 #endif
 #if PY_VERSION_HEX >= 0x030d0000
-#ifdef XXHASH_WITH_LOCK
-    /* Thread-safe variant declares it manages its own synchronisation. */
+    /* Both variants manage their own synchronisation guarantees:
+     * the thread-safe variant uses a per-object lock; the default
+     * variant requires callers not to share streaming hash objects
+     * across threads. */
     {Py_mod_gil, Py_MOD_GIL_NOT_USED},
-#else
-    /* Default variant relies on the GIL (or caller synchronisation on free-threading builds). */
-    {Py_mod_gil, Py_MOD_GIL_USED},
-#endif
 #endif
     {0, NULL}
 };
