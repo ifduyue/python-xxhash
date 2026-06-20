@@ -125,13 +125,10 @@
 #define XXH128_DIGESTSIZE 16
 #define XXH128_BLOCKSIZE 64
 
-#ifndef Py_ALWAYS_INLINE
-#  define Py_ALWAYS_INLINE
-#endif
 
 /* Hex lookup table for hexdigest(). */
 /* Get a buffer from an object. Rejects str with hashlib-compatible error. */
-static inline Py_ALWAYS_INLINE int
+static inline int
 _get_buffer_or_str(PyObject *obj, Py_buffer *buf)
 {
     if (obj == Py_None) {
@@ -651,7 +648,7 @@ static void PYXXH32_dealloc(PYXXH32Object *self)
  * When XXHASH_WITH_LOCK is not defined: no locking, but still release GIL
  * for large data to avoid blocking other threads. */
 #define XXHASH_DO_UPDATE(type, update_fn)                                     \
-static inline Py_ALWAYS_INLINE void                                           \
+static inline void                                                            \
 PY##type##_do_update(PY##type##Object *self, Py_buffer *buf)                  \
 {                                                                             \
     XXHASH_LOCK_MAYBE_INIT(self, buf->len);                                   \
