@@ -763,9 +763,7 @@ _parse_init_args(PyObject *args, PyObject *kwargs,
 {
     Py_ssize_t nargs = PyTuple_GET_SIZE(args);
 
-    if (!kwargs) {
-        /* fast path: no keywords */
-    } else {
+    if (kwargs) {
         Py_ssize_t pos = 0;
         PyObject *key, *val;
         while (PyDict_Next(kwargs, &pos, &key, &val)) {
