@@ -3,6 +3,7 @@ import sysconfig
 from pathlib import Path
 
 from setuptools import Extension, setup
+from setuptools.command.build_ext import build_ext as _build_ext
 
 if os.getenv("XXHASH_LINK_SO"):
     libraries = ["xxhash"]
@@ -34,10 +35,28 @@ ext_modules = [
     ),
     Extension(
         "_xxhash_threadsafe",
-        define_macros=[("XXHASH_WITH_LOCK", "1")],
+        define_macros=[("XXHASH_WITH_LOCK", "1"), ("XXHASH_MODULE_NAME", "_xxhash_threadsafe")],
         **_ext_kwargs,
     ),
 ]
+
+
+class build_ext(_build_ext):
+    """Build each extension in its own temp directory.
+
+    Both extensions are built from the same ``src/_xxhash.c`` source file.
+    Without separate temp directories their object files would overwrite
+    each other, causing one variant to be linked with the wrong macros.
+    """
+
+    def build_extension(self, ext):
+        old_build_temp = self.build_temp
+        self.build_temp = os.path.join(old_build_temp, ext.name)
+        try:
+            super().build_extension(ext)
+        finally:
+            self.build_temp = old_build_temp
+
 
 d = Path(__file__).parent
 long_description = d.joinpath("README.rst").read_text() + "\n" + d.joinpath("CHANGELOG.rst").read_text()
@@ -76,5 +95,6 @@ setup(
     ],
     python_requires=">=3.9",
     ext_modules=ext_modules,
+    cmdclass={"build_ext": build_ext},
     package_data={"xxhash": ["py.typed", "**.pyi"]},
 )
