@@ -8,8 +8,6 @@ _DataType = _Buffer
 
 VERSION: str
 XXHASH_VERSION: str
-#: Deprecated, will be removed in the next major release
-VERSION_TUPLE: tuple[int, ...]
 
 algorithms_available: set[str]
 algorithms_guaranteed: set[str]
@@ -36,7 +34,6 @@ __all__: list[str] = [
     "xxh128_intdigest",
     "xxh128_hexdigest",
     "VERSION",
-    "VERSION_TUPLE",
     "XXHASH_VERSION",
     "algorithms_available",
     "algorithms_guaranteed",

@@ -5,6 +5,7 @@ NEXT
 ~~~~~~~~~~~~~~~~~
 
 - Drop support for Python 3.8
+- Remove deprecated ``xxhash.VERSION_TUPLE``
 
 v3.7.0 2025-04-25
 ~~~~~~~~~~~~~~~~~
