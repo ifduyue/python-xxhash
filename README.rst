@@ -251,6 +251,32 @@ And aliases:
     | xxh128_intdigest = xxh3_128_intdigest
     | xxh128_hexdigest = xxh3_128_hexdigest
 
+Thread safety
+-------------
+
+The default ``xxhash`` module is optimized for speed. Streaming hash objects
+(``xxh32``, ``xxh64``, ``xxh3_64``, ``xxh3_128`` / ``xxh128``) are **not**
+thread-safe: do not call ``update()``, ``digest()``, ``copy()``, ``reset()``,
+or any other mutating method on the same object from multiple threads without
+external synchronization.
+
+One-shot functions (``xxh32_digest``, ``xxh64_hexdigest``, ``xxh3_128_digest``,
+etc.) are stateless and always safe to call concurrently.
+
+If you need to share a streaming hash object across threads, use the
+``xxhash.threadsafe`` submodule. It provides the same API with a per-object
+lock that protects all access to the internal xxHash state:
+
+.. code-block:: python
+
+    >>> from xxhash import threadsafe
+    >>> h = threadsafe.xxh64()
+    >>> # h can now be safely updated from multiple threads
+
+On free-threading (no-GIL) Python builds the default ``xxhash`` module is
+also locked, because there is no GIL to protect the internal state.
+
+
 Caveats
 -------
 
