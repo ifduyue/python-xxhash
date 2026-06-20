@@ -644,9 +644,12 @@ static void PYXXH32_dealloc(PYXXH32Object *self)
 }
 
 /* Macro to generate _do_update for each hash type.
- * Matches CPython 3.9-3.12 md5 pattern: release GIL first (for large data),
- * then acquire lock, hash, release lock, re-acquire GIL.
- * For small data, acquire lock with GIL held (try-then-block if contested). */
+ * When XXHASH_WITH_LOCK is defined: matches CPython 3.9-3.12 md5 pattern,
+ * release GIL first (for large data), then acquire lock, hash, release lock,
+ * re-acquire GIL.  For small data, acquire lock with GIL held
+ * (try-then-block if contested).
+ * When XXHASH_WITH_LOCK is not defined: no locking, but still release GIL
+ * for large data to avoid blocking other threads. */
 #define XXHASH_DO_UPDATE(type, update_fn)                                     \
 static inline Py_ALWAYS_INLINE void                                           \
 PY##type##_do_update(PY##type##Object *self, Py_buffer *buf)                  \
