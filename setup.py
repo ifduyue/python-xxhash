@@ -44,6 +44,9 @@ class build_ext(_build_ext):
     Both extensions are built from the same ``src/_xxhash.c`` source file.
     Without separate temp directories their object files would overwrite
     each other, causing one variant to be linked with the wrong macros.
+
+    ``try/finally`` restores ``self.build_temp`` so that incremental builds
+    (where ``build_ext`` may be reused) still work correctly.
     """
 
     def build_extension(self, ext):
