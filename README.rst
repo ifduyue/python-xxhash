@@ -263,15 +263,18 @@ external synchronization.
 One-shot functions (``xxh32_digest``, ``xxh64_hexdigest``, ``xxh3_128_digest``,
 etc.) are stateless and always safe to call concurrently.
 
-If you need to share a streaming hash object across threads, use the
+Concurrent ``update()`` / ``reset()`` on a shared streaming hash object is
+discouraged even with locking — prefer one-shot functions or per-thread hash
+objects. If you must share a streaming hash across threads, use the
 ``xxhash.threadsafe`` submodule. It provides the same API with a per-object
-lock that protects all access to the internal xxHash state:
+lock that serializes all access to the internal xxHash state:
 
 .. code-block:: python
 
     >>> from xxhash import threadsafe
     >>> h = threadsafe.xxh64()
-    >>> # h can now be safely updated from multiple threads
+    >>> # h can be updated from multiple threads, but concurrent update/reset
+    >>> # still adds overhead and is not recommended
 
 The same two-module split is provided on free-threading (no-GIL) Python
 builds: the default module is unlocked, and ``xxhash.threadsafe`` provides a
