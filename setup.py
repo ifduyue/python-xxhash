@@ -32,7 +32,11 @@ ext_modules = [
     ),
     Extension(
         "_xxhash_threadsafe",
-        define_macros=[("XXHASH_WITH_LOCK", "1"), ("XXHASH_MODULE_NAME", "_xxhash_threadsafe"), ("XXHASH_TP_NAME_PREFIX", "xxhash.threadsafe")],
+        define_macros=[
+            ("XXHASH_WITH_LOCK", "1"),
+            ("XXHASH_MODULE_NAME", "_xxhash_threadsafe"),
+            ("XXHASH_TP_NAME_PREFIX", "xxhash.threadsafe"),
+        ],
         **_ext_kwargs,
     ),
 ]
