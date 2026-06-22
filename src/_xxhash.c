@@ -105,6 +105,8 @@
 #define XXHASH_PASTE2(a, b) a ## b
 #define XXHASH_PASTE(a, b) XXHASH_PASTE2(a, b)
 #define XXHASH_PYINIT(name) XXHASH_PASTE(PyInit_, name)
+/* Type name for repr(), e.g. "_xxhash.xxh32" or "_xxhash_threadsafe.xxh32". */
+#define XXHASH_TP_NAME(base)  VALUE_TO_STRING(XXHASH_MODULE_NAME) "." base
 
 #define XXH32_DIGESTSIZE 4
 #define XXH32_BLOCKSIZE 16
@@ -662,7 +664,7 @@ PYXXH32_vectorcall(PyObject *type, PyObject *const *args,
     Py_buffer buf;
     unsigned long long raw_seed;
 
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxhash.xxh32", 0,
+    if (_parse_fastcall_args(args, nargs, kwnames, XXHASH_TP_NAME("xxh32"), 0,
                              &buf, &raw_seed) < 0)
         return NULL;
     seed = (XXH32_hash_t)raw_seed;
@@ -1078,7 +1080,7 @@ static PyType_Slot XXH32Type_slots[] = {
 };
 
 static PyType_Spec XXH32Type_spec = {
-    .name = "xxhash.xxh32",
+    .name = XXHASH_TP_NAME("xxh32"),
     .basicsize = sizeof(PYXXH32Object),
     .flags = Py_TPFLAGS_DEFAULT
 #if PY_VERSION_HEX >= 0x030c0000
@@ -1119,7 +1121,7 @@ PYXXH64_vectorcall(PyObject *type, PyObject *const *args,
     Py_buffer buf;
     unsigned long long raw_seed;
 
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxhash.xxh64", 0,
+    if (_parse_fastcall_args(args, nargs, kwnames, XXHASH_TP_NAME("xxh64"), 0,
                              &buf, &raw_seed) < 0)
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
@@ -1379,7 +1381,7 @@ static PyType_Slot XXH64Type_slots[] = {
 };
 
 static PyType_Spec XXH64Type_spec = {
-    .name = "xxhash.xxh64",
+    .name = XXHASH_TP_NAME("xxh64"),
     .basicsize = sizeof(PYXXH64Object),
     .flags = Py_TPFLAGS_DEFAULT
 #if PY_VERSION_HEX >= 0x030c0000
@@ -1420,7 +1422,7 @@ PYXXH3_64_vectorcall(PyObject *type, PyObject *const *args,
     Py_buffer buf;
     unsigned long long raw_seed;
 
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxhash.xxh3_64", 0,
+    if (_parse_fastcall_args(args, nargs, kwnames, XXHASH_TP_NAME("xxh3_64"), 0,
                              &buf, &raw_seed) < 0)
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
@@ -1687,7 +1689,7 @@ static PyType_Slot XXH3_64Type_slots[] = {
 };
 
 static PyType_Spec XXH3_64Type_spec = {
-    .name = "xxhash.xxh3_64",
+    .name = XXHASH_TP_NAME("xxh3_64"),
     .basicsize = sizeof(PYXXH3_64Object),
     .flags = Py_TPFLAGS_DEFAULT
 #if PY_VERSION_HEX >= 0x030c0000
@@ -1728,7 +1730,7 @@ PYXXH3_128_vectorcall(PyObject *type, PyObject *const *args,
     Py_buffer buf;
     unsigned long long raw_seed;
 
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxhash.xxh3_128", 0,
+    if (_parse_fastcall_args(args, nargs, kwnames, XXHASH_TP_NAME("xxh3_128"), 0,
                              &buf, &raw_seed) < 0)
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
@@ -2014,7 +2016,7 @@ static PyType_Slot XXH3_128Type_slots[] = {
 };
 
 static PyType_Spec XXH3_128Type_spec = {
-    .name = "xxhash.xxh3_128",
+    .name = XXHASH_TP_NAME("xxh3_128"),
     .basicsize = sizeof(PYXXH3_128Object),
     .flags = Py_TPFLAGS_DEFAULT
 #if PY_VERSION_HEX >= 0x030c0000
