@@ -104,11 +104,18 @@
 #ifndef XXHASH_MODULE_NAME
 #  define XXHASH_MODULE_NAME _xxhash
 #endif
+/* Display prefix for tp_name (repr), separate from the C extension module name.
+ * Default: "xxhash". Threadsafe build: "xxhash.threadsafe". */
+#ifndef XXHASH_TP_NAME_PREFIX
+#  define XXHASH_TP_NAME_PREFIX xxhash
+#endif
 #define XXHASH_PASTE2(a, b) a ## b
 #define XXHASH_PASTE(a, b) XXHASH_PASTE2(a, b)
 #define XXHASH_PYINIT(name) XXHASH_PASTE(PyInit_, name)
-/* Type name for repr(), e.g. "_xxhash.xxh32" or "_xxhash_threadsafe.xxh32". */
-#define XXHASH_TP_NAME(base)  VALUE_TO_STRING(XXHASH_MODULE_NAME) "." base
+/* Type name for repr(), e.g. "xxhash.xxh32" or "xxhash.threadsafe.xxh32".
+ * Uses XXHASH_TP_NAME_PREFIX (public module name) instead of
+ * XXHASH_MODULE_NAME (internal C extension name). */
+#define XXHASH_TP_NAME(base)  VALUE_TO_STRING(XXHASH_TP_NAME_PREFIX) "." base
 
 #define XXH32_DIGESTSIZE 4
 #define XXH32_BLOCKSIZE 16
