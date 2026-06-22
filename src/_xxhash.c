@@ -38,14 +38,16 @@
 #ifdef XXHASH_WITH_LOCK
 #  if PY_VERSION_HEX >= 0x030d0000 /* Python 3.13+: always-on PyMutex (3.15+ style) */
 #    define XXHASH_LOCK_FIELD      PyMutex mutex;
-#    define XXHASH_LOCK_INIT(o)    ((void)((o)->mutex = (PyMutex){0}))
+#    define XXHASH_LOCK_INIT(o)    ( ((o)->mutex = (PyMutex){0}), 0 )
 #    define XXHASH_LOCK_FINI(o)    ((void)0)
 #    define XXHASH_LOCK_ACQUIRE(o)          PyMutex_Lock(&(o)->mutex)
 #    define XXHASH_LOCK_ACQUIRE_BLOCKING(o) XXHASH_LOCK_ACQUIRE(o)
 #    define XXHASH_LOCK_RELEASE(o)       PyMutex_Unlock(&(o)->mutex)
 #  else  /* Python 3.9-3.12: PyThread_type_lock (always-on) */
 #    define XXHASH_LOCK_FIELD      PyThread_type_lock lock;
-#    define XXHASH_LOCK_INIT(o)    ((o)->lock = PyThread_allocate_lock())
+/* Returns 0 on success, -1 on allocation failure (exception set). */
+#    define XXHASH_LOCK_INIT(o)                                               \
+       (((o)->lock = PyThread_allocate_lock()) ? 0 : (PyErr_NoMemory(), -1))
 #    define XXHASH_LOCK_FINI(o)    do { if ((o)->lock)                 \
                                         PyThread_free_lock((o)->lock); \
                                     } while (0)
@@ -83,7 +85,7 @@
 #  endif
 #  else  /* !XXHASH_WITH_LOCK */
 #  define XXHASH_LOCK_FIELD
-#  define XXHASH_LOCK_INIT(o)                 ((void)0)
+#  define XXHASH_LOCK_INIT(o)                 (0)
 #  define XXHASH_LOCK_FINI(o)                 ((void)0)
 #  define XXHASH_LOCK_ACQUIRE(o)              ((void)0)
 #  define XXHASH_LOCK_ACQUIRE_BLOCKING(o)     ((void)0)
@@ -676,7 +678,11 @@ PYXXH32_vectorcall(PyObject *type, PyObject *const *args,
         return NULL;
     }
 
-    XXHASH_LOCK_INIT(self);
+    if (XXHASH_LOCK_INIT(self) < 0) {
+        Py_DECREF(self);
+        PyBuffer_Release(&buf);
+        return NULL;
+    }
 
     self->xxhash_state = XXH32_createState();
     if (self->xxhash_state == NULL) {
@@ -711,7 +717,10 @@ static PyObject *PYXXH32_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
         return NULL;
     }
 
-    XXHASH_LOCK_INIT(self);
+    if (XXHASH_LOCK_INIT(self) < 0) {
+        Py_DECREF(self);
+        return NULL;
+    }
 
     if ((self->xxhash_state = XXH32_createState()) == NULL) {
         Py_DECREF(self);
@@ -960,7 +969,10 @@ static PyObject *PYXXH32_copy(PYXXH32Object *self)
         return NULL;
     }
 
-    XXHASH_LOCK_INIT(p);
+    if (XXHASH_LOCK_INIT(p) < 0) {
+        Py_DECREF(p);
+        return NULL;
+    }
 
     if ((p->xxhash_state = XXH32_createState()) == NULL) {
         Py_DECREF(p);
@@ -1133,7 +1145,11 @@ PYXXH64_vectorcall(PyObject *type, PyObject *const *args,
         return NULL;
     }
 
-    XXHASH_LOCK_INIT(self);
+    if (XXHASH_LOCK_INIT(self) < 0) {
+        Py_DECREF(self);
+        PyBuffer_Release(&buf);
+        return NULL;
+    }
 
     self->xxhash_state = XXH64_createState();
     if (self->xxhash_state == NULL) {
@@ -1165,7 +1181,10 @@ static PyObject *PYXXH64_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
         return NULL;
     }
 
-    XXHASH_LOCK_INIT(self);
+    if (XXHASH_LOCK_INIT(self) < 0) {
+        Py_DECREF(self);
+        return NULL;
+    }
 
     if ((self->xxhash_state = XXH64_createState()) == NULL) {
         Py_DECREF(self);
@@ -1261,7 +1280,10 @@ static PyObject *PYXXH64_copy(PYXXH64Object *self)
         return NULL;
     }
 
-    XXHASH_LOCK_INIT(p);
+    if (XXHASH_LOCK_INIT(p) < 0) {
+        Py_DECREF(p);
+        return NULL;
+    }
 
     if ((p->xxhash_state = XXH64_createState()) == NULL) {
         Py_DECREF(p);
@@ -1434,7 +1456,11 @@ PYXXH3_64_vectorcall(PyObject *type, PyObject *const *args,
         return NULL;
     }
 
-    XXHASH_LOCK_INIT(self);
+    if (XXHASH_LOCK_INIT(self) < 0) {
+        Py_DECREF(self);
+        PyBuffer_Release(&buf);
+        return NULL;
+    }
 
     self->xxhash_state = XXH3_createState();
     if (self->xxhash_state == NULL) {
@@ -1466,7 +1492,10 @@ static PyObject *PYXXH3_64_new(PyTypeObject *type, PyObject *args, PyObject *kwa
         return NULL;
     }
 
-    XXHASH_LOCK_INIT(self);
+    if (XXHASH_LOCK_INIT(self) < 0) {
+        Py_DECREF(self);
+        return NULL;
+    }
 
     if ((self->xxhash_state = XXH3_createState()) == NULL) {
         Py_DECREF(self);
@@ -1562,7 +1591,10 @@ static PyObject *PYXXH3_64_copy(PYXXH3_64Object *self)
         return NULL;
     }
 
-    XXHASH_LOCK_INIT(p);
+    if (XXHASH_LOCK_INIT(p) < 0) {
+        Py_DECREF(p);
+        return NULL;
+    }
 
     if ((p->xxhash_state = XXH3_createState()) == NULL) {
         Py_DECREF(p);
@@ -1742,7 +1774,11 @@ PYXXH3_128_vectorcall(PyObject *type, PyObject *const *args,
         return NULL;
     }
 
-    XXHASH_LOCK_INIT(self);
+    if (XXHASH_LOCK_INIT(self) < 0) {
+        Py_DECREF(self);
+        PyBuffer_Release(&buf);
+        return NULL;
+    }
 
     self->xxhash_state = XXH3_createState();
     if (self->xxhash_state == NULL) {
@@ -1774,7 +1810,10 @@ static PyObject *PYXXH3_128_new(PyTypeObject *type, PyObject *args, PyObject *kw
         return NULL;
     }
 
-    XXHASH_LOCK_INIT(self);
+    if (XXHASH_LOCK_INIT(self) < 0) {
+        Py_DECREF(self);
+        return NULL;
+    }
 
     if ((self->xxhash_state = XXH3_createState()) == NULL) {
         Py_DECREF(self);
@@ -1889,7 +1928,10 @@ static PyObject *PYXXH3_128_copy(PYXXH3_128Object *self)
         return NULL;
     }
 
-    XXHASH_LOCK_INIT(p);
+    if (XXHASH_LOCK_INIT(p) < 0) {
+        Py_DECREF(p);
+        return NULL;
+    }
 
     if ((p->xxhash_state = XXH3_createState()) == NULL) {
         Py_DECREF(p);
