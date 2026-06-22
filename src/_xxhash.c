@@ -45,23 +45,18 @@
 #    define XXHASH_LOCK_ACQUIRE(o)          PyMutex_Lock(&(o)->mutex)
 #    define XXHASH_LOCK_ACQUIRE_BLOCKING(o) XXHASH_LOCK_ACQUIRE(o)
 #    define XXHASH_LOCK_RELEASE(o)       PyMutex_Unlock(&(o)->mutex)
-#  else  /* Python 3.9-3.12: PyThread_type_lock */
+#  else  /* Python 3.9-3.12: PyThread_type_lock (always-on, no lazy init) */
 #    define XXHASH_LOCK_FIELD      PyThread_type_lock lock;
-#    define XXHASH_LOCK_INIT(o)    ((o)->lock = NULL)
+#    define XXHASH_LOCK_INIT(o)    ((o)->lock = PyThread_allocate_lock())
+/* Always-on: lock is allocated in __init__, matching hashlib's approach.
+ * NULL is only possible if memory allocation fails; guards are defensive. */
 #    define XXHASH_LOCK_IS_ACTIVE(o)  ((o)->lock != NULL)
-/* Lazy allocation on first large update */
-#    define XXHASH_LOCK_MAYBE_INIT(o, len)                                  \
-       do {                                                                 \
-           if ((o)->lock == NULL && (len) >= XXHASH_GIL_MINSIZE) {          \
-               (o)->lock = PyThread_allocate_lock();                        \
-               /* fail? lock stays NULL, fall back to non-threaded code. */ \
-           }                                                                \
-       } while (0)
+/* Lazy init removed: lock is always allocated. Safety check retained. */
+#    define XXHASH_LOCK_MAYBE_INIT(o, len)  ((void)0)
 #    define XXHASH_LOCK_FINI(o)    do { if ((o)->lock)                 \
                                         PyThread_free_lock((o)->lock); \
                                     } while (0)
-/* Acquire lock when GIL is already released — simple blocking acquire.
- * Only acquires if lock has been allocated (lazy init). */
+/* Acquire lock when GIL is already released — simple blocking acquire. */
 #    define XXHASH_LOCK_ACQUIRE_BLOCKING(o)                 \
        do {                                                 \
            if ((o)->lock) {                                 \
@@ -70,13 +65,12 @@
        } while (0)
 
 /* Acquire lock with the GIL held — non-blocking try first, then release
- * GIL and block if contested (matches hashlib's ENTER_HASHLIB in 3.9-3.12).
- * Only acquires if lock has been allocated (lazy init). */
+ * GIL and block if contested (matches hashlib's ENTER_HASHLIB in 3.9-3.12). */
 #    define XXHASH_LOCK_ACQUIRE(o)                                   \
        do {                                                          \
            if ((o)->lock) {                                          \
                if (!PyThread_acquire_lock((o)->lock, NOWAIT_LOCK)) { \
-                   /* Lock contested – release GIL while waiting. */ \
+                   /* Lock contested — release GIL while waiting. */ \
                    Py_BEGIN_ALLOW_THREADS                            \
                    PyThread_acquire_lock((o)->lock, WAIT_LOCK);      \
                    Py_END_ALLOW_THREADS                              \
@@ -641,40 +635,24 @@ static void PYXXH32_dealloc(PYXXH32Object *self)
 }
 
 /* Macro to generate _do_update for each hash type.
- * When XXHASH_WITH_LOCK is defined: matches CPython 3.9-3.12 md5 pattern,
- * release GIL first (for large data), then acquire lock, hash, release lock,
- * re-acquire GIL.  For small data, acquire lock with GIL held
- * (try-then-block if contested).
- * When XXHASH_WITH_LOCK is not defined: no locking, but still release GIL
- * for large data to avoid blocking other threads. */
+ * Lock is always acquired (no-op in non-lock build). For large data,
+ * release GIL while blocking on lock to avoid stalling other threads. */
 #define XXHASH_DO_UPDATE(type, update_fn)                                     \
 static inline void                                                            \
 PY##type##_do_update(PY##type##Object *self, Py_buffer *buf)                  \
 {                                                                             \
-    XXHASH_LOCK_MAYBE_INIT(self, buf->len);                                   \
-    if (XXHASH_LOCK_IS_ACTIVE(self)) {                                        \
-        if (buf->len > XXHASH_GIL_MINSIZE) {                                  \
-            /* Release GIL first, then acquire lock. */                       \
-            Py_BEGIN_ALLOW_THREADS                                            \
-            XXHASH_LOCK_ACQUIRE_BLOCKING(self);                               \
-            update_fn(self->xxhash_state, buf->buf, buf->len);                \
-            XXHASH_LOCK_RELEASE(self);                                        \
-            Py_END_ALLOW_THREADS                                              \
-        } else {                                                              \
-            /* Acquire lock with GIL held. */                                 \
-            XXHASH_LOCK_ACQUIRE(self);                                        \
-            update_fn(self->xxhash_state, buf->buf, buf->len);                \
-            XXHASH_LOCK_RELEASE(self);                                        \
-        }                                                                     \
+    if (buf->len > XXHASH_GIL_MINSIZE) {                                      \
+        /* Release GIL first, then acquire lock. */                           \
+        Py_BEGIN_ALLOW_THREADS                                                \
+        XXHASH_LOCK_ACQUIRE_BLOCKING(self);                                   \
+        update_fn(self->xxhash_state, buf->buf, buf->len);                    \
+        XXHASH_LOCK_RELEASE(self);                                            \
+        Py_END_ALLOW_THREADS                                                  \
     } else {                                                                  \
-        /* No lock */                                                         \
-        if (buf->len > XXHASH_GIL_MINSIZE) {                                  \
-            Py_BEGIN_ALLOW_THREADS                                            \
-            update_fn(self->xxhash_state, buf->buf, buf->len);                \
-            Py_END_ALLOW_THREADS                                              \
-        } else {                                                              \
-            update_fn(self->xxhash_state, buf->buf, buf->len);                \
-        }                                                                     \
+        /* Acquire lock with GIL held (try-then-block if contested). */       \
+        XXHASH_LOCK_ACQUIRE(self);                                            \
+        update_fn(self->xxhash_state, buf->buf, buf->len);                    \
+        XXHASH_LOCK_RELEASE(self);                                            \
     }                                                                         \
     PyBuffer_Release(buf);                                                    \
 }
