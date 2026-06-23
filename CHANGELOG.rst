@@ -5,6 +5,16 @@ NEXT
 ~~~~~~~~~~~~~~~~~
 
 - Drop support for Python 3.8
+- Remove deprecated ``xxhash.VERSION_TUPLE``
+- Default streaming hash objects (``xxh32``, ``xxh64``, ``xxh3_64``,
+  ``xxh3_128``) are no longer thread-safe by default; this removes
+  per-object locking overhead and restores performance as the primary goal
+- Add ``xxhash.threadsafe`` submodule for users who need to share a
+  streaming hash object across threads; it provides the same API with a
+  per-object lock
+- Both the default module and ``xxhash.threadsafe`` are provided on
+  free-threading (no-GIL) Python builds, matching the API on regular GIL
+  builds
 
 v3.7.0 2025-04-25
 ~~~~~~~~~~~~~~~~~

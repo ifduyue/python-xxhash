@@ -35,83 +35,224 @@
 /* ------------------------------------------------------------------ */
 /*  Lock type & helpers                                               */
 /* ------------------------------------------------------------------ */
-#if PY_VERSION_HEX >= 0x030d0000 /* Python 3.13+: always-on PyMutex (3.15+ style) */
-#  define XXHASH_LOCK_FIELD      PyMutex mutex;
-#  define XXHASH_LOCK_INIT(o)    ((void)((o)->mutex = (PyMutex){0}))
-#  define XXHASH_LOCK_IS_ACTIVE(o)  1
-#  define XXHASH_LOCK_MAYBE_INIT(o, len)  ((void)0)
-#  define XXHASH_LOCK_FINI(o)    ((void)0)
-#  define XXHASH_LOCK_ACQUIRE(o)          PyMutex_Lock(&(o)->mutex)
-#  define XXHASH_LOCK_ACQUIRE_BLOCKING(o) XXHASH_LOCK_ACQUIRE(o)
-#  define XXHASH_LOCK_RELEASE(o)       PyMutex_Unlock(&(o)->mutex)
-#else  /* Python 3.9-3.12: PyThread_type_lock */
-#  define XXHASH_LOCK_FIELD      PyThread_type_lock lock;
-#  define XXHASH_LOCK_INIT(o)    ((o)->lock = NULL)
-#  define XXHASH_LOCK_IS_ACTIVE(o)  ((o)->lock != NULL)
-/* Lazy allocation on first large update */
-#  define XXHASH_LOCK_MAYBE_INIT(o, len)                                 \
-    do {                                                                 \
-        if ((o)->lock == NULL && (len) >= XXHASH_GIL_MINSIZE) {          \
-            (o)->lock = PyThread_allocate_lock();                        \
-            /* fail? lock stays NULL, fall back to non-threaded code. */ \
-        }                                                                \
-    } while (0)
-#  define XXHASH_LOCK_FINI(o)    do { if ((o)->lock)                 \
-                                      PyThread_free_lock((o)->lock); \
-                                  } while (0)
-/* Acquire lock when GIL is already released — simple blocking acquire.
- * Only acquires if lock has been allocated (lazy init). */
-#  define XXHASH_LOCK_ACQUIRE_BLOCKING(o)                \
-    do {                                                 \
-        if ((o)->lock) {                                 \
-            PyThread_acquire_lock((o)->lock, WAIT_LOCK); \
-        }                                                \
-    } while (0)
+#ifdef XXHASH_WITH_LOCK
+#  if PY_VERSION_HEX >= 0x030d0000 /* Python 3.13+: always-on PyMutex (3.15+ style) */
+#    define XXHASH_LOCK_FIELD      PyMutex mutex;
+#    define XXHASH_LOCK_INIT(o)    ( ((o)->mutex = (PyMutex){0}), 0 )
+#    define XXHASH_LOCK_FINI(o)    ((void)0)
+#    define XXHASH_LOCK_ACQUIRE(o)          PyMutex_Lock(&(o)->mutex)
+#    define XXHASH_LOCK_ACQUIRE_BLOCKING(o) XXHASH_LOCK_ACQUIRE(o)
+#    define XXHASH_LOCK_RELEASE(o)       PyMutex_Unlock(&(o)->mutex)
+#  else  /* Python 3.9-3.12: PyThread_type_lock (always-on) */
+#    define XXHASH_LOCK_FIELD      PyThread_type_lock lock;
+/* Returns 0 on success, -1 on allocation failure (exception set). */
+#    define XXHASH_LOCK_INIT(o)                                               \
+       (((o)->lock = PyThread_allocate_lock()) ? 0 : (PyErr_NoMemory(), -1))
+#    define XXHASH_LOCK_FINI(o)    do { if ((o)->lock)                 \
+                                        PyThread_free_lock((o)->lock); \
+                                    } while (0)
+/* Acquire lock when GIL is already released — simple blocking acquire. */
+#    define XXHASH_LOCK_ACQUIRE_BLOCKING(o)                 \
+       do {                                                 \
+           if ((o)->lock) {                                 \
+               PyThread_acquire_lock((o)->lock, WAIT_LOCK); \
+           }                                                \
+       } while (0)
 
 /* Acquire lock with the GIL held — non-blocking try first, then release
  * GIL and block if contested (matches hashlib's ENTER_HASHLIB in 3.9-3.12).
- * Only acquires if lock has been allocated (lazy init). */
-#  define XXHASH_LOCK_ACQUIRE(o)                                  \
-    do {                                                          \
-        if ((o)->lock) {                                          \
-            if (!PyThread_acquire_lock((o)->lock, NOWAIT_LOCK)) { \
-                /* Lock contested – release GIL while waiting. */ \
-                Py_BEGIN_ALLOW_THREADS                            \
-                PyThread_acquire_lock((o)->lock, WAIT_LOCK);      \
-                Py_END_ALLOW_THREADS                              \
-            }                                                     \
-        }                                                         \
-    } while (0)
+ * WAIT_LOCK under GIL would deadlock: if another thread holds the object lock
+ * (large data path, GIL released), this thread blocks with GIL held, preventing
+ * the holder from re-acquiring GIL to release the lock. */
+#    define XXHASH_LOCK_ACQUIRE(o)                                   \
+       do {                                                          \
+           if ((o)->lock) {                                          \
+               if (!PyThread_acquire_lock((o)->lock, NOWAIT_LOCK)) { \
+                   /* Lock contested — release GIL while waiting. */ \
+                   Py_BEGIN_ALLOW_THREADS                            \
+                   PyThread_acquire_lock((o)->lock, WAIT_LOCK);      \
+                   Py_END_ALLOW_THREADS                              \
+               }                                                     \
+           }                                                         \
+       } while (0)
 
-#  define XXHASH_LOCK_RELEASE(o)              \
-    do {                                      \
-        if ((o)->lock) {                      \
-            PyThread_release_lock((o)->lock); \
-        }                                     \
-    } while (0)
+#    define XXHASH_LOCK_RELEASE(o)               \
+       do {                                      \
+           if ((o)->lock) {                      \
+               PyThread_release_lock((o)->lock); \
+           }                                     \
+       } while (0)
+#  endif
+#else  /* !XXHASH_WITH_LOCK */
+#  define XXHASH_LOCK_FIELD
+#  define XXHASH_LOCK_INIT(o)                 (0)
+#  define XXHASH_LOCK_FINI(o)                 ((void)0)
+#  define XXHASH_LOCK_ACQUIRE(o)              ((void)0)
+#  define XXHASH_LOCK_ACQUIRE_BLOCKING(o)     ((void)0)
+#  define XXHASH_LOCK_RELEASE(o)              ((void)0)
 #endif
 
-/* Data size threshold for releasing the GIL during hash. */
+/* Data size threshold for releasing the GIL during hash update. */
 #define XXHASH_GIL_MINSIZE  65536
 
+
+/* ------------------------------------------------------------------ */
+/*  Stringification helpers                                           */
+/* ------------------------------------------------------------------ */
 #define TOSTRING(x) #x
 #define VALUE_TO_STRING(x) TOSTRING(x)
-#define XXHASH_VERSION XXH_VERSION_MAJOR.XXH_VERSION_MINOR.XXH_VERSION_RELEASE
 
+
+/* ------------------------------------------------------------------ */
+/*  Build configuration: module & type names                          */
+/* ------------------------------------------------------------------ */
+/* Module name is parameterised so the same source file can be compiled
+ * as both xxhash._xxhash and xxhash._xxhash_threadsafe. */
+#ifndef XXHASH_MODULE_NAME
+#  define XXHASH_MODULE_NAME _xxhash
+#endif
+/* Display prefix for tp_name (repr), separate from the C extension
+ * module name.  Default: "xxhash".  Threadsafe build: "xxhash.threadsafe". */
+#ifndef XXHASH_TP_NAME_PREFIX
+#  define XXHASH_TP_NAME_PREFIX xxhash
+#endif
+/* Token concatenation helpers for PyInit_<name>. */
+#define XXHASH_PASTE2(a, b) a ## b
+#define XXHASH_PASTE(a, b) XXHASH_PASTE2(a, b)
+#define XXHASH_PYINIT(name) XXHASH_PASTE(PyInit_, name)
+/* Type name for repr(), e.g. "xxhash.xxh32" or "xxhash.threadsafe.xxh32". */
+#define XXHASH_TP_NAME(base)  VALUE_TO_STRING(XXHASH_TP_NAME_PREFIX) "." base
+
+
+/* ------------------------------------------------------------------ */
+/*  xxHash constants                                                  */
+/* ------------------------------------------------------------------ */
 #define XXH32_DIGESTSIZE 4
 #define XXH32_BLOCKSIZE 16
 #define XXH64_DIGESTSIZE 8
 #define XXH64_BLOCKSIZE 32
 #define XXH128_DIGESTSIZE 16
 #define XXH128_BLOCKSIZE 64
+#define XXHASH_VERSION XXH_VERSION_MAJOR.XXH_VERSION_MINOR.XXH_VERSION_RELEASE
 
-#ifndef Py_ALWAYS_INLINE
-#  define Py_ALWAYS_INLINE
-#endif
 
-/* Hex lookup table for hexdigest(). */
+/* ------------------------------------------------------------------ */
+/*  Code generation helpers                                           */
+/* ------------------------------------------------------------------ */
+
+/* Generate _do_update for each hash type.
+ * Lock is always acquired (no-op in non-lock build).  For large data
+ * release GIL while blocking on lock to avoid stalling other threads. */
+#define XXHASH_DO_UPDATE(type, update_fn)                   \
+static inline void                                          \
+PY##type##_do_update(PY##type##Object *self, Py_buffer *buf) \
+{                                                           \
+    if (buf->len > XXHASH_GIL_MINSIZE) {                    \
+        /* Release GIL first, then block on lock. */       \
+        Py_BEGIN_ALLOW_THREADS                              \
+        XXHASH_LOCK_ACQUIRE_BLOCKING(self);                 \
+        update_fn(self->xxhash_state, buf->buf, buf->len);  \
+        XXHASH_LOCK_RELEASE(self);                          \
+        Py_END_ALLOW_THREADS                                \
+    } else {                                                \
+        /* Acquire lock with GIL held (try-then-block). */  \
+        XXHASH_LOCK_ACQUIRE(self);                          \
+        update_fn(self->xxhash_state, buf->buf, buf->len);  \
+        XXHASH_LOCK_RELEASE(self);                          \
+    }                                                       \
+    PyBuffer_Release(buf);                                  \
+}
+
+/* Generate __init__ for each hash type. */
+#define XXHASH_INIT(type, reset_fn, update_fn, seed_cast)   \
+static int PY##type##_init(PY##type##Object *self,           \
+                           PyObject *args, PyObject *kwargs)  \
+{                                                           \
+    unsigned long long seed_val = 0;                        \
+    PyObject *data_obj = NULL;                              \
+    Py_buffer buf = {NULL, NULL};                           \
+                                                            \
+    if (_parse_init_args(args, kwargs, &data_obj, &seed_val,\
+                         "__init__()") < 0)                \
+        return -1;                                          \
+                                                            \
+    if (data_obj) {                                         \
+        if (_get_buffer_or_str(data_obj, &buf) < 0)         \
+            return -1;                                      \
+    }                                                       \
+                                                            \
+    XXHASH_LOCK_ACQUIRE(self);                              \
+    self->seed = (seed_cast)seed_val;                       \
+    reset_fn(self->xxhash_state, self->seed);               \
+                                                            \
+    if (buf.obj) {                                          \
+        update_fn(self->xxhash_state, buf.buf, buf.len);    \
+        PyBuffer_Release(&buf);                             \
+    }                                                       \
+    XXHASH_LOCK_RELEASE(self);                              \
+    return 0;                                               \
+}
+
+/* Generate update() method for each hash type (with keyword support). */
+#define XXHASH_UPDATE_METHOD(prefix, name)                                          \
+PyDoc_STRVAR(                                                                       \
+    PY##prefix##_update_doc,                                                        \
+    "update (data)\n\n"                                                             \
+    "Update the " name " object with bytes-like data. Repeated calls are\n"         \
+    "equivalent to a single call with the concatenation of all the arguments.");    \
+                                                                                    \
+static PyObject *PY##prefix##_update(PY##prefix##Object *self,                      \
+                                      PyObject *const *args,                        \
+                                      Py_ssize_t nargs, PyObject *kwnames)          \
+{                                                                                   \
+    PyObject *arg = NULL;                                                           \
+                                                                                    \
+    /* validate keywords first */                                                   \
+    if (kwnames) {                                                                  \
+        Py_ssize_t nkw = PyTuple_GET_SIZE(kwnames);                                 \
+        for (Py_ssize_t i = 0; i < nkw; i++) {                                      \
+            PyObject *key = PyTuple_GET_ITEM(kwnames, i);                           \
+            if (PyUnicode_CompareWithASCIIString(key, "data") == 0) {               \
+                if (nargs >= 1) {                                                   \
+                    PyErr_SetString(PyExc_TypeError,                                \
+                        name ".update() got multiple values for argument 'data'");  \
+                    return NULL;                                                    \
+                }                                                                   \
+                arg = args[nargs + i];                                              \
+            } else {                                                                \
+                PyErr_Format(PyExc_TypeError,                                       \
+                    "'%U' is an invalid keyword argument for '" name ".update()'", \
+                    key);                                                           \
+                return NULL;                                                        \
+            }                                                                       \
+        }                                                                           \
+    }                                                                               \
+                                                                                    \
+    if (nargs >= 1) {                                                               \
+        if (nargs > 1) {                                                            \
+            PyErr_Format(PyExc_TypeError,                                           \
+                name ".update() takes at most 1 positional argument (%zd given)",   \
+                nargs);                                                             \
+            return NULL;                                                            \
+        }                                                                           \
+        arg = args[0];                                                              \
+    }                                                                               \
+                                                                                    \
+    if (!arg) {                                                                     \
+        PyErr_SetString(PyExc_TypeError,                                            \
+            name ".update() missing required argument 'data'");                     \
+        return NULL;                                                                \
+    }                                                                               \
+                                                                                    \
+    Py_buffer buf = {NULL, NULL};                                                   \
+    if (_get_buffer_or_str(arg, &buf) < 0)                                          \
+        return NULL;                                                                \
+    PY##prefix##_do_update(self, &buf);                                             \
+    Py_RETURN_NONE;                                                                 \
+}
+
 /* Get a buffer from an object. Rejects str with hashlib-compatible error. */
-static inline Py_ALWAYS_INLINE int
+static inline int
 _get_buffer_or_str(PyObject *obj, Py_buffer *buf)
 {
     if (obj == Py_None) {
@@ -623,35 +764,7 @@ static void PYXXH32_dealloc(PYXXH32Object *self)
     Py_DECREF(tp);
 }
 
-/* Macro to generate _do_update for each hash type.
- * Matches CPython 3.9-3.12 md5 pattern: release GIL first (for large data),
- * then acquire lock, hash, release lock, re-acquire GIL.
- * For small data, acquire lock with GIL held (try-then-block if contested). */
-#define XXHASH_DO_UPDATE(type, update_fn)                                     \
-static inline Py_ALWAYS_INLINE void                                           \
-PY##type##_do_update(PY##type##Object *self, Py_buffer *buf)                  \
-{                                                                             \
-    XXHASH_LOCK_MAYBE_INIT(self, buf->len);                                   \
-    if (XXHASH_LOCK_IS_ACTIVE(self)) {                                        \
-        if (buf->len > XXHASH_GIL_MINSIZE) {                                  \
-            /* Release GIL first, then acquire lock. */                       \
-            Py_BEGIN_ALLOW_THREADS                                            \
-            XXHASH_LOCK_ACQUIRE_BLOCKING(self);                               \
-            update_fn(self->xxhash_state, buf->buf, buf->len);                \
-            XXHASH_LOCK_RELEASE(self);                                        \
-            Py_END_ALLOW_THREADS                                              \
-        } else {                                                              \
-            /* Acquire lock with GIL held. */                                 \
-            XXHASH_LOCK_ACQUIRE(self);                                        \
-            update_fn(self->xxhash_state, buf->buf, buf->len);                \
-            XXHASH_LOCK_RELEASE(self);                                        \
-        }                                                                     \
-    } else {                                                                  \
-        /* No lock: hash directly, no GIL release. */                         \
-        update_fn(self->xxhash_state, buf->buf, buf->len);                    \
-    }                                                                         \
-    PyBuffer_Release(buf);                                                    \
-}
+/* Invoke _do_update generator for each hash type. */
 
 XXHASH_DO_UPDATE(XXH32, XXH32_update)
 
@@ -664,7 +777,7 @@ PYXXH32_vectorcall(PyObject *type, PyObject *const *args,
     Py_buffer buf;
     unsigned long long raw_seed;
 
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxhash.xxh32", 0,
+    if (_parse_fastcall_args(args, nargs, kwnames, XXHASH_TP_NAME("xxh32"), 0,
                              &buf, &raw_seed) < 0)
         return NULL;
     seed = (XXH32_hash_t)raw_seed;
@@ -676,7 +789,11 @@ PYXXH32_vectorcall(PyObject *type, PyObject *const *args,
         return NULL;
     }
 
-    XXHASH_LOCK_INIT(self);
+    if (XXHASH_LOCK_INIT(self) < 0) {
+        Py_DECREF(self);
+        PyBuffer_Release(&buf);
+        return NULL;
+    }
 
     self->xxhash_state = XXH32_createState();
     if (self->xxhash_state == NULL) {
@@ -711,12 +828,14 @@ static PyObject *PYXXH32_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
         return NULL;
     }
 
-    XXHASH_LOCK_INIT(self);
+    if (XXHASH_LOCK_INIT(self) < 0) {
+        Py_DECREF(self);
+        return NULL;
+    }
 
     if ((self->xxhash_state = XXH32_createState()) == NULL) {
         Py_DECREF(self);
-        PyErr_NoMemory();
-        return NULL;
+        return PyErr_NoMemory();
     }
 
     self->seed = 0;
@@ -737,9 +856,7 @@ _parse_init_args(PyObject *args, PyObject *kwargs,
 {
     Py_ssize_t nargs = PyTuple_GET_SIZE(args);
 
-    if (!kwargs) {
-        /* fast path: no keywords */
-    } else {
+    if (kwargs) {
         Py_ssize_t pos = 0;
         PyObject *key, *val;
         while (PyDict_Next(kwargs, &pos, &key, &val)) {
@@ -747,7 +864,8 @@ _parse_init_args(PyObject *args, PyObject *kwargs,
                 PyUnicode_CompareWithASCIIString(key, "seed") == 0)
                 continue;
             PyErr_Format(PyExc_TypeError,
-                "'%U' is an invalid keyword argument for this function", key);
+                "'%U' is an invalid keyword argument for '%s()'",
+                key, funcname);
             return -1;
         }
     }
@@ -794,90 +912,13 @@ _parse_init_args(PyObject *args, PyObject *kwargs,
     return 0;
 }
 
-/* Macro to generate __init__ for each hash type. */
-#define XXHASH_INIT(type, reset_fn, update_fn, seed_cast)                     \
-static int PY##type##_init(PY##type##Object *self, PyObject *args,            \
-                           PyObject *kwargs)                                  \
-{                                                                             \
-    unsigned long long seed_val = 0;                                          \
-    PyObject *data_obj = NULL;                                                \
-    Py_buffer buf = {NULL, NULL};                                             \
-                                                                              \
-    if (_parse_init_args(args, kwargs, &data_obj, &seed_val,                  \
-                         "__init__()") < 0)                                   \
-        return -1;                                                            \
-                                                                              \
-    if (data_obj) {                                                           \
-        if (_get_buffer_or_str(data_obj, &buf) < 0)                           \
-            return -1;                                                        \
-    }                                                                         \
-                                                                              \
-    XXHASH_LOCK_ACQUIRE(self);                                                \
-    self->seed = (seed_cast)seed_val;                                         \
-    reset_fn(self->xxhash_state, self->seed);                                 \
-                                                                              \
-    if (buf.obj) {                                                            \
-        update_fn(self->xxhash_state, buf.buf, buf.len);                      \
-        PyBuffer_Release(&buf);                                               \
-    }                                                                         \
-    XXHASH_LOCK_RELEASE(self);                                                \
-    return 0;                                                                 \
-}
+/* Generate __init__ for each hash type. */
 
 XXHASH_INIT(XXH32, XXH32_reset, XXH32_update, XXH32_hash_t)
 
-PyDoc_STRVAR(
-    PYXXH32_update_doc,
-    "update (data)\n\n"
-    "Update the xxh32 object with bytes-like data. Repeated calls are\n"
-    "equivalent to a single call with the concatenation of all the arguments.");
+/* Generate update() for each hash type. */
 
-static PyObject *PYXXH32_update(PYXXH32Object *self, PyObject *const *args,
-                                 Py_ssize_t nargs, PyObject *kwnames)
-{
-    PyObject *arg = NULL;
-
-    /* validate keywords first */
-    if (kwnames) {
-        Py_ssize_t nkw = PyTuple_GET_SIZE(kwnames);
-        for (Py_ssize_t i = 0; i < nkw; i++) {
-            PyObject *key = PyTuple_GET_ITEM(kwnames, i);
-            if (PyUnicode_CompareWithASCIIString(key, "data") == 0) {
-                if (nargs >= 1) {
-                    PyErr_SetString(PyExc_TypeError,
-                        "xxh32.update() got multiple values for argument 'data'");
-                    return NULL;
-                }
-                arg = args[nargs + i];
-            } else {
-                PyErr_Format(PyExc_TypeError,
-                    "'%U' is an invalid keyword argument for 'xxh32.update()'",
-                    key);
-                return NULL;
-            }
-        }
-    }
-
-    if (nargs >= 1) {
-        if (nargs > 1) {
-            PyErr_Format(PyExc_TypeError,
-                "xxh32.update() takes at most 1 positional argument (%zd given)", nargs);
-            return NULL;
-        }
-        arg = args[0];
-    }
-
-    if (!arg) {
-        PyErr_SetString(PyExc_TypeError, "xxh32.update() missing required argument 'data'");
-        return NULL;
-    }
-
-    Py_buffer buf;
-    if (_get_buffer_or_str(arg, &buf) < 0)
-        return NULL;
-    PYXXH32_do_update(self, &buf);
-    Py_RETURN_NONE;
-}
+XXHASH_UPDATE_METHOD(XXH32, "xxh32")
 
 PyDoc_STRVAR(
     PYXXH32_digest_doc,
@@ -957,12 +998,14 @@ static PyObject *PYXXH32_copy(PYXXH32Object *self)
         return NULL;
     }
 
-    XXHASH_LOCK_INIT(p);
+    if (XXHASH_LOCK_INIT(p) < 0) {
+        Py_DECREF(p);
+        return NULL;
+    }
 
     if ((p->xxhash_state = XXH32_createState()) == NULL) {
         Py_DECREF(p);
-        PyErr_NoMemory();
-        return NULL;
+        return PyErr_NoMemory();
     }
 
     XXHASH_LOCK_ACQUIRE(self);
@@ -1077,7 +1120,7 @@ static PyType_Slot XXH32Type_slots[] = {
 };
 
 static PyType_Spec XXH32Type_spec = {
-    .name = "xxhash.xxh32",
+    .name = XXHASH_TP_NAME("xxh32"),
     .basicsize = sizeof(PYXXH32Object),
     .flags = Py_TPFLAGS_DEFAULT
 #if PY_VERSION_HEX >= 0x030c0000
@@ -1118,7 +1161,7 @@ PYXXH64_vectorcall(PyObject *type, PyObject *const *args,
     Py_buffer buf;
     unsigned long long raw_seed;
 
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxhash.xxh64", 0,
+    if (_parse_fastcall_args(args, nargs, kwnames, XXHASH_TP_NAME("xxh64"), 0,
                              &buf, &raw_seed) < 0)
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
@@ -1130,7 +1173,11 @@ PYXXH64_vectorcall(PyObject *type, PyObject *const *args,
         return NULL;
     }
 
-    XXHASH_LOCK_INIT(self);
+    if (XXHASH_LOCK_INIT(self) < 0) {
+        Py_DECREF(self);
+        PyBuffer_Release(&buf);
+        return NULL;
+    }
 
     self->xxhash_state = XXH64_createState();
     if (self->xxhash_state == NULL) {
@@ -1162,12 +1209,14 @@ static PyObject *PYXXH64_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
         return NULL;
     }
 
-    XXHASH_LOCK_INIT(self);
+    if (XXHASH_LOCK_INIT(self) < 0) {
+        Py_DECREF(self);
+        return NULL;
+    }
 
     if ((self->xxhash_state = XXH64_createState()) == NULL) {
         Py_DECREF(self);
-        PyErr_NoMemory();
-        return NULL;
+        return PyErr_NoMemory();
     }
 
     self->seed = 0;
@@ -1178,58 +1227,7 @@ static PyObject *PYXXH64_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
 
 XXHASH_INIT(XXH64, XXH64_reset, XXH64_update, XXH64_hash_t)
 
-PyDoc_STRVAR(
-    PYXXH64_update_doc,
-    "update (data)\n\n"
-    "Update the xxh64 object with bytes-like data. Repeated calls are\n"
-    "equivalent to a single call with the concatenation of all the arguments.");
-
-static PyObject *PYXXH64_update(PYXXH64Object *self, PyObject *const *args,
-                                 Py_ssize_t nargs, PyObject *kwnames)
-{
-    PyObject *arg = NULL;
-
-    /* validate keywords first */
-    if (kwnames) {
-        Py_ssize_t nkw = PyTuple_GET_SIZE(kwnames);
-        for (Py_ssize_t i = 0; i < nkw; i++) {
-            PyObject *key = PyTuple_GET_ITEM(kwnames, i);
-            if (PyUnicode_CompareWithASCIIString(key, "data") == 0) {
-                if (nargs >= 1) {
-                    PyErr_SetString(PyExc_TypeError,
-                        "xxh64.update() got multiple values for argument 'data'");
-                    return NULL;
-                }
-                arg = args[nargs + i];
-            } else {
-                PyErr_Format(PyExc_TypeError,
-                    "'%U' is an invalid keyword argument for 'xxh64.update()'",
-                    key);
-                return NULL;
-            }
-        }
-    }
-
-    if (nargs >= 1) {
-        if (nargs > 1) {
-            PyErr_Format(PyExc_TypeError,
-                "xxh64.update() takes at most 1 positional argument (%zd given)", nargs);
-            return NULL;
-        }
-        arg = args[0];
-    }
-
-    if (!arg) {
-        PyErr_SetString(PyExc_TypeError, "xxh64.update() missing required argument 'data'");
-        return NULL;
-    }
-
-    Py_buffer buf;
-    if (_get_buffer_or_str(arg, &buf) < 0)
-        return NULL;
-    PYXXH64_do_update(self, &buf);
-    Py_RETURN_NONE;
-}
+XXHASH_UPDATE_METHOD(XXH64, "xxh64")
 
 PyDoc_STRVAR(
     PYXXH64_digest_doc,
@@ -1309,12 +1307,14 @@ static PyObject *PYXXH64_copy(PYXXH64Object *self)
         return NULL;
     }
 
-    XXHASH_LOCK_INIT(p);
+    if (XXHASH_LOCK_INIT(p) < 0) {
+        Py_DECREF(p);
+        return NULL;
+    }
 
     if ((p->xxhash_state = XXH64_createState()) == NULL) {
         Py_DECREF(p);
-        PyErr_NoMemory();
-        return NULL;
+        return PyErr_NoMemory();
     }
 
     XXHASH_LOCK_ACQUIRE(self);
@@ -1429,7 +1429,7 @@ static PyType_Slot XXH64Type_slots[] = {
 };
 
 static PyType_Spec XXH64Type_spec = {
-    .name = "xxhash.xxh64",
+    .name = XXHASH_TP_NAME("xxh64"),
     .basicsize = sizeof(PYXXH64Object),
     .flags = Py_TPFLAGS_DEFAULT
 #if PY_VERSION_HEX >= 0x030c0000
@@ -1470,7 +1470,7 @@ PYXXH3_64_vectorcall(PyObject *type, PyObject *const *args,
     Py_buffer buf;
     unsigned long long raw_seed;
 
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxhash.xxh3_64", 0,
+    if (_parse_fastcall_args(args, nargs, kwnames, XXHASH_TP_NAME("xxh3_64"), 0,
                              &buf, &raw_seed) < 0)
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
@@ -1482,7 +1482,11 @@ PYXXH3_64_vectorcall(PyObject *type, PyObject *const *args,
         return NULL;
     }
 
-    XXHASH_LOCK_INIT(self);
+    if (XXHASH_LOCK_INIT(self) < 0) {
+        Py_DECREF(self);
+        PyBuffer_Release(&buf);
+        return NULL;
+    }
 
     self->xxhash_state = XXH3_createState();
     if (self->xxhash_state == NULL) {
@@ -1514,12 +1518,14 @@ static PyObject *PYXXH3_64_new(PyTypeObject *type, PyObject *args, PyObject *kwa
         return NULL;
     }
 
-    XXHASH_LOCK_INIT(self);
+    if (XXHASH_LOCK_INIT(self) < 0) {
+        Py_DECREF(self);
+        return NULL;
+    }
 
     if ((self->xxhash_state = XXH3_createState()) == NULL) {
         Py_DECREF(self);
-        PyErr_NoMemory();
-        return NULL;
+        return PyErr_NoMemory();
     }
 
     self->seed = 0;
@@ -1530,58 +1536,7 @@ static PyObject *PYXXH3_64_new(PyTypeObject *type, PyObject *args, PyObject *kwa
 
 XXHASH_INIT(XXH3_64, XXH3_64bits_reset_withSeed, XXH3_64bits_update, XXH64_hash_t)
 
-PyDoc_STRVAR(
-    PYXXH3_64_update_doc,
-    "update (data)\n\n"
-    "Update the xxh3_64 object with bytes-like data. Repeated calls are\n"
-    "equivalent to a single call with the concatenation of all the arguments.");
-
-static PyObject *PYXXH3_64_update(PYXXH3_64Object *self, PyObject *const *args,
-                                 Py_ssize_t nargs, PyObject *kwnames)
-{
-    PyObject *arg = NULL;
-
-    /* validate keywords first */
-    if (kwnames) {
-        Py_ssize_t nkw = PyTuple_GET_SIZE(kwnames);
-        for (Py_ssize_t i = 0; i < nkw; i++) {
-            PyObject *key = PyTuple_GET_ITEM(kwnames, i);
-            if (PyUnicode_CompareWithASCIIString(key, "data") == 0) {
-                if (nargs >= 1) {
-                    PyErr_SetString(PyExc_TypeError,
-                        "xxh3_64.update() got multiple values for argument 'data'");
-                    return NULL;
-                }
-                arg = args[nargs + i];
-            } else {
-                PyErr_Format(PyExc_TypeError,
-                    "'%U' is an invalid keyword argument for 'xxh3_64.update()'",
-                    key);
-                return NULL;
-            }
-        }
-    }
-
-    if (nargs >= 1) {
-        if (nargs > 1) {
-            PyErr_Format(PyExc_TypeError,
-                "xxh3_64.update() takes at most 1 positional argument (%zd given)", nargs);
-            return NULL;
-        }
-        arg = args[0];
-    }
-
-    if (!arg) {
-        PyErr_SetString(PyExc_TypeError, "xxh3_64.update() missing required argument 'data'");
-        return NULL;
-    }
-
-    Py_buffer buf;
-    if (_get_buffer_or_str(arg, &buf) < 0)
-        return NULL;
-    PYXXH3_64_do_update(self, &buf);
-    Py_RETURN_NONE;
-}
+XXHASH_UPDATE_METHOD(XXH3_64, "xxh3_64")
 
 PyDoc_STRVAR(
     PYXXH3_64_digest_doc,
@@ -1650,8 +1605,8 @@ static PyObject *PYXXH3_64_intdigest(PYXXH3_64Object *self)
 
 PyDoc_STRVAR(
     PYXXH3_64_copy_doc,
-    "copy() -> xxh64 object\n\n"
-    "Return a copy (``clone'') of the xxh64 object.");
+    "copy() -> xxh3_64 object\n\n"
+    "Return a copy (``clone'') of the xxh3_64 object.");
 
 static PyObject *PYXXH3_64_copy(PYXXH3_64Object *self)
 {
@@ -1661,12 +1616,14 @@ static PyObject *PYXXH3_64_copy(PYXXH3_64Object *self)
         return NULL;
     }
 
-    XXHASH_LOCK_INIT(p);
+    if (XXHASH_LOCK_INIT(p) < 0) {
+        Py_DECREF(p);
+        return NULL;
+    }
 
     if ((p->xxhash_state = XXH3_createState()) == NULL) {
         Py_DECREF(p);
-        PyErr_NoMemory();
-        return NULL;
+        return PyErr_NoMemory();
     }
 
     XXHASH_LOCK_ACQUIRE(self);
@@ -1775,7 +1732,7 @@ PyDoc_STRVAR(
     "digest() -- return the current digest value\n"
     "hexdigest() -- return the current digest as a string of hexadecimal digits\n"
     "intdigest() -- return the current digest as an integer\n"
-    "copy() -- return a copy of the current xxh64 object");
+    "copy() -- return a copy of the current xxh3_64 object");
 
 static PyType_Slot XXH3_64Type_slots[] = {
     {Py_tp_dealloc, PYXXH3_64_dealloc},
@@ -1788,7 +1745,7 @@ static PyType_Slot XXH3_64Type_slots[] = {
 };
 
 static PyType_Spec XXH3_64Type_spec = {
-    .name = "xxhash.xxh3_64",
+    .name = XXHASH_TP_NAME("xxh3_64"),
     .basicsize = sizeof(PYXXH3_64Object),
     .flags = Py_TPFLAGS_DEFAULT
 #if PY_VERSION_HEX >= 0x030c0000
@@ -1829,7 +1786,7 @@ PYXXH3_128_vectorcall(PyObject *type, PyObject *const *args,
     Py_buffer buf;
     unsigned long long raw_seed;
 
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxhash.xxh3_128", 0,
+    if (_parse_fastcall_args(args, nargs, kwnames, XXHASH_TP_NAME("xxh3_128"), 0,
                              &buf, &raw_seed) < 0)
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
@@ -1841,7 +1798,11 @@ PYXXH3_128_vectorcall(PyObject *type, PyObject *const *args,
         return NULL;
     }
 
-    XXHASH_LOCK_INIT(self);
+    if (XXHASH_LOCK_INIT(self) < 0) {
+        Py_DECREF(self);
+        PyBuffer_Release(&buf);
+        return NULL;
+    }
 
     self->xxhash_state = XXH3_createState();
     if (self->xxhash_state == NULL) {
@@ -1873,12 +1834,14 @@ static PyObject *PYXXH3_128_new(PyTypeObject *type, PyObject *args, PyObject *kw
         return NULL;
     }
 
-    XXHASH_LOCK_INIT(self);
+    if (XXHASH_LOCK_INIT(self) < 0) {
+        Py_DECREF(self);
+        return NULL;
+    }
 
     if ((self->xxhash_state = XXH3_createState()) == NULL) {
         Py_DECREF(self);
-        PyErr_NoMemory();
-        return NULL;
+        return PyErr_NoMemory();
     }
 
     self->seed = 0;
@@ -1889,58 +1852,7 @@ static PyObject *PYXXH3_128_new(PyTypeObject *type, PyObject *args, PyObject *kw
 
 XXHASH_INIT(XXH3_128, XXH3_128bits_reset_withSeed, XXH3_128bits_update, XXH64_hash_t)
 
-PyDoc_STRVAR(
-    PYXXH3_128_update_doc,
-    "update (data)\n\n"
-    "Update the xxh3_128 object with bytes-like data. Repeated calls are\n"
-    "equivalent to a single call with the concatenation of all the arguments.");
-
-static PyObject *PYXXH3_128_update(PYXXH3_128Object *self, PyObject *const *args,
-                                 Py_ssize_t nargs, PyObject *kwnames)
-{
-    PyObject *arg = NULL;
-
-    /* validate keywords first */
-    if (kwnames) {
-        Py_ssize_t nkw = PyTuple_GET_SIZE(kwnames);
-        for (Py_ssize_t i = 0; i < nkw; i++) {
-            PyObject *key = PyTuple_GET_ITEM(kwnames, i);
-            if (PyUnicode_CompareWithASCIIString(key, "data") == 0) {
-                if (nargs >= 1) {
-                    PyErr_SetString(PyExc_TypeError,
-                        "xxh3_128.update() got multiple values for argument 'data'");
-                    return NULL;
-                }
-                arg = args[nargs + i];
-            } else {
-                PyErr_Format(PyExc_TypeError,
-                    "'%U' is an invalid keyword argument for 'xxh3_128.update()'",
-                    key);
-                return NULL;
-            }
-        }
-    }
-
-    if (nargs >= 1) {
-        if (nargs > 1) {
-            PyErr_Format(PyExc_TypeError,
-                "xxh3_128.update() takes at most 1 positional argument (%zd given)", nargs);
-            return NULL;
-        }
-        arg = args[0];
-    }
-
-    if (!arg) {
-        PyErr_SetString(PyExc_TypeError, "xxh3_128.update() missing required argument 'data'");
-        return NULL;
-    }
-
-    Py_buffer buf;
-    if (_get_buffer_or_str(arg, &buf) < 0)
-        return NULL;
-    PYXXH3_128_do_update(self, &buf);
-    Py_RETURN_NONE;
-}
+XXHASH_UPDATE_METHOD(XXH3_128, "xxh3_128")
 
 PyDoc_STRVAR(
     PYXXH3_128_digest_doc,
@@ -2039,12 +1951,14 @@ static PyObject *PYXXH3_128_copy(PYXXH3_128Object *self)
         return NULL;
     }
 
-    XXHASH_LOCK_INIT(p);
+    if (XXHASH_LOCK_INIT(p) < 0) {
+        Py_DECREF(p);
+        return NULL;
+    }
 
     if ((p->xxhash_state = XXH3_createState()) == NULL) {
         Py_DECREF(p);
-        PyErr_NoMemory();
-        return NULL;
+        return PyErr_NoMemory();
     }
 
     XXHASH_LOCK_ACQUIRE(self);
@@ -2166,7 +2080,7 @@ static PyType_Slot XXH3_128Type_slots[] = {
 };
 
 static PyType_Spec XXH3_128Type_spec = {
-    .name = "xxhash.xxh3_128",
+    .name = XXHASH_TP_NAME("xxh3_128"),
     .basicsize = sizeof(PYXXH3_128Object),
     .flags = Py_TPFLAGS_DEFAULT
 #if PY_VERSION_HEX >= 0x030c0000
@@ -2230,7 +2144,10 @@ static PyModuleDef_Slot slots[] = {
     {Py_mod_multiple_interpreters, Py_MOD_PER_INTERPRETER_GIL_SUPPORTED},
 #endif
 #if PY_VERSION_HEX >= 0x030d0000
-    /* Python 3.13+: module is thread-safe with per-object lock */
+    /* Both variants manage their own synchronization guarantees:
+     * the thread-safe variant uses a per-object lock; the default
+     * variant requires callers not to share streaming hash objects
+     * across threads. */
     {Py_mod_gil, Py_MOD_GIL_NOT_USED},
 #endif
     {0, NULL}
@@ -2254,7 +2171,7 @@ static PyMethodDef methods[] = {
 
 static struct PyModuleDef moduledef = {
     PyModuleDef_HEAD_INIT,
-    "_xxhash",
+    VALUE_TO_STRING(XXHASH_MODULE_NAME),
     NULL,
     0,
     methods,
@@ -2265,7 +2182,7 @@ static struct PyModuleDef moduledef = {
 };
 
 PyMODINIT_FUNC
-PyInit__xxhash(void)
+XXHASH_PYINIT(XXHASH_MODULE_NAME)(void)
 {
     return PyModuleDef_Init(&moduledef);
 }

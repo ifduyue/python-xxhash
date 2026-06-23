@@ -1,18 +1,15 @@
 """
-Thread-safety tests for xxhash.
+Thread-safety tests for xxhash.threadsafe.
 
-Previously, the C extension released the GIL inside ``_do_update`` (via
-``Py_BEGIN_ALLOW_THREADS`` / ``Py_END_ALLOW_THREADS``) while calling
-``XXH*_update(self->xxhash_state, ...)``, and all other methods accessed the
-same ``xxhash_state`` without any per-object lock — creating a data race.
-
-This has been fixed by adding a per-object ``PyThread_type_lock`` that protects
-all access to ``xxhash_state``.  The lock is acquired **after** releasing the
-GIL in ``update()`` to avoid ABBA deadlocks.
+The default ``xxhash`` module is optimized for speed and does not protect
+streaming hash objects with a per-object lock.  Concurrent access to the same
+hash object from multiple threads is only safe when using the
+``xxhash.threadsafe`` submodule, which adds a per-object lock around every
+operation that touches the internal xxHash state.
 
 The tests below verify that:
-  * no crashes occur under concurrent access
-  * hash results are now deterministic (no data races)
+  * no crashes occur under concurrent access to ``threadsafe`` hash objects
+  * hash results are deterministic (no data races)
 """
 
 import os
@@ -20,7 +17,7 @@ import sys
 import subprocess
 import signal
 import unittest
-import xxhash
+from xxhash import threadsafe as xxhash
 
 
 # ---------------------------------------------------------------------------
@@ -47,7 +44,7 @@ def _run_in_subprocess(code: str, timeout: float = 60.0):
 # ---------------------------------------------------------------------------
 
 CONCURRENT_DIGEST_CODE = r"""
-import sys, threading, xxhash
+import sys, threading; from xxhash import threadsafe as xxhash
 
 h = xxhash.xxh32()
 BLOCK = b'x' * (4 * 1024 * 1024)          # 4 MiB
@@ -93,7 +90,7 @@ else:
 # ---------------------------------------------------------------------------
 
 CONCURRENT_RESET_CODE = r"""
-import sys, threading, xxhash
+import sys, threading; from xxhash import threadsafe as xxhash
 
 h = xxhash.xxh32()
 BLOCK = b'x' * (4 * 1024 * 1024)
@@ -139,7 +136,7 @@ else:
 # ---------------------------------------------------------------------------
 
 CONCURRENT_UPDATE_CODE = r"""
-import sys, threading, xxhash
+import sys, threading; from xxhash import threadsafe as xxhash
 
 h = xxhash.xxh32()
 BLOCK = b'x' * (4 * 1024 * 1024)
@@ -184,7 +181,7 @@ else:
 # ---------------------------------------------------------------------------
 
 NON_DETERMINISM_CODE = r"""
-import sys, threading, xxhash
+import sys, threading; from xxhash import threadsafe as xxhash
 
 h = xxhash.xxh32()
 BLOCK = b'x' * (4 * 1024 * 1024)
@@ -224,7 +221,7 @@ print(h.digest().hex())
 # ---------------------------------------------------------------------------
 
 XXH128_UPDATE_RESET_CODE = r"""
-import sys, threading, xxhash
+import sys, threading; from xxhash import threadsafe as xxhash
 
 h = xxhash.xxh128()
 BLOCK = b'x' * 16          # tiny block: more calls = more race windows
@@ -278,7 +275,7 @@ else:
 # ---------------------------------------------------------------------------
 
 XXH128_UPDATE_COPY_CODE = r"""
-import sys, threading, xxhash
+import sys, threading; from xxhash import threadsafe as xxhash
 
 h = xxhash.xxh128()
 copies = []
@@ -337,7 +334,7 @@ else:
 # ---------------------------------------------------------------------------
 
 XXH128_ALL_METHODS_CODE = r"""
-import sys, random, threading, xxhash
+import sys, random, threading; from xxhash import threadsafe as xxhash
 
 h = xxhash.xxh128()
 BLOCK = b'x' * 32
@@ -386,7 +383,7 @@ else:
 # ---------------------------------------------------------------------------
 
 XXH64_AGGRESSIVE_RACE_CODE = r"""
-import sys, threading, xxhash
+import sys, threading; from xxhash import threadsafe as xxhash
 
 h = xxhash.xxh64()
 BLOCK = b'x' * 16
@@ -423,9 +420,10 @@ else:
 
 
 class TestThreadSafety(unittest.TestCase):
-    """Verify that concurrent access to a single hash object does not crash.
+    """Verify that concurrent access to a single threadsafe hash object works.
 
-    With per-object locking in place, concurrent access is now safe.
+    These tests import ``xxhash.threadsafe`` (not the default ``xxhash``
+    module), which uses a per-object lock around all streaming operations.
     We run each scenario many times (``REPETITIONS``) to verify that no
     crashes, deadlocks, or unexpected exceptions occur.
     """
@@ -509,8 +507,7 @@ class TestNonDeterminism(unittest.TestCase):
     TIMEOUT = int(os.environ.get("XXHASH_TEST_TIMEOUT", "120"))
 
     def test_concurrent_update_is_deterministic(self):
-        """Concurrent update() should be deterministic (FIXED: per-object
-        lock now prevents data races)."""
+        """Concurrent update() on a threadsafe object should be deterministic."""
         digests = set()
         for i in range(self.SAMPLES):
             rc, out, err = _run_in_subprocess(

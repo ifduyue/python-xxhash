@@ -1,4 +1,5 @@
-from ._xxhash import (
+from xxhash.version import VERSION
+from xxhash._xxhash_threadsafe import (
     xxh32,
     xxh32_digest,
     xxh32_intdigest,
@@ -18,13 +19,10 @@ from ._xxhash import (
     XXHASH_VERSION,
 )
 
-from .version import VERSION
-
-
 xxh128 = xxh3_128
-xxh128_hexdigest = xxh3_128_hexdigest
-xxh128_intdigest = xxh3_128_intdigest
 xxh128_digest = xxh3_128_digest
+xxh128_intdigest = xxh3_128_intdigest
+xxh128_hexdigest = xxh3_128_hexdigest
 
 algorithms_available = {
     "xxh32",
@@ -35,7 +33,6 @@ algorithms_available = {
 }
 
 algorithms_guaranteed = algorithms_available
-
 
 __all__ = [
     "xxh32",

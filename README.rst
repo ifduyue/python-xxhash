@@ -251,6 +251,36 @@ And aliases:
     | xxh128_intdigest = xxh3_128_intdigest
     | xxh128_hexdigest = xxh3_128_hexdigest
 
+Thread safety
+-------------
+
+The default ``xxhash`` module is optimized for speed. Streaming hash objects
+(``xxh32``, ``xxh64``, ``xxh3_64``, ``xxh3_128`` / ``xxh128``) are **not**
+thread-safe: do not call ``update()``, ``digest()``, ``copy()``, ``reset()``,
+or any other mutating method on the same object from multiple threads without
+external synchronization.
+
+One-shot functions (``xxh32_digest``, ``xxh64_hexdigest``, ``xxh3_128_digest``,
+etc.) are stateless and always safe to call concurrently.
+
+Concurrent ``update()`` / ``reset()`` on a shared streaming hash object is
+discouraged even with locking — prefer one-shot functions or per-thread hash
+objects. If you must share a streaming hash across threads, use the
+``xxhash.threadsafe`` submodule. It provides the same API with a per-object
+lock that serializes all access to the internal xxHash state:
+
+.. code-block:: python
+
+    >>> from xxhash import threadsafe
+    >>> h = threadsafe.xxh64()
+    >>> # h can be updated from multiple threads, but concurrent update/reset
+    >>> # still adds overhead and is not recommended
+
+The same two-module split is provided on free-threading (no-GIL) Python
+builds: the default module is unlocked, and ``xxhash.threadsafe`` provides a
+locked variant.
+
+
 Caveats
 -------
 
@@ -282,6 +312,6 @@ functions are required.
 Copyright and License
 ---------------------
 
-Copyright (c) 2014-2025 Yue Du - https://github.com/ifduyue
+Copyright (c) 2014-2026 Yue Du - https://github.com/ifduyue
 
 Licensed under `BSD 2-Clause License <http://opensource.org/licenses/BSD-2-Clause>`_

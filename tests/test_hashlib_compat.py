@@ -10,11 +10,25 @@ class TestHashlibCompat(unittest.TestCase):
 
     def test_algorithms_available(self):
         self.assertIsInstance(xxhash.algorithms_available, set)
-        for a in ('xxh32', 'xxh64', 'xxh3_64', 'xxh3_128', 'xxh128'):
+        expected = {'xxh32', 'xxh64', 'xxh3_64', 'xxh3_128', 'xxh128'}
+        self.assertGreaterEqual(xxhash.algorithms_available, expected)
+        for a in expected:
             self.assertIn(a, xxhash.algorithms_available)
 
     def test_algorithms_guaranteed(self):
         self.assertEqual(xxhash.algorithms_guaranteed, xxhash.algorithms_available)
+
+    def test_name(self):
+        expected = {
+            'xxh32': 'XXH32',
+            'xxh64': 'XXH64',
+            'xxh3_64': 'XXH3_64',
+            'xxh3_128': 'XXH3_128',
+            'xxh128': 'XXH3_128',
+        }
+        for algo, name in expected.items():
+            with self.subTest(algo=algo):
+                self.assertEqual(getattr(xxhash, algo)().name, name)
 
     # ── str rejection ──────────────────────────────────────────────
 
@@ -120,12 +134,6 @@ class TestHashlibCompat(unittest.TestCase):
         self.assertEqual(xxhash.xxh3_64().block_size, 32)
         self.assertEqual(xxhash.xxh3_128().block_size, 64)
 
-    def test_name(self):
-        self.assertEqual(xxhash.xxh32().name, 'XXH32')
-        self.assertEqual(xxhash.xxh64().name, 'XXH64')
-        self.assertEqual(xxhash.xxh3_64().name, 'XXH3_64')
-        self.assertEqual(xxhash.xxh3_128().name, 'XXH3_128')
-
     # ── digest / hexdigest ─────────────────────────────────────────
 
     def test_digest(self):
@@ -162,3 +170,7 @@ class TestHashlibCompat(unittest.TestCase):
             self.assertEqual(a.digest(), b.digest())
             b.update(b'more')
             self.assertNotEqual(a.digest(), b.digest())
+
+
+if __name__ == '__main__':
+    unittest.main()
