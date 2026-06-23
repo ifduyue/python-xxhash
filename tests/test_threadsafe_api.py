@@ -301,6 +301,33 @@ class TestThreadsafeAttributes(unittest.TestCase):
     def test_block_size(self):
         self.assertEqual(threadsafe.xxh32().block_size, 16)
         self.assertEqual(threadsafe.xxh64().block_size, 32)
+        self.assertEqual(threadsafe.xxh3_64().block_size, 32)
+        self.assertEqual(threadsafe.xxh128().block_size, 64)
+
+
+class TestThreadsafeTypesAreDistinct(unittest.TestCase):
+    """Verify that threadsafe types are distinct from the default types.
+
+    A regression here (e.g. both modules accidentally pointing at the same
+    type object) would silently break thread safety with no other test
+    catching it.
+    """
+
+    def test_types_are_distinct(self):
+        for name in ('xxh32', 'xxh64', 'xxh3_64', 'xxh128'):
+            with self.subTest(name=name):
+                default_type = getattr(xxhash, name)
+                safe_type = getattr(threadsafe, name)
+                self.assertIsNot(default_type, safe_type)
+                self.assertIsNot(type(default_type()), type(safe_type()))
+
+    def test_instances_are_not_instances_of_each_other(self):
+        for name in ('xxh32', 'xxh64', 'xxh3_64', 'xxh128'):
+            with self.subTest(name=name):
+                default_type = getattr(xxhash, name)
+                safe_type = getattr(threadsafe, name)
+                self.assertFalse(isinstance(default_type(), safe_type))
+                self.assertFalse(isinstance(safe_type(), default_type))
 
 
 if __name__ == '__main__':
