@@ -83,7 +83,7 @@
            }                                     \
        } while (0)
 #  endif
-#  else  /* !XXHASH_WITH_LOCK */
+#else  /* !XXHASH_WITH_LOCK */
 #  define XXHASH_LOCK_FIELD
 #  define XXHASH_LOCK_INIT(o)                 (0)
 #  define XXHASH_LOCK_FINI(o)                 ((void)0)
