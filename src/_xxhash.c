@@ -244,14 +244,13 @@ static PyObject *PY##prefix##_update(PY##prefix##Object *self,                  
         return NULL;                                                                \
     }                                                                               \
                                                                                     \
-    Py_buffer buf;                                                                  \
+    Py_buffer buf = {NULL, NULL};                                                   \
     if (_get_buffer_or_str(arg, &buf) < 0)                                          \
         return NULL;                                                                \
     PY##prefix##_do_update(self, &buf);                                             \
     Py_RETURN_NONE;                                                                 \
 }
 
-/* Hex lookup table for hexdigest(). */
 /* Get a buffer from an object. Rejects str with hashlib-compatible error. */
 static inline int
 _get_buffer_or_str(PyObject *obj, Py_buffer *buf)
@@ -836,8 +835,7 @@ static PyObject *PYXXH32_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
 
     if ((self->xxhash_state = XXH32_createState()) == NULL) {
         Py_DECREF(self);
-        PyErr_NoMemory();
-        return NULL;
+        return PyErr_NoMemory();
     }
 
     self->seed = 0;
@@ -866,7 +864,8 @@ _parse_init_args(PyObject *args, PyObject *kwargs,
                 PyUnicode_CompareWithASCIIString(key, "seed") == 0)
                 continue;
             PyErr_Format(PyExc_TypeError,
-                "'%U' is an invalid keyword argument for this function", key);
+                "'%U' is an invalid keyword argument for '%s()'",
+                key, funcname);
             return -1;
         }
     }
@@ -1006,8 +1005,7 @@ static PyObject *PYXXH32_copy(PYXXH32Object *self)
 
     if ((p->xxhash_state = XXH32_createState()) == NULL) {
         Py_DECREF(p);
-        PyErr_NoMemory();
-        return NULL;
+        return PyErr_NoMemory();
     }
 
     XXHASH_LOCK_ACQUIRE(self);
@@ -1218,8 +1216,7 @@ static PyObject *PYXXH64_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
 
     if ((self->xxhash_state = XXH64_createState()) == NULL) {
         Py_DECREF(self);
-        PyErr_NoMemory();
-        return NULL;
+        return PyErr_NoMemory();
     }
 
     self->seed = 0;
@@ -1317,8 +1314,7 @@ static PyObject *PYXXH64_copy(PYXXH64Object *self)
 
     if ((p->xxhash_state = XXH64_createState()) == NULL) {
         Py_DECREF(p);
-        PyErr_NoMemory();
-        return NULL;
+        return PyErr_NoMemory();
     }
 
     XXHASH_LOCK_ACQUIRE(self);
@@ -1529,8 +1525,7 @@ static PyObject *PYXXH3_64_new(PyTypeObject *type, PyObject *args, PyObject *kwa
 
     if ((self->xxhash_state = XXH3_createState()) == NULL) {
         Py_DECREF(self);
-        PyErr_NoMemory();
-        return NULL;
+        return PyErr_NoMemory();
     }
 
     self->seed = 0;
@@ -1628,8 +1623,7 @@ static PyObject *PYXXH3_64_copy(PYXXH3_64Object *self)
 
     if ((p->xxhash_state = XXH3_createState()) == NULL) {
         Py_DECREF(p);
-        PyErr_NoMemory();
-        return NULL;
+        return PyErr_NoMemory();
     }
 
     XXHASH_LOCK_ACQUIRE(self);
@@ -1847,8 +1841,7 @@ static PyObject *PYXXH3_128_new(PyTypeObject *type, PyObject *args, PyObject *kw
 
     if ((self->xxhash_state = XXH3_createState()) == NULL) {
         Py_DECREF(self);
-        PyErr_NoMemory();
-        return NULL;
+        return PyErr_NoMemory();
     }
 
     self->seed = 0;
@@ -1965,8 +1958,7 @@ static PyObject *PYXXH3_128_copy(PYXXH3_128Object *self)
 
     if ((p->xxhash_state = XXH3_createState()) == NULL) {
         Py_DECREF(p);
-        PyErr_NoMemory();
-        return NULL;
+        return PyErr_NoMemory();
     }
 
     XXHASH_LOCK_ACQUIRE(self);
