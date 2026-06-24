@@ -1,6 +1,17 @@
 CHANGELOG
 -----------
 
+v3.7.1 2026-06-24
+~~~~~~~~~~~~~~~~~
+
+- Fix memory leaks in copy() and new() for all xxhash types
+- Fix seed/reset state initialization in xxh32 and xxh64
+- Replace Py_BuildValue with PyLong_FromUnsignedLong/LongLong for performance
+- Update README examples to use bytes literals
+- Add CodSpeed performance benchmarks and CI workflow
+- Build aarch64/armv7l on native Arm runners; test against Python 3.15.0-beta.2
+
+
 v3.7.0 2025-04-25
 ~~~~~~~~~~~~~~~~~
 
