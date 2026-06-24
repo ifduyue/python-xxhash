@@ -4,8 +4,8 @@ CHANGELOG
 v3.7.1 2026-06-24
 ~~~~~~~~~~~~~~~~~
 
-- Fix memory leaks in copy() and new() for all xxhash types
-- Fix seed/reset state initialization in xxh32 and xxh64
+- Fix memory leak in copy() and new() when memory allocation fails (rare edge case)
+- Fix seed/reset state initialization in xxh32 and xxh64 (unlikely to affect normal usage)
 - Replace Py_BuildValue with PyLong_FromUnsignedLong/LongLong for performance
 - Update README examples to use bytes literals
 - Add CodSpeed performance benchmarks and CI workflow
