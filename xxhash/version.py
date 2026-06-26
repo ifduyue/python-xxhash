@@ -1,3 +1,3 @@
-VERSION = "3.8.0.dev10"
+VERSION = "3.8.0.dev11"
 #: Deprecated, will be removed in the next major release
 VERSION_TUPLE = (3, 8, 0)
