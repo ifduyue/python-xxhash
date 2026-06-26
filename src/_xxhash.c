@@ -44,6 +44,25 @@
 #define XXH128_DIGESTSIZE 16
 #define XXH128_BLOCKSIZE 64
 
+#if PY_VERSION_HEX < 0x03090000
+static int
+_PyModule_AddType(PyObject *module, PyTypeObject *type)
+{
+    const char *name;
+    if (PyType_Ready(type) < 0)
+        return -1;
+    name = strrchr(type->tp_name, '.');
+    name = name ? name + 1 : type->tp_name;
+    Py_INCREF(type);
+    if (PyModule_AddObject(module, name, (PyObject *)type) < 0) {
+        Py_DECREF(type);
+        return -1;
+    }
+    return 0;
+}
+#define PyModule_AddType _PyModule_AddType
+#endif
+
 
 /* Get a buffer from an object, or UTF-8 encode if it's a str.
  * On success, *owner is set to the object that owns the buffer
