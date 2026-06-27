@@ -1,6 +1,23 @@
 CHANGELOG
 -----------
 
+
+v3.8.0 2026-06-27
+~~~~~~~~~~~~~~~~~
+
+- Speed up module-level one-shot ``digest()``, ``intdigest()``, and
+  ``hexdigest()`` functions by switching them to ``METH_FASTCALL``.
+- Keep one-shot argument handling consistent with hash constructors, including
+  positional and keyword ``input``/``seed`` arguments, duplicate argument
+  errors, and oversized seed wrapping.
+- Fix error handling in the ``xxh3_128`` integer digest path so allocation
+  failures are reported cleanly.
+- Fix Python 3.8 builds by adding a ``PyModule_AddType`` compatibility
+  fallback with correct reference counting.
+- Correct type stubs for ``xxh64_digest()``, ``xxh64_hexdigest()``, and
+  ``xxh64_intdigest()``, they were incorrectly aliased to xxh3_64 functions.
+
+
 v3.7.1 2026-06-24
 ~~~~~~~~~~~~~~~~~
 
