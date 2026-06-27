@@ -48,19 +48,19 @@ class TestFastcallNormal(unittest.TestCase):
 
     def test_positional_seed_xxh32(self):
         for s in self.seeds_32:
-            self._check('xxh32', self.data, seed=s)
+            self._check('xxh32', self.data, s)
 
     def test_positional_seed_xxh64(self):
         for s in self.seeds_64:
-            self._check('xxh64', self.data, seed=s)
+            self._check('xxh64', self.data, s)
 
     def test_positional_seed_xxh3_64(self):
         for s in self.seeds_64:
-            self._check('xxh3_64', self.data, seed=s)
+            self._check('xxh3_64', self.data, s)
 
     def test_positional_seed_xxh3_128(self):
         for s in self.seeds_64:
-            self._check('xxh3_128', self.data, seed=s)
+            self._check('xxh3_128', self.data, s)
 
     # ── keyword input ─────────────────────────────────────────────
 
@@ -183,9 +183,17 @@ class TestFastcallSeedOverflow(unittest.TestCase):
     def _check_wrap(self, algo, seed):
         """Module function with seed matches type constructor with same seed."""
         d = getattr(xxhash, f'{algo}_digest')
+        i = getattr(xxhash, f'{algo}_intdigest')
+        h = getattr(xxhash, f'{algo}_hexdigest')
         obj = getattr(xxhash, algo)(self.data, seed=seed)
+        # positional seed
         self.assertEqual(d(self.data, seed), obj.digest())
+        self.assertEqual(i(self.data, seed), obj.intdigest())
+        self.assertEqual(h(self.data, seed), obj.hexdigest())
+        # keyword seed
         self.assertEqual(d(self.data, seed=seed), obj.digest())
+        self.assertEqual(i(self.data, seed=seed), obj.intdigest())
+        self.assertEqual(h(self.data, seed=seed), obj.hexdigest())
 
     def test_xxh32_wrap(self):
         """2**32 wraps to 0, 2**32+1 wraps to 1, etc."""
