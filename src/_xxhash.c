@@ -1248,8 +1248,8 @@ static PyObject *PYXXH3_64_intdigest(PYXXH3_64Object *self)
 
 PyDoc_STRVAR(
     PYXXH3_64_copy_doc,
-    "copy() -> xxh64 object\n\n"
-    "Return a copy (``clone'') of the xxh64 object.");
+    "copy() -> xxh3_64 object\n\n"
+    "Return a copy (``clone'') of the xxh3_64 object.");
 
 static PyObject *PYXXH3_64_copy(PYXXH3_64Object *self)
 {
@@ -1367,7 +1367,7 @@ PyDoc_STRVAR(
     "digest() -- return the current digest value\n"
     "hexdigest() -- return the current digest as a string of hexadecimal digits\n"
     "intdigest() -- return the current digest as an integer\n"
-    "copy() -- return a copy of the current xxh64 object");
+    "copy() -- return a copy of the current xxh3_64 object");
 
 static PyTypeObject PYXXH3_64Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
