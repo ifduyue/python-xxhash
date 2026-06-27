@@ -217,7 +217,7 @@ static PyObject *xxh32_intdigest(PyObject *self, PyObject *const *args,
     PyBuffer_Release(&buf);
     Py_XDECREF(buf_owner);
 
-    return Py_BuildValue("I", intdigest);
+    return PyLong_FromUnsignedLong(intdigest);
 }
 static PyObject *xxh32_hexdigest(PyObject *self, PyObject *const *args,
                                   Py_ssize_t nargs, PyObject *kwnames)
@@ -287,7 +287,7 @@ static PyObject *xxh64_intdigest(PyObject *self, PyObject *const *args,
     PyBuffer_Release(&buf);
     Py_XDECREF(buf_owner);
 
-    return Py_BuildValue("K", intdigest);
+    return PyLong_FromUnsignedLongLong(intdigest);
 }
 static PyObject *xxh64_hexdigest(PyObject *self, PyObject *const *args,
                                   Py_ssize_t nargs, PyObject *kwnames)
@@ -357,7 +357,7 @@ static PyObject *xxh3_64_intdigest(PyObject *self, PyObject *const *args,
     PyBuffer_Release(&buf);
     Py_XDECREF(buf_owner);
 
-    return Py_BuildValue("K", intdigest);
+    return PyLong_FromUnsignedLongLong(intdigest);
 }
 static PyObject *xxh3_64_hexdigest(PyObject *self, PyObject *const *args,
                                   Py_ssize_t nargs, PyObject *kwnames)
@@ -629,7 +629,7 @@ PyDoc_STRVAR(
 static PyObject *PYXXH32_intdigest(PYXXH32Object *self)
 {
     XXH32_hash_t digest = XXH32_digest(self->xxhash_state);
-    return Py_BuildValue("I", digest);
+    return PyLong_FromUnsignedLong(digest);
 }
 
 PyDoc_STRVAR(
@@ -698,7 +698,7 @@ PYXXH32_get_name(PYXXH32Object *self, void *closure)
 static PyObject *
 PYXXH32_get_seed(PYXXH32Object *self, void *closure)
 {
-    return Py_BuildValue("I", self->seed);
+    return PyLong_FromUnsignedLong(self->seed);
 }
 
 static PyGetSetDef PYXXH32_getseters[] = {
@@ -936,7 +936,7 @@ PyDoc_STRVAR(
 static PyObject *PYXXH64_intdigest(PYXXH64Object *self)
 {
     XXH64_hash_t digest = XXH64_digest(self->xxhash_state);
-    return Py_BuildValue("K", digest);
+    return PyLong_FromUnsignedLongLong(digest);
 }
 
 PyDoc_STRVAR(
@@ -1005,7 +1005,7 @@ PYXXH64_get_name(PYXXH64Object *self, void *closure)
 static PyObject *
 PYXXH64_get_seed(PYXXH64Object *self, void *closure)
 {
-    return Py_BuildValue("K", self->seed);
+    return PyLong_FromUnsignedLongLong(self->seed);
 }
 
 static PyGetSetDef PYXXH64_getseters[] = {
@@ -1243,7 +1243,7 @@ PyDoc_STRVAR(
 static PyObject *PYXXH3_64_intdigest(PYXXH3_64Object *self)
 {
     XXH64_hash_t intdigest = XXH3_64bits_digest(self->xxhash_state);
-    return Py_BuildValue("K", intdigest);
+    return PyLong_FromUnsignedLongLong(intdigest);
 }
 
 PyDoc_STRVAR(
@@ -1319,7 +1319,7 @@ PYXXH3_64_get_name(PYXXH3_64Object *self, void *closure)
 static PyObject *
 PYXXH3_64_get_seed(PYXXH3_64Object *self, void *closure)
 {
-    return Py_BuildValue("K", self->seed);
+    return PyLong_FromUnsignedLongLong(self->seed);
 }
 
 static PyGetSetDef PYXXH3_64_getseters[] = {
@@ -1651,7 +1651,7 @@ PYXXH3_128_get_name(PYXXH3_128Object *self, void *closure)
 static PyObject *
 PYXXH3_128_get_seed(PYXXH3_128Object *self, void *closure)
 {
-    return Py_BuildValue("K", self->seed);
+    return PyLong_FromUnsignedLongLong(self->seed);
 }
 
 static PyGetSetDef PYXXH3_128_getseters[] = {
