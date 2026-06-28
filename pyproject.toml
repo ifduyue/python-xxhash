@@ -31,3 +31,8 @@ implicit_reexport = false
 strict_equality = true
 pretty = true
 error_summary = false
+
+[tool.pytest.ini_options]
+markers = [
+    "benchmark",
+]
