@@ -105,12 +105,8 @@
 #define XXH128_DIGESTSIZE 16
 #define XXH128_BLOCKSIZE 64
 
-#ifndef Py_ALWAYS_INLINE
-#  define Py_ALWAYS_INLINE
-#endif
-
 /* Get a buffer from an object. Rejects str with hashlib-compatible error. */
-static inline Py_ALWAYS_INLINE int
+static inline int
 _get_buffer_or_str(PyObject *obj, Py_buffer *buf)
 {
     if (obj == Py_None) {
@@ -627,7 +623,7 @@ static void PYXXH32_dealloc(PYXXH32Object *self)
  * then acquire lock, hash, release lock, re-acquire GIL.
  * For small data, acquire lock with GIL held (try-then-block if contested). */
 #define XXHASH_DO_UPDATE(type, update_fn)                                     \
-static inline Py_ALWAYS_INLINE void                                           \
+static inline void                                           \
 PY##type##_do_update(PY##type##Object *self, Py_buffer *buf)                  \
 {                                                                             \
     XXHASH_LOCK_MAYBE_INIT(self, buf->len);                                   \
