@@ -109,7 +109,6 @@
 #  define Py_ALWAYS_INLINE
 #endif
 
-/* Hex lookup table for hexdigest(). */
 /* Get a buffer from an object. Rejects str with hashlib-compatible error. */
 static inline Py_ALWAYS_INLINE int
 _get_buffer_or_str(PyObject *obj, Py_buffer *buf)
