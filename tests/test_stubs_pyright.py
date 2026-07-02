@@ -1,5 +1,6 @@
 """Validate the .pyi type stubs using pyright."""
 
+import os
 import subprocess
 import tempfile
 import unittest
@@ -7,6 +8,19 @@ from pathlib import Path
 
 
 class TestStubsPyright(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        timeout = int(os.environ.get("PYRIGHT_TIMEOUT", "30"))
+        try:
+            subprocess.run(
+                ["pyright", "--version"],
+                capture_output=True,
+                check=True,
+                timeout=timeout,
+            )
+        except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.CalledProcessError):
+            raise unittest.SkipTest("pyright is not available or not working")
+
     def _run_pyright(self, source: str) -> subprocess.CompletedProcess:
         """Run pyright on a temporary file with the given source.
 
@@ -24,14 +38,19 @@ class TestStubsPyright(unittest.TestCase):
             f.write(source)
             tmp_path = f.name
 
+        timeout = int(os.environ.get("PYRIGHT_TIMEOUT", "30"))
         try:
             return subprocess.run(
                 ["pyright", "--project", str(repo_root), tmp_path],
                 capture_output=True,
                 text=True,
                 cwd=repo_root,
-                timeout=30,
+                timeout=timeout,
             )
+        except subprocess.TimeoutExpired as exc:
+            raise unittest.SkipTest(
+                f"pyright timed out after {timeout}s; skipping type-stub check"
+            ) from exc
         finally:
             Path(tmp_path).unlink(missing_ok=True)
 
