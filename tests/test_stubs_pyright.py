@@ -30,7 +30,7 @@ class TestStubsPyright(unittest.TestCase):
                 capture_output=True,
                 text=True,
                 cwd=repo_root,
-                timeout=30,
+                timeout=60,
             )
         finally:
             Path(tmp_path).unlink(missing_ok=True)

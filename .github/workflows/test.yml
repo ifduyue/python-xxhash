@@ -41,3 +41,26 @@ jobs:
           python -m unittest discover -vv tests
           ./bench.sh
 
+  test_s390x:
+    name: Test on big-endian s390x
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Run tests on s390x
+        uses: uraimo/run-on-arch-action@v2
+        with:
+          arch: s390x
+          distro: ubuntu22.04
+          githubToken: ${{ github.token }}
+          install: |
+            apt-get update -q -y
+            apt-get install -q -y python3 python3-pip build-essential
+          run: |
+            python3 -c "import sys; assert sys.byteorder == 'big'; print('byteorder:', sys.byteorder)"
+            python3 -m pip install --upgrade uv
+            uvx --python cpython@3.12 --with setuptools python setup.py build_ext --inplace
+            uvx --python cpython@3.12 --with pytest,pyright python -m unittest discover -vv tests
