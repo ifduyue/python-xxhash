@@ -6,6 +6,32 @@ NEXT
 
 - Drop support for Python 3.8
 
+v3.8.0 2026-06-27
+~~~~~~~~~~~~~~~~~
+
+- Speed up module-level one-shot ``digest()``, ``intdigest()``, and
+  ``hexdigest()`` functions by switching them to ``METH_FASTCALL``.
+- Keep one-shot argument handling consistent with hash constructors, including
+  positional and keyword ``input``/``seed`` arguments, duplicate argument
+  errors, and oversized seed wrapping.
+- Fix error handling in the ``xxh3_128`` integer digest path so allocation
+  failures are reported cleanly.
+- Fix Python 3.8 builds by adding a ``PyModule_AddType`` compatibility
+  fallback with correct reference counting.
+- Correct type stubs for ``xxh64_digest()``, ``xxh64_hexdigest()``, and
+  ``xxh64_intdigest()``, they were incorrectly aliased to xxh3_64 functions.
+
+
+v3.7.1 2026-06-24
+~~~~~~~~~~~~~~~~~
+
+- Fix memory leak in copy() and new() when memory allocation fails (rare edge case)
+- Fix seed/reset state initialization in xxh32 and xxh64 (unlikely to affect normal usage)
+- Replace Py_BuildValue with PyLong_FromUnsignedLong/LongLong for performance
+- Update README examples to use bytes literals
+- Add CodSpeed performance benchmarks and CI workflow
+- Build aarch64/armv7l on native Arm runners; test against Python 3.15.0-beta.2
+
 v3.7.0 2025-04-25
 ~~~~~~~~~~~~~~~~~
 
