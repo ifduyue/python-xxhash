@@ -485,7 +485,6 @@ static PyObject *xxh3_128_hexdigest(PyObject *self, PyObject *const *args,
 
 typedef struct {
     PyObject_HEAD
-    /* Type-specific fields go here. */
     XXH32_state_t *xxhash_state;
     XXH32_hash_t seed;
 } PYXXH32Object;
@@ -555,7 +554,7 @@ static int PYXXH32_init(PYXXH32Object *self, PyObject *args, PyObject *kwargs)
 PyDoc_STRVAR(
     PYXXH32_update_doc,
     "update (input)\n\n"
-    "Update the xxh32 object with the string input. Repeated calls are\n"
+    "Update the xxh32 object with input data. Repeated calls are\n"
     "equivalent to a single call with the concatenation of all the arguments.");
 
 static PyObject *PYXXH32_update(PYXXH32Object *self, PyObject *args)
@@ -576,9 +575,9 @@ static PyObject *PYXXH32_update(PYXXH32Object *self, PyObject *args)
 
 PyDoc_STRVAR(
     PYXXH32_digest_doc,
-    "digest() -> string\n\n"
-    "Return the digest of the strings passed to the update() method so\n"
-    "far. This is a 4-byte string which may contain non-ASCII characters,\n"
+    "digest() -> bytes\n\n"
+    "Return the digest of the data passed to the update() method so\n"
+    "far. This is a 4-byte value which may contain non-ASCII characters,\n"
     "including null bytes.");
 
 static PyObject *PYXXH32_digest(PYXXH32Object *self)
@@ -624,7 +623,7 @@ PyDoc_STRVAR(
     PYXXH32_intdigest_doc,
     "intdigest() -> int\n\n"
     "Like digest(), but returns the digest as an integer, which is the integer\n"
-    "returned by xxhash C API");
+    "returned by the xxHash C API.");
 
 static PyObject *PYXXH32_intdigest(PYXXH32Object *self)
 {
@@ -635,7 +634,7 @@ static PyObject *PYXXH32_intdigest(PYXXH32Object *self)
 PyDoc_STRVAR(
     PYXXH32_copy_doc,
     "copy() -> xxh32 object\n\n"
-    "Return a copy (``clone'') of the xxh32 object.");
+    "Return a copy of the xxh32 object.");
 
 static PyObject *PYXXH32_copy(PYXXH32Object *self)
 {
@@ -738,11 +737,11 @@ static PyGetSetDef PYXXH32_getseters[] = {
 PyDoc_STRVAR(
     PYXXH32Type_doc,
     "An xxh32 represents the object used to calculate the XXH32 hash of a\n"
-    "string of information.\n"
+    "data input.\n"
     "\n"
     "Methods:\n"
     "\n"
-    "update(input) -- updates the current digest with the provided string.\n"
+    "update(input) -- updates the current hash state with additional data.\n"
     "digest() -- return the current digest value\n"
     "hexdigest() -- return the current digest as a string of hexadecimal digits\n"
     "intdigest() -- return the current digest as an integer\n"
@@ -794,7 +793,6 @@ static PyTypeObject PYXXH32Type = {
 
 typedef struct {
     PyObject_HEAD
-    /* Type-specific fields go here. */
     XXH64_state_t *xxhash_state;
     XXH64_hash_t seed;
 } PYXXH64Object;
@@ -862,7 +860,7 @@ static int PYXXH64_init(PYXXH64Object *self, PyObject *args, PyObject *kwargs)
 PyDoc_STRVAR(
     PYXXH64_update_doc,
     "update (input)\n\n"
-    "Update the xxh64 object with the string input. Repeated calls are\n"
+    "Update the xxh64 object with input data. Repeated calls are\n"
     "equivalent to a single call with the concatenation of all the arguments.");
 
 static PyObject *PYXXH64_update(PYXXH64Object *self, PyObject *args)
@@ -882,9 +880,9 @@ static PyObject *PYXXH64_update(PYXXH64Object *self, PyObject *args)
 
 PyDoc_STRVAR(
     PYXXH64_digest_doc,
-    "digest() -> string\n\n"
-    "Return the digest of the strings passed to the update() method so\n"
-    "far. This is a 8-byte string which may contain non-ASCII characters,\n"
+    "digest() -> bytes\n\n"
+    "Return the digest of the data passed to the update() method so\n"
+    "far. This is an 8-byte value which may contain non-ASCII characters,\n"
     "including null bytes.");
 
 static PyObject *PYXXH64_digest(PYXXH64Object *self)
@@ -931,7 +929,7 @@ PyDoc_STRVAR(
     PYXXH64_intdigest_doc,
     "intdigest() -> int\n\n"
     "Like digest(), but returns the digest as an integer, which is the integer\n"
-    "returned by xxhash C API");
+    "returned by the xxHash C API.");
 
 static PyObject *PYXXH64_intdigest(PYXXH64Object *self)
 {
@@ -942,7 +940,7 @@ static PyObject *PYXXH64_intdigest(PYXXH64Object *self)
 PyDoc_STRVAR(
     PYXXH64_copy_doc,
     "copy() -> xxh64 object\n\n"
-    "Return a copy (``clone'') of the xxh64 object.");
+    "Return a copy of the xxh64 object.");
 
 static PyObject *PYXXH64_copy(PYXXH64Object *self)
 {
@@ -1045,11 +1043,11 @@ static PyGetSetDef PYXXH64_getseters[] = {
 PyDoc_STRVAR(
     PYXXH64Type_doc,
     "An xxh64 represents the object used to calculate the XXH64 hash of a\n"
-    "string of information.\n"
+    "data input.\n"
     "\n"
     "Methods:\n"
     "\n"
-    "update(input) -- updates the current digest with an additional string\n"
+    "update(input) -- updates the current hash state with additional data\n"
     "digest() -- return the current digest value\n"
     "hexdigest() -- return the current digest as a string of hexadecimal digits\n"
     "intdigest() -- return the current digest as an integer\n"
@@ -1100,7 +1098,6 @@ static PyTypeObject PYXXH64Type = {
 
 typedef struct {
     PyObject_HEAD
-    /* Type-specific fields go here. */
     XXH3_state_t *xxhash_state;
     XXH64_hash_t seed;
 } PYXXH3_64Object;
@@ -1168,7 +1165,7 @@ static int PYXXH3_64_init(PYXXH3_64Object *self, PyObject *args, PyObject *kwarg
 PyDoc_STRVAR(
     PYXXH3_64_update_doc,
     "update (input)\n\n"
-    "Update the xxh3_64 object with the string input. Repeated calls are\n"
+    "Update the xxh3_64 object with input data. Repeated calls are\n"
     "equivalent to a single call with the concatenation of all the arguments.");
 
 static PyObject *PYXXH3_64_update(PYXXH3_64Object *self, PyObject *args)
@@ -1188,9 +1185,9 @@ static PyObject *PYXXH3_64_update(PYXXH3_64Object *self, PyObject *args)
 
 PyDoc_STRVAR(
     PYXXH3_64_digest_doc,
-    "digest() -> string\n\n"
-    "Return the digest of the strings passed to the update() method so\n"
-    "far. This is a 8-byte string which may contain non-ASCII characters,\n"
+    "digest() -> bytes\n\n"
+    "Return the digest of the data passed to the update() method so\n"
+    "far. This is an 8-byte value which may contain non-ASCII characters,\n"
     "including null bytes.");
 
 static PyObject *PYXXH3_64_digest(PYXXH3_64Object *self)
@@ -1238,7 +1235,7 @@ PyDoc_STRVAR(
     PYXXH3_64_intdigest_doc,
     "intdigest() -> int\n\n"
     "Like digest(), but returns the digest as an integer, which is the integer\n"
-    "returned by xxhash C API");
+    "returned by the xxHash C API.");
 
 static PyObject *PYXXH3_64_intdigest(PYXXH3_64Object *self)
 {
@@ -1249,7 +1246,7 @@ static PyObject *PYXXH3_64_intdigest(PYXXH3_64Object *self)
 PyDoc_STRVAR(
     PYXXH3_64_copy_doc,
     "copy() -> xxh3_64 object\n\n"
-    "Return a copy (``clone'') of the xxh3_64 object.");
+    "Return a copy of the xxh3_64 object.");
 
 static PyObject *PYXXH3_64_copy(PYXXH3_64Object *self)
 {
@@ -1359,11 +1356,11 @@ static PyGetSetDef PYXXH3_64_getseters[] = {
 PyDoc_STRVAR(
     PYXXH3_64Type_doc,
     "An xxh3_64 represents the object used to calculate the XXH3_64 hash of a\n"
-    "string of information.\n"
+    "data input.\n"
     "\n"
     "Methods:\n"
     "\n"
-    "update(input) -- updates the current digest with an additional string\n"
+    "update(input) -- updates the current hash state with additional data\n"
     "digest() -- return the current digest value\n"
     "hexdigest() -- return the current digest as a string of hexadecimal digits\n"
     "intdigest() -- return the current digest as an integer\n"
@@ -1415,7 +1412,6 @@ static PyTypeObject PYXXH3_64Type = {
 
 typedef struct {
     PyObject_HEAD
-    /* Type-specific fields go here. */
     XXH3_state_t *xxhash_state;
     XXH64_hash_t seed;
 } PYXXH3_128Object;
@@ -1483,7 +1479,7 @@ static int PYXXH3_128_init(PYXXH3_128Object *self, PyObject *args, PyObject *kwa
 PyDoc_STRVAR(
     PYXXH3_128_update_doc,
     "update (input)\n\n"
-    "Update the xxh3_128 object with the string input. Repeated calls are\n"
+    "Update the xxh3_128 object with input data. Repeated calls are\n"
     "equivalent to a single call with the concatenation of all the arguments.");
 
 static PyObject *PYXXH3_128_update(PYXXH3_128Object *self, PyObject *args)
@@ -1502,9 +1498,9 @@ static PyObject *PYXXH3_128_update(PYXXH3_128Object *self, PyObject *args)
 
 PyDoc_STRVAR(
     PYXXH3_128_digest_doc,
-    "digest() -> string\n\n"
-    "Return the digest of the strings passed to the update() method so\n"
-    "far. This is a 16-byte string which may contain non-ASCII characters,\n"
+    "digest() -> bytes\n\n"
+    "Return the digest of the data passed to the update() method so\n"
+    "far. This is a 16-byte value which may contain non-ASCII characters,\n"
     "including null bytes.");
 
 static PyObject *PYXXH3_128_digest(PYXXH3_128Object *self)
@@ -1551,7 +1547,7 @@ PyDoc_STRVAR(
     PYXXH3_128_intdigest_doc,
     "intdigest() -> int\n\n"
     "Like digest(), but returns the digest as an integer, which is the integer\n"
-    "returned by xxhash C API");
+    "returned by the xxHash C API.");
 
 static PyObject *PYXXH3_128_intdigest(PYXXH3_128Object *self)
 {
@@ -1581,7 +1577,7 @@ static PyObject *PYXXH3_128_intdigest(PYXXH3_128Object *self)
 PyDoc_STRVAR(
     PYXXH3_128_copy_doc,
     "copy() -> xxh3_128 object\n\n"
-    "Return a copy (``clone'') of the xxh3_128 object.");
+    "Return a copy of the xxh3_128 object.");
 
 static PyObject *PYXXH3_128_copy(PYXXH3_128Object *self)
 {
@@ -1691,11 +1687,11 @@ static PyGetSetDef PYXXH3_128_getseters[] = {
 PyDoc_STRVAR(
     PYXXH3_128Type_doc,
     "An xxh3_128 represents the object used to calculate the XXH3_128 hash of a\n"
-    "string of information.\n"
+    "data input.\n"
     "\n"
     "Methods:\n"
     "\n"
-    "update(input) -- updates the current digest with an additional string\n"
+    "update(input) -- updates the current hash state with additional data\n"
     "digest() -- return the current digest value\n"
     "hexdigest() -- return the current digest as a string of hexadecimal digits\n"
     "intdigest() -- return the current digest as an integer\n"
