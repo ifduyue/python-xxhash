@@ -1,6 +1,12 @@
 CHANGELOG
 -----------
 
+v3.8.1 2026-07-06
+~~~~~~~~~~~~~~~~~
+
+- Register the "benchmark" pytest mark to avoid PytestUnknownMarkWarning
+- Update C extension docstrings and remove stale comments
+
 
 v3.8.0 2026-06-27
 ~~~~~~~~~~~~~~~~~
