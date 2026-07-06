@@ -6,6 +6,13 @@ NEXT
 
 - Drop support for Python 3.8
 
+v3.8.1 2026-07-06
+~~~~~~~~~~~~~~~~~
+
+- Register the "benchmark" pytest mark to avoid PytestUnknownMarkWarning
+- Update C extension docstrings and remove stale comments
+
+
 v3.8.0 2026-06-27
 ~~~~~~~~~~~~~~~~~
 
@@ -20,6 +27,13 @@ v3.8.0 2026-06-27
   fallback with correct reference counting.
 - Correct type stubs for ``xxh64_digest()``, ``xxh64_hexdigest()``, and
   ``xxh64_intdigest()``, they were incorrectly aliased to xxh3_64 functions.
+
+
+v3.7.2 2026-07-06
+~~~~~~~~~~~~~~~~~
+
+- Register the "benchmark" pytest mark to avoid PytestUnknownMarkWarning
+- Update C extension docstrings and remove stale comments
 
 
 v3.7.1 2026-06-24
