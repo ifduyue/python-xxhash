@@ -117,8 +117,6 @@ jobs:
       url: https://test.pypi.org/project/xxhash/
     permissions:
       id-token: write
-    env:
-      TAG: ${{ github.ref_name }}
     steps:
       - uses: actions/download-artifact@v8
         with:
