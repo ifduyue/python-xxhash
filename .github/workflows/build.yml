@@ -105,11 +105,13 @@ jobs:
       fail-fast: false
       matrix:
         group:
-          - 1-of-5
-          - 2-of-5
-          - 3-of-5
-          - 4-of-5
-          - 5-of-5
+          - 1-of-7
+          - 2-of-7
+          - 3-of-7
+          - 4-of-7
+          - 5-of-7
+          - 6-of-7
+          - 7-of-7
     environment:
       name: test-pypi
       url: https://test.pypi.org/project/xxhash/
@@ -157,11 +159,13 @@ jobs:
       fail-fast: false
       matrix:
         group:
-          - 1-of-5
-          - 2-of-5
-          - 3-of-5
-          - 4-of-5
-          - 5-of-5
+          - 1-of-7
+          - 2-of-7
+          - 3-of-7
+          - 4-of-7
+          - 5-of-7
+          - 6-of-7
+          - 7-of-7
     environment:
       name: pypi
       url: https://pypi.org/project/xxhash/
