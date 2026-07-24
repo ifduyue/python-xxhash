@@ -97,15 +97,26 @@ jobs:
 
 
   upload_test_pypi:
-    name: Upload to Test PyPI
+    name: Upload to Test PyPI (${{ matrix.group }})
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-24.04
     if: github.event_name == 'push' && github.repository == 'ifduyue/python-xxhash' && !startsWith(github.ref, 'refs/tags/v')
-    permissions:
-      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        group:
+          - 1-of-5
+          - 2-of-5
+          - 3-of-5
+          - 4-of-5
+          - 5-of-5
     environment:
       name: test-pypi
       url: https://test.pypi.org/project/xxhash/
+    permissions:
+      id-token: write
+    env:
+      TAG: ${{ github.ref_name }}
     steps:
       - uses: actions/download-artifact@v8
         with:
@@ -113,31 +124,142 @@ jobs:
           path: dist
           merge-multiple: true
 
+      - name: Select this group's distributions
+        run: |
+          set -euo pipefail
+          index=$(( $(echo "${{ matrix.group }}" | cut -d- -f1) - 1 ))
+          count=$(echo "${{ matrix.group }}" | cut -d- -f3)
+          mkdir -p dist_group
+          shopt -s nullglob
+          mapfile -t all < <(printf '%s\n' dist/*.whl dist/*.tar.gz | LC_ALL=C sort)
+          i=0
+          for f in "${all[@]}"; do
+            if [ "$(( i % count ))" -eq "${index}" ]; then
+              mv -- "$f" dist_group/
+            fi
+            i=$(( i + 1 ))
+          done
+          echo "Group ${index} of ${count}: ${#all[@]} dists total, kept $(ls dist_group | wc -l) dist(s)"
+
       - name: Upload to Test PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
         with:
+          packages-dir: dist_group
           skip-existing: true
           repository-url: https://test.pypi.org/legacy/
 
   upload_pypi:
-    name: Upload to PyPI
+    name: Upload to PyPI (${{ matrix.group }})
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-24.04
     if: github.event_name == 'push' && github.repository == 'ifduyue/python-xxhash' && startsWith(github.ref, 'refs/tags/v')
+    strategy:
+      fail-fast: false
+      matrix:
+        group:
+          - 1-of-5
+          - 2-of-5
+          - 3-of-5
+          - 4-of-5
+          - 5-of-5
     environment:
       name: pypi
       url: https://pypi.org/project/xxhash/
     permissions:
+      contents: write
       id-token: write
+    env:
+      TAG: ${{ github.ref_name }}
     steps:
+      - uses: actions/checkout@v7
+        if: ${{ strategy.job-index == 0 }}
+        with:
+          fetch-depth: 0
+
       - uses: actions/download-artifact@v8
         with:
           pattern: wheels-*
           path: dist
           merge-multiple: true
 
+      - name: Select this group's distributions
+        id: group
+        run: |
+          set -euo pipefail
+          index=$(( $(echo "${{ matrix.group }}" | cut -d- -f1) - 1 ))
+          count=$(echo "${{ matrix.group }}" | cut -d- -f3)
+          mkdir -p dist_group
+          shopt -s nullglob
+          mapfile -t all < <(printf '%s\n' dist/*.whl dist/*.tar.gz | LC_ALL=C sort)
+          i=0
+          for f in "${all[@]}"; do
+            if [ "$(( i % count ))" -eq "${index}" ]; then
+              mv -- "$f" dist_group/
+            fi
+            i=$(( i + 1 ))
+          done
+          echo "Group ${index} of ${count}: ${#all[@]} dists total, kept $(ls dist_group | wc -l) dist(s)"
+
+      - name: Check whether the GitHub Release already exists
+        if: ${{ strategy.job-index == 0 }}
+        id: check-release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" \
+              --silent 2>err; then
+            echo 'exists=true' >> "${GITHUB_OUTPUT}"
+          elif grep -q 'HTTP 404' err; then
+            echo 'exists=false' >> "${GITHUB_OUTPUT}"
+          else
+            cat err >&2
+            exit 1
+          fi
+
+      - name: Create GitHub Release
+        if: ${{ strategy.job-index == 0 && steps.check-release.outputs.exists != 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          python3 .github/workflows/create_release_notes.py
+          gh release create "${TAG}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "${TAG}" \
+            --notes-file release_notes.md
+
+      - name: Wait for the GitHub Release
+        if: ${{ strategy.job-index != 0 }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          for _ in $(seq 1 150); do
+            if gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" \
+                --silent 2>err; then
+              exit 0
+            fi
+            if ! grep -q 'HTTP 404' err; then
+              cat err >&2
+              exit 1
+            fi
+            sleep 2
+          done
+          echo "GitHub Release ${TAG} did not appear in time" >&2
+          exit 1
+
       - name: Upload to PyPI
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
         with:
+          packages-dir: dist_group
           skip-existing: true
+
+      - name: Upload assets to GitHub Release
+        uses: softprops/action-gh-release@v3.0.2
+        with:
+          files: |
+            dist_group/*.whl
+            dist_group/*.tar.gz
