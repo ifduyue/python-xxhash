@@ -36,7 +36,7 @@ jobs:
         run: python setup.py build_ext --inplace
 
       - name: Run benchmarks
-        uses: CodSpeedHQ/action@v4
+        uses: CodSpeedHQ/action@v5.0.1
         with:
           mode: simulation
           run: pytest tests/test_benchmark.py --codspeed
