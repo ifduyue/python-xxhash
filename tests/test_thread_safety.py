@@ -20,7 +20,6 @@ import sys
 import subprocess
 import signal
 import unittest
-import xxhash
 
 
 # ---------------------------------------------------------------------------

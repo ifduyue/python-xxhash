@@ -14,16 +14,7 @@ DATA_10KB = os.urandom(10000)
 DATA_64KB = os.urandom(65536)
 DATA_2MB = os.urandom(2 * 1024 * 1024)
 
-# Hash types to bench.
 # xxh128 is an alias for xxh3_128 — we skip it to avoid duplicating work.
-HASH_TYPES = ["xxh32", "xxh64", "xxh3_64", "xxh3_128"]
-
-
-def _doc(name):
-    """Return a readable test docstring from the function name."""
-    return name.replace("test_", "").replace("_", " ").strip()
-
-
 # ---------------------------------------------------------------------------
 #  Oneshot _intdigest  —  xxh32_intdigest(bytes, seed=…)
 # ---------------------------------------------------------------------------
@@ -420,7 +411,6 @@ def test_xxh3_128_ctor_seed_kw():
     xxhash.xxh3_128(DATA_5B, seed=SEED_64)
 
 
-# ---------------------------------------------------------------------------
 # ---------------------------------------------------------------------------
 #  Stream (no update): create(data, seed), then finalize.
 #  Covers the constructor __init__ path + finalizer.

@@ -1,6 +1,4 @@
-import os
 import unittest
-import random
 import xxhash
 
 

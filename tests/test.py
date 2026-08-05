@@ -1,7 +1,5 @@
 import array
-import os
 import unittest
-import random
 import struct
 import sys
 from typing import Union, List, TYPE_CHECKING

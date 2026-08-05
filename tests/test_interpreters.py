@@ -6,7 +6,6 @@ Py_MOD_GIL_NOT_USED (3.13t+), so these tests verify that the module
 can be loaded and used safely inside sub-interpreters.
 """
 
-import os
 import unittest
 
 
