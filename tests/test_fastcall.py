@@ -51,19 +51,19 @@ class TestFastcallNormal(unittest.TestCase):
 
     def test_positional_seed_xxh32(self):
         for s in self.seeds_32:
-            self._check('xxh32', self.data, seed=s)
+            self._check('xxh32', self.data, s)
 
     def test_positional_seed_xxh64(self):
         for s in self.seeds_64:
-            self._check('xxh64', self.data, seed=s)
+            self._check('xxh64', self.data, s)
 
     def test_positional_seed_xxh3_64(self):
         for s in self.seeds_64:
-            self._check('xxh3_64', self.data, seed=s)
+            self._check('xxh3_64', self.data, s)
 
     def test_positional_seed_xxh3_128(self):
         for s in self.seeds_64:
-            self._check('xxh3_128', self.data, seed=s)
+            self._check('xxh3_128', self.data, s)
 
     # ── keyword input ─────────────────────────────────────────────
 

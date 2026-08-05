@@ -373,7 +373,7 @@ def test_xxh64_ctor_empty():
 
 @pytest.mark.benchmark
 def test_xxh64_ctor():
-    xxhash.xxh64(DATA_5B, seed=SEED_64)
+    xxhash.xxh64(DATA_5B)
 
 
 @pytest.mark.benchmark
@@ -388,7 +388,7 @@ def test_xxh3_64_ctor_empty():
 
 @pytest.mark.benchmark
 def test_xxh3_64_ctor():
-    xxhash.xxh3_64(DATA_5B, seed=SEED_64)
+    xxhash.xxh3_64(DATA_5B)
 
 
 @pytest.mark.benchmark
@@ -403,7 +403,7 @@ def test_xxh3_128_ctor_empty():
 
 @pytest.mark.benchmark
 def test_xxh3_128_ctor():
-    xxhash.xxh3_128(DATA_5B, seed=SEED_64)
+    xxhash.xxh3_128(DATA_5B)
 
 
 @pytest.mark.benchmark

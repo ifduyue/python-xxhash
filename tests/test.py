@@ -34,9 +34,8 @@ class TestXXH(unittest.TestCase):
         a = array.array('i', struct.unpack('i', b'ab\x00c'))
         assert a.itemsize == 4
         args.append(a)
-        # A memoryview, where supported
-        if sys.version_info >= (2, 7):
-            args.append(memoryview(b'ab\x00c'))
+        # A memoryview
+        args.append(memoryview(b'ab\x00c'))
 
         for func in [xxhash.xxh32, xxhash.xxh64, xxhash.xxh3_64, xxhash.xxh3_128]:
             old_refcounts = list(map(getrefcount, args))
