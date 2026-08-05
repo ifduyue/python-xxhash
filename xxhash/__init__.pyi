@@ -12,7 +12,7 @@ XXHASH_VERSION: str
 VERSION_TUPLE: tuple[int, ...]
 
 algorithms_available: set[str]
-algorithms_guaranteed: set[str]
+algorithms_guaranteed: frozenset[str]
 
 __all__: list[str] = [
     "xxh32",

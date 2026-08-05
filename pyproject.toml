@@ -3,7 +3,7 @@ requires = ["setuptools>=45"]
 build-backend = "setuptools.build_meta"
 
 [tool.cibuildwheel]
-enable = ["pypy", "pypy-eol", "graalpy", "pyodide-prerelease", "pyodide-eol"]
+enable = ["pypy", "pypy-eol", "graalpy", "cpython-prerelease", "pyodide-prerelease", "pyodide-eol"]
 build-frontend = "build[uv]"
 
 [[tool.cibuildwheel.overrides]]

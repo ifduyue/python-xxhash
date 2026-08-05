@@ -26,15 +26,16 @@ xxh128_hexdigest = xxh3_128_hexdigest
 xxh128_intdigest = xxh3_128_intdigest
 xxh128_digest = xxh3_128_digest
 
-algorithms_available = set([
+algorithms_available = {
     "xxh32",
     "xxh64",
     "xxh3_64",
     "xxh128",
     "xxh3_128",
-])
+}
 
-algorithms_guaranteed = algorithms_available
+# hashlib exposes this as an immutable set; frozenset matches that contract.
+algorithms_guaranteed = frozenset(algorithms_available)
 
 
 __all__ = [
