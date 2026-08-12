@@ -741,7 +741,8 @@ _parse_init_args(PyObject *args, PyObject *kwargs,
                 PyUnicode_CompareWithASCIIString(key, "seed") == 0)
                 continue;
             PyErr_Format(PyExc_TypeError,
-                "'%U' is an invalid keyword argument for this function", key);
+                "'%U' is an invalid keyword argument for '%s()'",
+                key, funcname);
             return -1;
         }
     }
@@ -789,7 +790,7 @@ _parse_init_args(PyObject *args, PyObject *kwargs,
 }
 
 /* Macro to generate __init__ for each hash type. */
-#define XXHASH_INIT(type, reset_fn, update_fn, seed_cast)                     \
+#define XXHASH_INIT(type, name, reset_fn, update_fn, seed_cast)               \
 static int PY##type##_init(PY##type##Object *self, PyObject *args,            \
                            PyObject *kwargs)                                  \
 {                                                                             \
@@ -798,7 +799,7 @@ static int PY##type##_init(PY##type##Object *self, PyObject *args,            \
     Py_buffer buf = {NULL, NULL};                                             \
                                                                               \
     if (_parse_init_args(args, kwargs, &data_obj, &seed_val,                  \
-                         "__init__()") < 0)                                   \
+                         name) < 0)                                           \
         return -1;                                                            \
                                                                               \
     if (data_obj) {                                                           \
@@ -818,7 +819,7 @@ static int PY##type##_init(PY##type##Object *self, PyObject *args,            \
     return 0;                                                                 \
 }
 
-XXHASH_INIT(XXH32, XXH32_reset, XXH32_update, XXH32_hash_t)
+XXHASH_INIT(XXH32, "xxhash.xxh32", XXH32_reset, XXH32_update, XXH32_hash_t)
 
 PyDoc_STRVAR(
     PYXXH32_update_doc,
@@ -1169,7 +1170,7 @@ static PyObject *PYXXH64_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
     return (PyObject *)self;
 }
 
-XXHASH_INIT(XXH64, XXH64_reset, XXH64_update, XXH64_hash_t)
+XXHASH_INIT(XXH64, "xxhash.xxh64", XXH64_reset, XXH64_update, XXH64_hash_t)
 
 PyDoc_STRVAR(
     PYXXH64_update_doc,
@@ -1520,7 +1521,7 @@ static PyObject *PYXXH3_64_new(PyTypeObject *type, PyObject *args, PyObject *kwa
     return (PyObject *)self;
 }
 
-XXHASH_INIT(XXH3_64, XXH3_64bits_reset_withSeed, XXH3_64bits_update, XXH64_hash_t)
+XXHASH_INIT(XXH3_64, "xxhash.xxh3_64", XXH3_64bits_reset_withSeed, XXH3_64bits_update, XXH64_hash_t)
 
 PyDoc_STRVAR(
     PYXXH3_64_update_doc,
@@ -1878,7 +1879,7 @@ static PyObject *PYXXH3_128_new(PyTypeObject *type, PyObject *args, PyObject *kw
     return (PyObject *)self;
 }
 
-XXHASH_INIT(XXH3_128, XXH3_128bits_reset_withSeed, XXH3_128bits_update, XXH64_hash_t)
+XXHASH_INIT(XXH3_128, "xxhash.xxh3_128", XXH3_128bits_reset_withSeed, XXH3_128bits_update, XXH64_hash_t)
 
 PyDoc_STRVAR(
     PYXXH3_128_update_doc,
