@@ -4,7 +4,21 @@ CHANGELOG
 NEXT
 ~~~~~~~~~~~~~~~~~
 
-- Drop support for Python 3.8
+- **Breaking change**: Drop support for Python 3.8, require Python >= 3.9
+- **Breaking change**: Remove deprecated ``xxhash.VERSION_TUPLE``
+- Upgrade xxHash from v0.8.2 to v0.8.3. Note: on GCC/Clang source builds
+  that target AVX2 (e.g. ``-march=x86-64-v3``), upstream v0.8.3
+  autovectorizes ``XXH64_update()`` and makes the xxh64 streaming path
+  about 2x slower. The shipped wheels are built for baseline x86-64 and
+  are unaffected. Source builds can work around it by adding
+  ``-fno-tree-vectorize`` to the compiler flags.
+- Add per-object locking for thread safety, with sub-interpreter and
+  free-threaded (no-GIL) Python support
+- Build pyodide wasm32 wheels
+- Add s390x big-endian test job
+- Add Python 3.15 classifier
+- CI: shard the PyPI upload into parallel groups and create the GitHub
+  Release automatically
 
 v3.8.1 2026-07-06
 ~~~~~~~~~~~~~~~~~
