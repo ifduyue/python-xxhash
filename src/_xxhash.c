@@ -47,10 +47,10 @@
 #  define XXHASH_LOCK_FIELD      PyThread_type_lock lock;
 #  define XXHASH_LOCK_INIT(o)    ((o)->lock = NULL)
 #  define XXHASH_LOCK_IS_ACTIVE(o)  ((o)->lock != NULL)
-/* Lazy allocation on first large update */
+/* Lazy allocation on first update large enough to release the GIL */
 #  define XXHASH_LOCK_MAYBE_INIT(o, len)                                 \
     do {                                                                 \
-        if ((o)->lock == NULL && (len) >= XXHASH_GIL_MINSIZE) {          \
+        if ((o)->lock == NULL && (len) > XXHASH_GIL_MINSIZE) {           \
             (o)->lock = PyThread_allocate_lock();                        \
             /* fail? lock stays NULL, fall back to non-threaded code. */ \
         }                                                                \

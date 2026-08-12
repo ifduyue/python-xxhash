@@ -264,8 +264,8 @@ One-shot functions (``xxh32_digest``, ``xxh64_hexdigest``, ``xxh3_128_digest``,
 etc.) are stateless and always safe to call concurrently.
 
 On Python 3.13+ the lock is always active. On Python 3.9-3.12 the lock is
-created on the first ``update()`` of 64KB or more; smaller operations never
-release the GIL, so they are serialized by the GIL itself.
+created on the first ``update()`` of more than 64KB; operations of 64KB or
+less never release the GIL, so they are serialized by the GIL itself.
 
 Sharing a streaming hash object across threads is still discouraged: even
 with locking, the order in which concurrent updates are applied (and hence
