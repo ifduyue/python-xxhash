@@ -251,6 +251,27 @@ And aliases:
     | xxh128_intdigest = xxh3_128_intdigest
     | xxh128_hexdigest = xxh3_128_hexdigest
 
+Thread safety
+-------------
+
+Streaming hash objects (``xxh32``, ``xxh64``, ``xxh3_64``, ``xxh3_128`` /
+``xxh128``) are thread-safe: each object carries a per-object lock that
+serializes access to its internal xxHash state, so concurrent ``update()``,
+``digest()``, ``copy()``, and ``reset()`` calls on the same object never
+corrupt state or crash.
+
+One-shot functions (``xxh32_digest``, ``xxh64_hexdigest``, ``xxh3_128_digest``,
+etc.) are stateless and always safe to call concurrently.
+
+On Python 3.13+ the lock is always active. On Python 3.9-3.12 the lock is
+created on the first ``update()`` of 64KB or more; smaller operations never
+release the GIL, so they are serialized by the GIL itself.
+
+Sharing a streaming hash object across threads is still discouraged: even
+with locking, the order in which concurrent updates are applied (and hence
+the final digest) is nondeterministic. Prefer one-shot functions or one hash
+object per thread.
+
 Caveats
 -------
 
