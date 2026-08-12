@@ -28,7 +28,6 @@
  non-cryptographic hash algorithm */
 
 #include <Python.h>
-#include <string.h>
 
 #include "xxhash.h"
 
@@ -1005,7 +1004,7 @@ PYXXH32_get_digest_size(PYXXH32Object *self, void *closure)
 static PyObject *
 PYXXH32_get_name(PYXXH32Object *self, void *closure)
 {
-    return PyUnicode_FromStringAndSize("XXH32", strlen("XXH32"));
+    return PyUnicode_FromString("XXH32");
 }
 
 static PyObject *
@@ -1356,7 +1355,7 @@ PYXXH64_get_digest_size(PYXXH64Object *self, void *closure)
 static PyObject *
 PYXXH64_get_name(PYXXH64Object *self, void *closure)
 {
-    return PyUnicode_FromStringAndSize("XXH64", strlen("XXH64"));
+    return PyUnicode_FromString("XXH64");
 }
 
 static PyObject *
@@ -1714,7 +1713,7 @@ PYXXH3_64_get_digest_size(PYXXH3_64Object *self, void *closure)
 static PyObject *
 PYXXH3_64_get_name(PYXXH3_64Object *self, void *closure)
 {
-    return PyUnicode_FromStringAndSize("XXH3_64", strlen("XXH3_64"));
+    return PyUnicode_FromString("XXH3_64");
 }
 
 static PyObject *
@@ -2091,7 +2090,7 @@ PYXXH3_128_get_digest_size(PYXXH3_128Object *self, void *closure)
 static PyObject *
 PYXXH3_128_get_name(PYXXH3_128Object *self, void *closure)
 {
-    return PyUnicode_FromStringAndSize("XXH3_128", strlen("XXH3_128"));
+    return PyUnicode_FromString("XXH3_128");
 }
 
 static PyObject *
