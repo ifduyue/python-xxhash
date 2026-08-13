@@ -7,7 +7,8 @@ v4.0.0 2026-08-12
 - **Breaking change**: Drop support for Python 3.8, require Python >= 3.9
 - **Breaking change**: Remove deprecated ``xxhash.VERSION_TUPLE``
 - **Breaking change**: The ``input`` keyword argument is renamed to ``data``
-  across constructors, ``update()``, and one-shot functions
+  in constructors and one-shot functions. ``update()`` additionally gains a
+  ``data`` keyword argument (it accepted no keyword arguments before).
 - **Breaking change**: ``str`` input is no longer accepted and raises
   ``TypeError: Strings must be encoded before hashing``; encode to
   ``bytes`` before hashing
@@ -18,7 +19,9 @@ v4.0.0 2026-08-12
   are unaffected. Source builds can work around it by adding
   ``-fno-tree-vectorize`` to the compiler flags.
 - Add per-object locking for thread safety, with sub-interpreter and
-  free-threaded (no-GIL) Python support
+  free-threaded (no-GIL) Python support. The GIL is now released only
+  while hashing inputs larger than 64 KiB; previously ``update()``
+  released it unconditionally and one-shot functions always held it.
 - Speed up hash constructors by switching them to ``tp_vectorcall``.
 - Build pyodide wasm32 wheels
 - Add s390x big-endian test job
