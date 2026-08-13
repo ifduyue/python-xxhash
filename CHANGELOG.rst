@@ -8,6 +8,8 @@ v4.0.0 2026-08-12
 - **Breaking change**: Remove deprecated ``xxhash.VERSION_TUPLE``
 - **Breaking change**: The ``input`` keyword argument is renamed to ``data``
   across constructors, ``update()``, and one-shot functions
+- **Breaking change**: ``str`` input is no longer accepted; encode to
+  ``bytes`` before hashing (hashlib-compatible ``TypeError``)
 - Upgrade xxHash from v0.8.2 to v0.8.3. Note: on GCC/Clang source builds
   that target AVX2 (e.g. ``-march=x86-64-v3``), upstream v0.8.3
   autovectorizes ``XXH64_update()`` and makes the xxh64 streaming path
