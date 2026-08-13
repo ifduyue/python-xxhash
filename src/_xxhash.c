@@ -2246,7 +2246,10 @@ static PyMethodDef methods[] = {
 static struct PyModuleDef moduledef = {
     PyModuleDef_HEAD_INIT,
     "_xxhash",
-    NULL,
+    "Low-level C extension for the xxhash package.\n"
+    "\n"
+    "Provides the XXH32, XXH64, XXH3_64, and XXH3_128 hash types plus\n"
+    "their one-shot digest(), intdigest(), and hexdigest() functions.",
     0,
     methods,
     slots,
