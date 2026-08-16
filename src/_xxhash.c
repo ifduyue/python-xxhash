@@ -730,9 +730,7 @@ _parse_init_args(PyObject *args, PyObject *kwargs,
 {
     Py_ssize_t nargs = PyTuple_GET_SIZE(args);
 
-    if (!kwargs) {
-        /* fast path: no keywords */
-    } else {
+    if (kwargs) {
         Py_ssize_t pos = 0;
         PyObject *key, *val;
         while (PyDict_Next(kwargs, &pos, &key, &val)) {
@@ -776,7 +774,11 @@ _parse_init_args(PyObject *args, PyObject *kwargs,
     if (kwargs) {
         PyObject *val = PyDict_GetItemString(kwargs, "data");
         if (val) {
-            if (*data_obj) return -1; /* unreachable, caught above */
+            if (*data_obj) {
+                PyErr_Format(PyExc_TypeError,
+                    "%s() got multiple values for argument 'data'", funcname);
+                return -1;
+            }
             *data_obj = val;
         }
         val = PyDict_GetItemString(kwargs, "seed");
