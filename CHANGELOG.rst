@@ -1,6 +1,14 @@
 CHANGELOG
 -----------
 
+v4.0.1 2026-08-17
+~~~~~~~~~~~~~~~~~
+
+- Clean up ``_parse_init_args`` keyword handling so the defensive check
+  for a duplicate ``data`` keyword raises a proper error message
+- Add ``_xxhash`` module docstring
+
+
 v4.0.0 2026-08-12
 ~~~~~~~~~~~~~~~~~
 
