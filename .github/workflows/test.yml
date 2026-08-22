@@ -4,10 +4,21 @@ on: [push, pull_request]
 
 jobs:
   test:
-    runs-on: ubuntu-24.04
+    name: ${{ matrix.python-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
+        os:
+          - ubuntu-24.04
+          - ubuntu-24.04-arm
+          - macos-15
+          - macos-15-intel
+          - macos-26
+          - macos-26-intel
+          - windows-2022
+          - windows-2025
+          - windows-11-arm
         python-version:
           - "3.9"
           - "3.10"
@@ -20,6 +31,18 @@ jobs:
           - "pypy3.9"
           - "pypy3.10"
           - "pypy3.11"
+        exclude:
+          # CPython Windows ARM64 installers start at 3.11; PyPy has no win-arm64 builds.
+          - os: windows-11-arm
+            python-version: "3.9"
+          - os: windows-11-arm
+            python-version: "3.10"
+          - os: windows-11-arm
+            python-version: "pypy3.9"
+          - os: windows-11-arm
+            python-version: "pypy3.10"
+          - os: windows-11-arm
+            python-version: "pypy3.11"
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -35,15 +58,18 @@ jobs:
       - name: Install dependencies
         run: python -m pip install -U pip 'setuptools>=45' pytest pyright
 
-      - name: Run tests
+      - name: Build and run tests
         run: |
           python setup.py build_ext --inplace
           python -m unittest discover -vv tests
-          ./bench.sh
+
+      - name: Run benchmarks
+        shell: bash
+        run: ./bench.sh
 
   test_s390x:
     name: Test on big-endian s390x
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
