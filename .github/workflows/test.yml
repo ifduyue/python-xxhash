@@ -10,8 +10,12 @@ jobs:
       fail-fast: false
       matrix:
         os:
+          - ubuntu-22.04
+          - ubuntu-22.04-arm
           - ubuntu-24.04
           - ubuntu-24.04-arm
+          - ubuntu-26.04
+          - ubuntu-26.04-arm
           - macos-15
           - macos-15-intel
           - macos-26
@@ -43,6 +47,15 @@ jobs:
             python-version: "pypy3.10"
           - os: windows-11-arm
             python-version: "pypy3.11"
+          # setup-python has no Python 3.9 builds for Ubuntu 26.04.
+          - os: ubuntu-26.04
+            python-version: "3.9"
+          - os: ubuntu-26.04
+            python-version: "pypy3.9"
+          - os: ubuntu-26.04-arm
+            python-version: "3.9"
+          - os: ubuntu-26.04-arm
+            python-version: "pypy3.9"
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
