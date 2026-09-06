@@ -1,9 +1,16 @@
 import os
 import re
 import sysconfig
+import threading
 from pathlib import Path
 
 from setuptools import Extension, setup
+from setuptools.command.build_ext import build_ext as _build_ext
+
+# Must cover the whole build_extension (compile + link), not just the
+# build_temp swap. ``build_ext -j`` shares one command instance; a
+# narrower lock would still let two variants mix object files.
+_build_temp_lock = threading.Lock()
 
 # xxh_x86dispatch.c only builds for x86, and only with baseline flags.
 # -mavx*, -march=native, or /arch:AVX* would make the wheel require that ISA.
@@ -35,15 +42,53 @@ else:
         source.append("deps/xxhash/xxh_x86dispatch.c")
         define_macros.append(("XXHASH_X86_DISPATCH", "1"))
 
+# The default ``xxhash._xxhash`` extension is built with per-object locks.
+# ``xxhash._xxhash_nolock`` (public ``xxhash.nolock``) is compiled from the
+# same source with locking disabled, for callers that never share a streaming
+# hash object across threads.
+
+_ext_kwargs = {
+    "sources": source,
+    "include_dirs": include_dirs,
+    "libraries": libraries,
+}
+
 ext_modules = [
     Extension(
         "_xxhash",
-        source,
-        include_dirs=include_dirs,
-        libraries=libraries,
-        define_macros=define_macros,
-    )
+        define_macros=define_macros + [
+            ("XXHASH_WITH_LOCK", "1"),
+        ],
+        **_ext_kwargs,
+    ),
+    Extension(
+        "_xxhash_nolock",
+        define_macros=define_macros + [
+            ("XXHASH_WITH_LOCK", "0"),
+            ("XXHASH_MODULE_NAME", "_xxhash_nolock"),
+            ("XXHASH_TP_NAME_PREFIX", "xxhash.nolock"),
+        ],
+        **_ext_kwargs,
+    ),
 ]
+
+
+class build_ext(_build_ext):
+    """Build each extension in its own temp directory.
+
+    Both extensions are compiled from ``src/_xxhash.c`` with different
+    macros; a shared temp dir would let one variant link the other's objects.
+    """
+
+    def build_extension(self, ext):
+        with _build_temp_lock:
+            old_build_temp = self.build_temp
+            self.build_temp = os.path.join(old_build_temp, ext.name)
+            try:
+                super().build_extension(ext)
+            finally:
+                self.build_temp = old_build_temp
+
 
 d = Path(__file__).parent
 long_description = d.joinpath("README.rst").read_text() + "\n" + d.joinpath("CHANGELOG.rst").read_text()
@@ -83,5 +128,6 @@ setup(
     ],
     python_requires=">=3.9",
     ext_modules=ext_modules,
+    cmdclass={"build_ext": build_ext},
     package_data={"xxhash": ["py.typed", "**.pyi"]},
 )

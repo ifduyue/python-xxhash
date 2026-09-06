@@ -1,6 +1,13 @@
 CHANGELOG
 -----------
 
+NEXT
+~~~~~~~~~~~~~~~~~
+
+- Add ``xxhash.nolock`` submodule with the same API as the default module
+  but without a per-object lock, for callers that never share a streaming
+  hash object across threads. The default module remains thread-safe.
+
 v4.1.0 2026-11-09
 ~~~~~~~~~~~~~~~~~
 
@@ -11,12 +18,10 @@ v4.1.0 2026-11-09
   those inputs are about 1.5x faster.
 - Upgrade bundled xxHash from v0.8.3 to v0.8.4.
 
-
 v4.0.2 2026-10-19
 ~~~~~~~~~~~~~~~~~
 
 - Improve type annotation compatibility with ``hashlib``
-
 
 v4.0.1 2026-08-17
 ~~~~~~~~~~~~~~~~~

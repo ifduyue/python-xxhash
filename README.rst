@@ -255,10 +255,10 @@ Thread safety
 -------------
 
 Streaming hash objects (``xxh32``, ``xxh64``, ``xxh3_64``, ``xxh3_128`` /
-``xxh128``) are thread-safe: each object carries a per-object lock that
-serializes access to its internal xxHash state, so concurrent ``update()``,
-``digest()``, ``copy()``, and ``reset()`` calls on the same object never
-corrupt state or crash.
+``xxh128``) in the default ``xxhash`` module are thread-safe: each object
+carries a per-object lock that serializes access to its internal xxHash
+state, so concurrent ``update()``, ``digest()``, ``copy()``, and ``reset()``
+calls on the same object never corrupt state or crash.
 
 One-shot functions (``xxh32_digest``, ``xxh64_hexdigest``, ``xxh3_128_digest``,
 etc.) are stateless and always safe to call concurrently.
@@ -271,6 +271,80 @@ Sharing a streaming hash object across threads is still discouraged: even
 with locking, the order in which concurrent updates are applied (and hence
 the final digest) is nondeterministic. Prefer one-shot functions or one hash
 object per thread.
+
+``xxhash.nolock``
+~~~~~~~~~~~~~~~~~
+
+If a streaming hash object is never shared across threads, ``xxhash.nolock``
+provides the same API without a per-object lock. Skipping the lock makes
+``update()``, ``digest()``, ``copy()``, and ``reset()`` faster, especially
+on Python 3.13+ and free-threaded builds where the default module always
+takes a mutex.
+
+.. code-block:: python
+
+    >>> from xxhash import nolock
+    >>> h = nolock.xxh64()
+    >>> h.update(b'xxhash')
+    >>> h.hexdigest()
+    '32dd38952c4bc720'
+
+Use it only when this code **exclusively owns** the streaming object for
+its whole lifetime — one hasher per thread, per task, or per request. A
+process-wide singleton that "you will be careful with" is not a fit; use
+the default module.
+
+The caller must guarantee all of the following:
+
+- **Exclusive access to the object.** Do not call ``update()``,
+  ``digest()``, ``hexdigest()``, ``intdigest()``, ``copy()``, ``reset()``,
+  or the constructor-style ``__init__`` on one object from more than one
+  thread, and do not drop the last reference while another thread is still
+  in a method. Same-thread use (including asyncio on a single thread) is
+  fine. On free-threaded (no-GIL) Python a race is undefined behavior — a
+  crash or silent corruption — not merely a wrong digest. ``xxh3_64`` /
+  ``xxh128`` are the most crash-prone: their C state holds internal
+  pointers, so a concurrent ``update()`` + ``reset()``/``copy()`` can
+  segfault.
+- **The input buffer must stay valid and unchanged until the call
+  returns.** That is more than "do not write to it": do not resize it, do
+  not ``memoryview.release()``, do not let the exporter be freed. This
+  applies to the constructor and to ``update()``. For inputs larger than
+  64 KiB the GIL is released while hashing, so another thread touching
+  that memory is a C-level data race. The default module has the same
+  GIL-release caveat for large inputs; ``nolock`` does not protect the
+  buffer either. Prefer immutable ``bytes``, or copy a mutable buffer
+  first.
+- **You own the update order.** With no lock there is no serialization at
+  all. If two threads both ``update()`` the same object, the result is
+  meaningless. Even the default locked module does not define a canonical
+  interleaving: if you need a specific concatenation order, do the updates
+  on one thread, or take your own lock around the whole sequence.
+
+Other notes:
+
+- ``copy()`` of a ``nolock`` object is also unlocked. After ``copy()``
+  returns, the two objects are independent and may be used on different
+  threads — but the ``copy()`` call itself must not race with
+  ``update()`` / ``reset()`` on the source.
+- ``xxhash.xxh64`` and ``xxhash.nolock.xxh64`` (and the other algorithms)
+  are different types. ``isinstance`` across the two is false; APIs that
+  type-check against the default classes will reject ``nolock`` objects.
+- On regular GIL Python, a small ``update()`` holds the GIL, which can
+  hide races in testing. Free-threaded builds and inputs above 64 KiB
+  will not. "It worked on 3.12 with 4 KiB chunks" is not proof the object
+  is safe to share.
+- If you take your own ``threading.Lock``, it must cover the whole
+  sequence you care about (every ``update()`` plus the final
+  ``digest()``), and the buffer rule still applies inside the locked
+  section. At that point the default module is usually simpler.
+- One-shot functions on ``xxhash.nolock`` (``xxh64_digest``, and so on)
+  are still stateless and safe to call concurrently. If the data is
+  already in one buffer, prefer a one-shot function over a streaming
+  object.
+
+The same two-module split is provided on free-threaded builds: the default
+module stays locked, and ``xxhash.nolock`` is the unlocked opt-in.
 
 Caveats
 -------
