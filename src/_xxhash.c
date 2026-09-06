@@ -725,7 +725,8 @@ PYXXH32_vectorcall(PyObject *type, PyObject *const *args,
     XXH32_reset(self->xxhash_state, seed);
 
     if (buf.obj) {
-        /* Constructor: no concurrent access possible, skip locking. */
+        /* Object is not yet published; skip locking. The input buffer
+         * may still be raced while the GIL is released. */
         if (buf.len > XXHASH_GIL_MINSIZE) {
             Py_BEGIN_ALLOW_THREADS
             XXH32_update(self->xxhash_state, buf.buf, buf.len);
@@ -834,7 +835,8 @@ _parse_init_args(PyObject *args, PyObject *kwargs,
     return 0;
 }
 
-/* Macro to generate __init__ for each hash type. */
+/* Re-init of an already-published object. Unlike the vectorcall
+ * constructor, take the lock; large inputs do not release the GIL. */
 #define XXHASH_INIT(type, name, reset_fn, update_fn, seed_cast)               \
 static int PY##type##_init(PY##type##Object *self, PyObject *args,            \
                            PyObject *kwargs)                                  \
@@ -987,7 +989,7 @@ static PyObject *PYXXH32_intdigest(PYXXH32Object *self)
 PyDoc_STRVAR(
     PYXXH32_copy_doc,
     "copy() -> xxh32 object\n\n"
-    "Return a copy of the xxh32 object.");
+    "Return a copy (clone) of the xxh32 object.");
 
 static PyObject *PYXXH32_copy(PYXXH32Object *self)
 {
@@ -1104,7 +1106,8 @@ PyDoc_STRVAR(
     "digest() -- return the current digest value\n"
     "hexdigest() -- return the current digest as a string of hexadecimal digits\n"
     "intdigest() -- return the current digest as an integer\n"
-    "copy() -- return a copy of the current xxh32 object");
+    "copy() -- return a copy (clone) of the current xxh32 object\n"
+    "reset() -- reset state");
 
 static PyType_Slot XXH32Type_slots[] = {
     {Py_tp_dealloc, PYXXH32_dealloc},
@@ -1181,7 +1184,8 @@ PYXXH64_vectorcall(PyObject *type, PyObject *const *args,
     XXH64_reset(self->xxhash_state, seed);
 
     if (buf.obj) {
-        /* Constructor: no concurrent access possible, skip locking. */
+        /* Object is not yet published; skip locking. The input buffer
+         * may still be raced while the GIL is released. */
         if (buf.len > XXHASH_GIL_MINSIZE) {
             Py_BEGIN_ALLOW_THREADS
             XXH64_update(self->xxhash_state, buf.buf, buf.len);
@@ -1338,7 +1342,7 @@ static PyObject *PYXXH64_intdigest(PYXXH64Object *self)
 PyDoc_STRVAR(
     PYXXH64_copy_doc,
     "copy() -> xxh64 object\n\n"
-    "Return a copy of the xxh64 object.");
+    "Return a copy (clone) of the xxh64 object.");
 
 static PyObject *PYXXH64_copy(PYXXH64Object *self)
 {
@@ -1455,7 +1459,8 @@ PyDoc_STRVAR(
     "digest() -- return the current digest value\n"
     "hexdigest() -- return the current digest as a string of hexadecimal digits\n"
     "intdigest() -- return the current digest as an integer\n"
-    "copy() -- return a copy of the current xxh64 object");
+    "copy() -- return a copy (clone) of the current xxh64 object\n"
+    "reset() -- reset state");
 
 static PyType_Slot XXH64Type_slots[] = {
     {Py_tp_dealloc, PYXXH64_dealloc},
@@ -1532,7 +1537,8 @@ PYXXH3_64_vectorcall(PyObject *type, PyObject *const *args,
     XXH3_64bits_reset_withSeed(self->xxhash_state, seed);
 
     if (buf.obj) {
-        /* Constructor: no concurrent access possible, skip locking. */
+        /* Object is not yet published; skip locking. The input buffer
+         * may still be raced while the GIL is released. */
         if (buf.len > XXHASH_GIL_MINSIZE) {
             Py_BEGIN_ALLOW_THREADS
             XXH3_64bits_update(self->xxhash_state, buf.buf, buf.len);
@@ -1689,7 +1695,7 @@ static PyObject *PYXXH3_64_intdigest(PYXXH3_64Object *self)
 PyDoc_STRVAR(
     PYXXH3_64_copy_doc,
     "copy() -> xxh3_64 object\n\n"
-    "Return a copy of the xxh3_64 object.");
+    "Return a copy (clone) of the xxh3_64 object.");
 
 static PyObject *PYXXH3_64_copy(PYXXH3_64Object *self)
 {
@@ -1813,7 +1819,8 @@ PyDoc_STRVAR(
     "digest() -- return the current digest value\n"
     "hexdigest() -- return the current digest as a string of hexadecimal digits\n"
     "intdigest() -- return the current digest as an integer\n"
-    "copy() -- return a copy of the current xxh3_64 object");
+    "copy() -- return a copy (clone) of the current xxh3_64 object\n"
+    "reset() -- reset state");
 
 static PyType_Slot XXH3_64Type_slots[] = {
     {Py_tp_dealloc, PYXXH3_64_dealloc},
@@ -1890,7 +1897,8 @@ PYXXH3_128_vectorcall(PyObject *type, PyObject *const *args,
     XXH3_128bits_reset_withSeed(self->xxhash_state, seed);
 
     if (buf.obj) {
-        /* Constructor: no concurrent access possible, skip locking. */
+        /* Object is not yet published; skip locking. The input buffer
+         * may still be raced while the GIL is released. */
         if (buf.len > XXHASH_GIL_MINSIZE) {
             Py_BEGIN_ALLOW_THREADS
             XXH3_128bits_update(self->xxhash_state, buf.buf, buf.len);
@@ -2066,7 +2074,7 @@ static PyObject *PYXXH3_128_intdigest(PYXXH3_128Object *self)
 PyDoc_STRVAR(
     PYXXH3_128_copy_doc,
     "copy() -> xxh3_128 object\n\n"
-    "Return a copy of the xxh3_128 object.");
+    "Return a copy (clone) of the xxh3_128 object.");
 
 static PyObject *PYXXH3_128_copy(PYXXH3_128Object *self)
 {
@@ -2190,7 +2198,8 @@ PyDoc_STRVAR(
     "digest() -- return the current digest value\n"
     "hexdigest() -- return the current digest as a string of hexadecimal digits\n"
     "intdigest() -- return the current digest as an integer\n"
-    "copy() -- return a copy of the current xxh3_128 object");
+    "copy() -- return a copy (clone) of the current xxh3_128 object\n"
+    "reset() -- reset state");
 
 static PyType_Slot XXH3_128Type_slots[] = {
     {Py_tp_dealloc, PYXXH3_128_dealloc},

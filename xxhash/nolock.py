@@ -1,15 +1,15 @@
 """Same API as ``xxhash``, without a per-object lock.
 
 Safe on distinct objects only: exclusively own each streaming hasher.
-While a method runs — and while the GIL is released or absent — no
-other code that can reach the hasher or the input buffer may run
-(threads, asyncio, subinterpreters, callbacks, and so on). Ensure
+While a method runs, other code may be scheduled (GIL released or
+absent) but must not touch the hasher or the input buffer. Ensure
 update order yourselves.
 
 Races are undefined behavior (crash or corruption), especially for
 ``xxh3_64`` / ``xxh128``. ``copy()`` clones state and stays unlocked.
 Types are not interchangeable with the default module. One-shot
-functions remain safe.
+functions are safe to call concurrently; a shared mutable buffer is
+still a data race when the GIL is released.
 """
 
 from ._xxhash_nolock import (
