@@ -651,37 +651,37 @@ static void PYXXH32_dealloc(PYXXH32Object *self)
     Py_DECREF(tp);
 }
 
-/* Macro to generate _do_update for each hash type.
- * Matches CPython 3.9-3.12 md5 pattern: release GIL first (for large data),
- * then acquire lock, hash, release lock, re-acquire GIL.
- * For small data, acquire lock with GIL held (try-then-block if contested).
- *
- * The unlocked (XXHASH_WITH_LOCK=0) build still releases the GIL for large
- * inputs; lock macros are no-ops.  On the locked 3.9-3.12 lazy-lock path,
- * GIL is only released once the lock has been allocated, so a failed lock
- * allocation falls back to hashing with the GIL held. */
+/* Run STATEMENTS on a published hasher (update / __init__).
+ * Matches CPython hashlib HASHLIB_EXTERNAL_INSTRUCTIONS_LOCKED:
+ * large inputs release the GIL first, then take the lock.
+ * The unlocked build still releases the GIL; lock macros are no-ops.
+ * On the locked 3.9-3.12 lazy-lock path, GIL is only released once the
+ * lock has been allocated, so a failed allocation hashes with the GIL. */
+#define XXHASH_LOCKED_OP(self, len, STATEMENTS)                               \
+    do {                                                                      \
+        XXHASH_LOCK_MAYBE_INIT(self, len);                                    \
+        if ((len) > XXHASH_GIL_MINSIZE &&                                     \
+            (!XXHASH_WITH_LOCK || XXHASH_LOCK_IS_ACTIVE(self))) {             \
+            Py_BEGIN_ALLOW_THREADS                                            \
+            XXHASH_LOCK_ACQUIRE_BLOCKING(self);                               \
+            STATEMENTS;                                                       \
+            XXHASH_LOCK_RELEASE(self);                                        \
+            Py_END_ALLOW_THREADS                                              \
+        } else if (XXHASH_LOCK_IS_ACTIVE(self)) {                             \
+            XXHASH_LOCK_ACQUIRE(self);                                        \
+            STATEMENTS;                                                       \
+            XXHASH_LOCK_RELEASE(self);                                        \
+        } else {                                                              \
+            STATEMENTS;                                                       \
+        }                                                                     \
+    } while (0)
+
 #define XXHASH_DO_UPDATE(type, update_fn)                                     \
 static inline void                                           \
 PY##type##_do_update(PY##type##Object *self, Py_buffer *buf)                  \
 {                                                                             \
-    XXHASH_LOCK_MAYBE_INIT(self, buf->len);                                   \
-    if (buf->len > XXHASH_GIL_MINSIZE &&                                      \
-        (!XXHASH_WITH_LOCK || XXHASH_LOCK_IS_ACTIVE(self))) {                 \
-        /* Release GIL first, then acquire lock (no-op if unlocked). */       \
-        Py_BEGIN_ALLOW_THREADS                                                \
-        XXHASH_LOCK_ACQUIRE_BLOCKING(self);                                   \
-        update_fn(self->xxhash_state, buf->buf, buf->len);                    \
-        XXHASH_LOCK_RELEASE(self);                                            \
-        Py_END_ALLOW_THREADS                                                  \
-    } else if (XXHASH_LOCK_IS_ACTIVE(self)) {                                 \
-        /* Acquire lock with GIL held. */                                     \
-        XXHASH_LOCK_ACQUIRE(self);                                            \
-        update_fn(self->xxhash_state, buf->buf, buf->len);                    \
-        XXHASH_LOCK_RELEASE(self);                                            \
-    } else {                                                                  \
-        /* No lock: hash directly, no GIL release. */                         \
-        update_fn(self->xxhash_state, buf->buf, buf->len);                    \
-    }                                                                         \
+    XXHASH_LOCKED_OP(self, buf->len,                                          \
+        update_fn(self->xxhash_state, buf->buf, buf->len));                   \
     PyBuffer_Release(buf);                                                    \
 }
 
@@ -830,8 +830,8 @@ _parse_init_args(PyObject *args, PyObject *kwargs,
     return 0;
 }
 
-/* Re-init of an already-published object. Unlike the vectorcall
- * constructor, take the lock; large inputs do not release the GIL. */
+/* Re-init of an already-published object: reset + optional update
+ * in one locked section (same GIL protocol as update()). */
 #define XXHASH_INIT(type, name, reset_fn, update_fn, seed_cast)               \
 static int PY##type##_init(PY##type##Object *self, PyObject *args,            \
                            PyObject *kwargs)                                  \
@@ -849,15 +849,13 @@ static int PY##type##_init(PY##type##Object *self, PyObject *args,            \
             return -1;                                                        \
     }                                                                         \
                                                                               \
-    XXHASH_LOCK_ACQUIRE(self);                                                \
-    self->seed = (seed_cast)seed_val;                                         \
-    reset_fn(self->xxhash_state, self->seed);                                 \
-                                                                              \
-    if (buf.obj) {                                                            \
-        update_fn(self->xxhash_state, buf.buf, buf.len);                      \
+    XXHASH_LOCKED_OP(self, buf.obj ? buf.len : 0,                             \
+        self->seed = (seed_cast)seed_val;                                     \
+        reset_fn(self->xxhash_state, self->seed);                             \
+        if (buf.obj)                                                          \
+            update_fn(self->xxhash_state, buf.buf, buf.len));                 \
+    if (buf.obj)                                                              \
         PyBuffer_Release(&buf);                                               \
-    }                                                                         \
-    XXHASH_LOCK_RELEASE(self);                                                \
     return 0;                                                                 \
 }
 

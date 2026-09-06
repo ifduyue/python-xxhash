@@ -153,6 +153,22 @@ class TestHashlibCompat(unittest.TestCase):
             b = getattr(xxhash, algo)(self.data)
             self.assertEqual(a.digest(), b.digest())
 
+    def test_reinit(self):
+        for algo in ('xxh32', 'xxh64', 'xxh3_64', 'xxh3_128'):
+            cls = getattr(xxhash, algo)
+            obj = cls(b'old', seed=1)
+            obj.__init__(self.data, seed=2)
+            self.assertEqual(obj.digest(), cls(self.data, seed=2).digest())
+            self.assertEqual(obj.seed, 2)
+
+    def test_reinit_large(self):
+        data = b'x' * (xxhash._xxhash._GIL_MINSIZE + 1)
+        for algo in ('xxh32', 'xxh64', 'xxh3_64', 'xxh3_128'):
+            cls = getattr(xxhash, algo)
+            obj = cls()
+            obj.__init__(data)
+            self.assertEqual(obj.digest(), cls(data).digest())
+
     # ── copy ───────────────────────────────────────────────────────
 
     def test_copy(self):
