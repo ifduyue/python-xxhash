@@ -1,9 +1,9 @@
 """Same API as ``xxhash``, without a per-object lock.
 
-Safe on distinct objects only: exclusively own each streaming hasher.
-While a method runs, other code may be scheduled (GIL released or
-absent) but must not touch the hasher or the input buffer. Ensure
-update order yourselves.
+Safe on distinct objects only: exclusively own each streaming hasher
+for its whole lifetime, including between method calls. Other code
+that can reach the hasher or the input buffer must not run while a
+call is in progress. Ensure update order yourselves.
 
 Races are undefined behavior (crash or corruption), especially for
 ``xxh3_64`` / ``xxh128``. ``copy()`` clones state and stays unlocked.
