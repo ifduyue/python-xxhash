@@ -21,8 +21,8 @@ else:
 
 # The default ``xxhash._xxhash`` extension is built with per-object locks.
 # ``xxhash._xxhash_nolock`` (public ``xxhash.nolock``) is compiled from the
-# same source with locking disabled, for callers that never share a streaming
-# hash object across threads.
+# same source with locking disabled, for callers that exclusively own each
+# streaming hash object.
 
 _ext_kwargs = {
     "sources": source,

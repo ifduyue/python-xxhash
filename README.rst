@@ -100,10 +100,11 @@ This module is hashlib-compliant, which means you can use it in the same way as 
     | copy() -- return a clone of the current hash object
     | reset() -- reset state
 
-To allow multithreading, the GIL is released while hashing more than
-64 KiB of data at once in a constructor or ``update()``. Any other code
-that can run in that window, and that can still reach the hash object or
-the input buffer, is concurrent access. Repeated ``update()`` calls are
+To allow other Python threads to run, the GIL is released while hashing
+more than 64 KiB of data at once in constructors (``xxh32(data)``),
+``update()``, and one-shot functions. Other code that can reach the
+input buffer in that window is concurrent access; the hasher is not
+visible until the constructor returns. Repeated ``update()`` calls are
 equivalent to concatenating the chunks: ``h.update(a); h.update(b)`` is
 ``h.update(a+b)``.
 
@@ -263,30 +264,34 @@ Thread safety
 
 Concurrent access is any other code that can reach the hasher's state or
 the input buffer while a call is in progress, or that can interleave
-between ``update()`` calls you meant to be sequential. OS threads,
-``asyncio`` tasks, and subinterpreters are the usual cases, not the
-complete list: the same applies to a ``ThreadPoolExecutor`` or GUI
-callback, an ``await`` (or ``asyncio.to_thread``), another process
-writing ``mmap`` / ``shared_memory``, a ``__buffer__`` / ``__del__`` /
-weakref callback that re-enters the hasher, or anything else the runtime
-schedules while the GIL is released (more than 64 KiB) or absent
-(free-threaded). That other code must not touch the hasher or the buffer
-until the call returns.
+between ``update()`` calls you meant to be sequential. Typical sources
+are OS threads, ``asyncio`` tasks (``await`` / ``asyncio.to_thread``),
+subinterpreters, a ``ThreadPoolExecutor`` or GUI callback, another
+process writing ``mmap`` / ``shared_memory``, and a ``__buffer__`` /
+``__del__`` / weakref callback that re-enters the hasher. While a call
+is in progress, that other code must not touch the hasher or the buffer.
+Between calls, an ``await`` is enough for another task to sneak in.
 
 One-shot functions (``xxh32_digest``, ``xxh64_hexdigest``,
-``xxh3_128_digest``, and so on) are stateless and always safe to call
-concurrently.
+``xxh3_128_digest``, and so on) are stateless: overlapping calls are
+safe. They still release the GIL for inputs larger than 64 KiB, so a
+shared mutable buffer is a data race, same as a large ``update()``.
 
 Streaming objects in the default ``xxhash`` module are **safe on a shared
-object**: each carries a per-object lock, so overlapping ``update()``,
-``digest()``, ``copy()``, and ``reset()`` on the same object never
-corrupt state or crash. The lock serializes the hasher; it does not pin
-the input buffer. A ``bytearray`` or memoryview mutated by other code
-while a large ``update()`` has released the GIL is still a data race.
+object**: each carries a per-object lock that serializes ``update()``,
+``digest()``, ``hexdigest()``, ``intdigest()``, ``copy()``, ``reset()``,
+and ``__init__``, so overlapping calls on the same object never corrupt
+state or crash. The lock serializes the hasher; it does not pin the
+input buffer. A ``bytearray`` or memoryview mutated by other code while
+a large constructor, ``update()``, or one-shot has released the GIL is
+still a data race.
 
 On Python 3.13+ the lock is always active. On Python 3.9-3.12 it is
 created on the first ``update()`` of more than 64 KiB; smaller operations
 never release the GIL and are serialized by the GIL itself.
+Constructors (``xxh32(data)``) also release the GIL for large inputs
+(the object is not yet visible); re-calling ``__init__`` on an existing
+object does not.
 
 Sharing one streaming object is still the wrong default. Concurrent
 ``update()`` calls have no defined concatenation order, so the digest is
@@ -330,11 +335,12 @@ The caller must guarantee all of the following:
 - **The input buffer must stay valid and unchanged until the call
   returns.** That is more than "do not write to it": do not resize it, do
   not ``memoryview.release()``, do not let the exporter be freed. This
-  applies to the constructor and to ``update()``. While the GIL is
-  released (or absent), any scheduled code that can reach that memory is
-  a C-level data race. The default module has the same GIL-release
-  caveat for large inputs; ``nolock`` does not protect the buffer either.
-  Prefer immutable ``bytes``, or copy a mutable buffer first.
+  applies to constructors, ``update()``, and one-shot functions. While
+  the GIL is released (or absent), any scheduled code that can reach
+  that memory is a C-level data race. The default module has the same
+  GIL-release caveat for large inputs; ``nolock`` does not protect the
+  buffer either. Prefer immutable ``bytes``, or copy a mutable buffer
+  first.
 - **You own the update order.** With no lock there is no serialization.
   Two overlapping ``update()`` calls do not concatenate in any defined
   order. Even the default locked module does not define a canonical
@@ -359,7 +365,8 @@ Other notes:
   ``digest()``), and the buffer rule still applies inside the locked
   section. At that point the default module is usually simpler.
 - One-shot functions on ``xxhash.nolock`` (``xxh64_digest``, and so on)
-  are still stateless and safe to call concurrently. If the data is
+  are still stateless and safe to call concurrently. A shared mutable
+  buffer is still a data race when the GIL is released. If the data is
   already in one buffer, prefer a one-shot function over a streaming
   object.
 
