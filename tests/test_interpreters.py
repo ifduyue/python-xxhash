@@ -69,6 +69,14 @@ class TestSubinterpreterBasic(_SubinterpreterTestCase):
     def test_import(self):
         self._run("import xxhash")
 
+    def test_import_nolock(self):
+        self._run("""\
+import xxhash
+from xxhash import nolock
+h = nolock.xxh64(b'data', seed=12345)
+assert h.intdigest() == xxhash.xxh64(b'data', seed=12345).intdigest()
+""")
+
     def test_version_exists(self):
         self._run("""\
 import xxhash

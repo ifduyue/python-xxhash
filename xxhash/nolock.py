@@ -1,0 +1,77 @@
+"""Same API as ``xxhash``, without a per-object lock.
+
+Faster streaming ``update()`` / ``digest()`` / ``copy()`` / ``reset()``.
+The caller must exclusively own each streaming object: do not share it
+across threads, do not mutate or release the input buffer until the call
+returns, and ensure update order themselves.
+
+Races are undefined behavior (crash or corruption), especially for
+``xxh3_64`` / ``xxh128``. ``copy()`` stays unlocked; types are not
+interchangeable with the default module. One-shot functions remain safe.
+"""
+
+from ._xxhash_nolock import (
+    xxh32,
+    xxh32_digest,
+    xxh32_intdigest,
+    xxh32_hexdigest,
+    xxh64,
+    xxh64_digest,
+    xxh64_intdigest,
+    xxh64_hexdigest,
+    xxh3_64,
+    xxh3_64_digest,
+    xxh3_64_intdigest,
+    xxh3_64_hexdigest,
+    xxh3_128,
+    xxh3_128_digest,
+    xxh3_128_intdigest,
+    xxh3_128_hexdigest,
+    XXHASH_VERSION,
+)
+
+from .version import VERSION
+
+
+xxh128 = xxh3_128
+xxh128_hexdigest = xxh3_128_hexdigest
+xxh128_intdigest = xxh3_128_intdigest
+xxh128_digest = xxh3_128_digest
+
+algorithms_available = {
+    "xxh32",
+    "xxh64",
+    "xxh3_64",
+    "xxh128",
+    "xxh3_128",
+}
+
+algorithms_guaranteed = algorithms_available
+
+
+__all__ = [
+    "xxh32",
+    "xxh32_digest",
+    "xxh32_intdigest",
+    "xxh32_hexdigest",
+    "xxh64",
+    "xxh64_digest",
+    "xxh64_intdigest",
+    "xxh64_hexdigest",
+    "xxh3_64",
+    "xxh3_64_digest",
+    "xxh3_64_intdigest",
+    "xxh3_64_hexdigest",
+    "xxh3_128",
+    "xxh3_128_digest",
+    "xxh3_128_intdigest",
+    "xxh3_128_hexdigest",
+    "xxh128",
+    "xxh128_digest",
+    "xxh128_intdigest",
+    "xxh128_hexdigest",
+    "VERSION",
+    "XXHASH_VERSION",
+    "algorithms_available",
+    "algorithms_guaranteed",
+]

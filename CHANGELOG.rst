@@ -1,6 +1,13 @@
 CHANGELOG
 -----------
 
+NEXT
+~~~~~~~~~~~~~~~~~
+
+- Add ``xxhash.nolock`` submodule with the same API as the default module
+  but without a per-object lock, for callers that never share a streaming
+  hash object across threads. The default module remains thread-safe.
+
 v4.0.1 2026-08-17
 ~~~~~~~~~~~~~~~~~
 

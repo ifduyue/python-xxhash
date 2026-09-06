@@ -79,3 +79,19 @@ xxhash.xxh32(42)
         result = self._run_pyright(code)
         if result.returncode == 0:
             self.fail("pyright did not reject int argument")
+
+    def test_nolock_valid_buffer_types(self):
+        """xxhash.nolock should type-check the same buffer types."""
+        code = """\
+from xxhash import nolock
+
+h = nolock.xxh64(b"hello")
+h.update(b"world")
+nolock.xxh64_digest(b"hello")
+"""
+        result = self._run_pyright(code)
+        if result.returncode != 0:
+            self.fail(
+                f"pyright reported errors for xxhash.nolock:\n"
+                f"{result.stdout}\n{result.stderr}"
+            )
