@@ -93,12 +93,19 @@ the module properties ``VERSION`` AND ``XXHASH_VERSION`` respectively.
 
 This module is hashlib-compliant, which means you can use it in the same way as ``hashlib.md5``.
 
-    | update() -- update the current digest with an additional string
+    | update() -- update the current digest with additional data
     | digest() -- return the current digest value
     | hexdigest() -- return the current digest as a string of hexadecimal digits
     | intdigest() -- return the current digest as an integer
-    | copy() -- return a copy of the current xxhash object
+    | copy() -- return a clone of the current hash object
     | reset() -- reset state
+
+To allow multithreading, the GIL is released while hashing more than
+64 KiB of data at once in a constructor or ``update()``. Any other code
+that can run in that window, and that can still reach the hash object or
+the input buffer, is concurrent access. Repeated ``update()`` calls are
+equivalent to concatenating the chunks: ``h.update(a); h.update(b)`` is
+``h.update(a+b)``.
 
 md5 digest returns bytes, but the original xxh32 and xxh64 C APIs return integers.
 While this module is made hashlib-compliant, ``intdigest()`` is also provided to
@@ -254,32 +261,47 @@ And aliases:
 Thread safety
 -------------
 
-Streaming hash objects (``xxh32``, ``xxh64``, ``xxh3_64``, ``xxh3_128`` /
-``xxh128``) in the default ``xxhash`` module are thread-safe: each object
-carries a per-object lock that serializes access to its internal xxHash
-state, so concurrent ``update()``, ``digest()``, ``copy()``, and ``reset()``
-calls on the same object never corrupt state or crash.
+Concurrent access is any other code that can reach the hasher's state or
+the input buffer while a call is in progress, or that can interleave
+between ``update()`` calls you meant to be sequential. OS threads,
+``asyncio`` tasks, and subinterpreters are the usual cases, not the
+complete list: the same applies to a ``ThreadPoolExecutor`` or GUI
+callback, an ``await`` (or ``asyncio.to_thread``), another process
+writing ``mmap`` / ``shared_memory``, a ``__buffer__`` / ``__del__`` /
+weakref callback that re-enters the hasher, or anything else the runtime
+schedules while the GIL is released (more than 64 KiB) or absent
+(free-threaded). That other code must not touch the hasher or the buffer
+until the call returns.
 
-One-shot functions (``xxh32_digest``, ``xxh64_hexdigest``, ``xxh3_128_digest``,
-etc.) are stateless and always safe to call concurrently.
+One-shot functions (``xxh32_digest``, ``xxh64_hexdigest``,
+``xxh3_128_digest``, and so on) are stateless and always safe to call
+concurrently.
 
-On Python 3.13+ the lock is always active. On Python 3.9-3.12 the lock is
-created on the first ``update()`` of more than 64KB; operations of 64KB or
-less never release the GIL, so they are serialized by the GIL itself.
+Streaming objects in the default ``xxhash`` module are **safe on a shared
+object**: each carries a per-object lock, so overlapping ``update()``,
+``digest()``, ``copy()``, and ``reset()`` on the same object never
+corrupt state or crash. The lock serializes the hasher; it does not pin
+the input buffer. A ``bytearray`` or memoryview mutated by other code
+while a large ``update()`` has released the GIL is still a data race.
 
-Sharing a streaming hash object across threads is still discouraged: even
-with locking, the order in which concurrent updates are applied (and hence
-the final digest) is nondeterministic. Prefer one-shot functions or one hash
-object per thread.
+On Python 3.13+ the lock is always active. On Python 3.9-3.12 it is
+created on the first ``update()`` of more than 64 KiB; smaller operations
+never release the GIL and are serialized by the GIL itself.
+
+Sharing one streaming object is still the wrong default. Concurrent
+``update()`` calls have no defined concatenation order, so the digest is
+nondeterministic even with the lock. Prefer a one-shot function, or one
+hash object per task. ``copy()`` clones the current state so you can
+hash data that shares a common prefix without repeating work.
 
 ``xxhash.nolock``
 ~~~~~~~~~~~~~~~~~
 
-If a streaming hash object is never shared across threads, ``xxhash.nolock``
-provides the same API without a per-object lock. Skipping the lock makes
-``update()``, ``digest()``, ``copy()``, and ``reset()`` faster, especially
-on Python 3.13+ and free-threaded builds where the default module always
-takes a mutex.
+``xxhash.nolock`` is the same API without a per-object lock. Streaming
+methods are faster, especially on Python 3.13+ and free-threaded builds.
+It is only **safe on distinct objects**: exclusively own each streaming
+hasher for its whole lifetime. Do not let any other task, thread,
+callback, or interpreter reach it while a method is running.
 
 .. code-block:: python
 
@@ -289,51 +311,49 @@ takes a mutex.
     >>> h.hexdigest()
     '32dd38952c4bc720'
 
-Use it only when this code **exclusively owns** the streaming object for
-its whole lifetime — one hasher per thread, per task, or per request. A
-process-wide singleton that "you will be careful with" is not a fit; use
-the default module.
+One hasher per thread, per task, or per request. A process-wide
+singleton that "you will be careful with" is not a fit; use the default
+module.
 
 The caller must guarantee all of the following:
 
-- **Exclusive access to the object.** Do not call ``update()``,
-  ``digest()``, ``hexdigest()``, ``intdigest()``, ``copy()``, ``reset()``,
-  or the constructor-style ``__init__`` on one object from more than one
-  thread, and do not drop the last reference while another thread is still
-  in a method. Same-thread use (including asyncio on a single thread) is
-  fine. On free-threaded (no-GIL) Python a race is undefined behavior — a
-  crash or silent corruption — not merely a wrong digest. ``xxh3_64`` /
-  ``xxh128`` are the most crash-prone: their C state holds internal
-  pointers, so a concurrent ``update()`` + ``reset()``/``copy()`` can
-  segfault.
+- **Exclusive access to the object.** Do not let any other code call
+  ``update()``, ``digest()``, ``hexdigest()``, ``intdigest()``,
+  ``copy()``, ``reset()``, or the constructor-style ``__init__`` on the
+  same object while a method is running, and do not drop the last
+  reference while other code is still in a method. An ``await`` between
+  updates is enough for another task to sneak in. On free-threaded
+  (no-GIL) Python a race is undefined behavior — a crash or silent
+  corruption — not merely a wrong digest. ``xxh3_64`` / ``xxh128`` are
+  the most crash-prone: their C state holds internal pointers, so an
+  overlapping ``update()`` + ``reset()``/``copy()`` can segfault.
 - **The input buffer must stay valid and unchanged until the call
   returns.** That is more than "do not write to it": do not resize it, do
   not ``memoryview.release()``, do not let the exporter be freed. This
-  applies to the constructor and to ``update()``. For inputs larger than
-  64 KiB the GIL is released while hashing, so another thread touching
-  that memory is a C-level data race. The default module has the same
-  GIL-release caveat for large inputs; ``nolock`` does not protect the
-  buffer either. Prefer immutable ``bytes``, or copy a mutable buffer
-  first.
-- **You own the update order.** With no lock there is no serialization at
-  all. If two threads both ``update()`` the same object, the result is
-  meaningless. Even the default locked module does not define a canonical
-  interleaving: if you need a specific concatenation order, do the updates
-  on one thread, or take your own lock around the whole sequence.
+  applies to the constructor and to ``update()``. While the GIL is
+  released (or absent), any scheduled code that can reach that memory is
+  a C-level data race. The default module has the same GIL-release
+  caveat for large inputs; ``nolock`` does not protect the buffer either.
+  Prefer immutable ``bytes``, or copy a mutable buffer first.
+- **You own the update order.** With no lock there is no serialization.
+  Two overlapping ``update()`` calls do not concatenate in any defined
+  order. Even the default locked module does not define a canonical
+  interleaving: if you need ``a+b``, keep the updates on one sequential
+  path, or take your own lock around the whole sequence.
 
 Other notes:
 
-- ``copy()`` of a ``nolock`` object is also unlocked. After ``copy()``
-  returns, the two objects are independent and may be used on different
-  threads — but the ``copy()`` call itself must not race with
-  ``update()`` / ``reset()`` on the source.
+- ``copy()`` clones the current state (a hashlib-style copy). The clone
+  is also unlocked. After ``copy()`` returns, the two objects are
+  independent and may be used on different tasks — but the ``copy()``
+  call itself must not overlap ``update()`` / ``reset()`` on the source.
 - ``xxhash.xxh64`` and ``xxhash.nolock.xxh64`` (and the other algorithms)
   are different types. ``isinstance`` across the two is false; APIs that
   type-check against the default classes will reject ``nolock`` objects.
 - On regular GIL Python, a small ``update()`` holds the GIL, which can
-  hide races in testing. Free-threaded builds and inputs above 64 KiB
-  will not. "It worked on 3.12 with 4 KiB chunks" is not proof the object
-  is safe to share.
+  hide races in testing. Free-threaded builds, inputs above 64 KiB, and
+  any yield/callback that lets other code run will not. "It worked on
+  3.12 with 4 KiB chunks" is not proof the object is safe to share.
 - If you take your own ``threading.Lock``, it must cover the whole
   sequence you care about (every ``update()`` plus the final
   ``digest()``), and the buffer rule still applies inside the locked
