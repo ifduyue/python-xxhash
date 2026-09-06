@@ -1,13 +1,15 @@
 """Same API as ``xxhash``, without a per-object lock.
 
-Faster streaming ``update()`` / ``digest()`` / ``copy()`` / ``reset()``.
-The caller must exclusively own each streaming object: do not share it
-across threads, do not mutate or release the input buffer until the call
-returns, and ensure update order themselves.
+Safe on distinct objects only: exclusively own each streaming hasher.
+While a method runs — and while the GIL is released or absent — no
+other code that can reach the hasher or the input buffer may run
+(threads, asyncio, subinterpreters, callbacks, and so on). Ensure
+update order yourselves.
 
 Races are undefined behavior (crash or corruption), especially for
-``xxh3_64`` / ``xxh128``. ``copy()`` stays unlocked; types are not
-interchangeable with the default module. One-shot functions remain safe.
+``xxh3_64`` / ``xxh128``. ``copy()`` clones state and stays unlocked.
+Types are not interchangeable with the default module. One-shot
+functions remain safe.
 """
 
 from ._xxhash_nolock import (
