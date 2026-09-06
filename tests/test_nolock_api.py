@@ -99,6 +99,15 @@ class TestNolockStreaming(unittest.TestCase):
                 h.update(data)
                 self.assertEqual(h.digest(), typ(data).digest())
 
+    def test_reinit(self):
+        h = nolock.xxh64(b'old', seed=1)
+        h.__init__(b'hello world', seed=2)
+        self.assertEqual(
+            h.digest(),
+            nolock.xxh64(b'hello world', seed=2).digest(),
+        )
+        self.assertEqual(h.seed, 2)
+
     def test_reset(self):
         for typ in [nolock.xxh32, nolock.xxh64,
                     nolock.xxh3_64, nolock.xxh128]:

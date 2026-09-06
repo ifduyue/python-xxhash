@@ -102,13 +102,13 @@ This module is hashlib-compliant, which means you can use it in the same way as 
 
 To allow other Python threads to run, the GIL is released while hashing
 more than 64 KiB of data at once in constructors (``xxh32(data)``),
-``update()``, and one-shot functions. Other code that can reach the
-input buffer in that window is concurrent access. A constructor does
-not publish the hasher until it returns, so only the buffer can race
-during that call; ``update()`` and one-shot functions already have a
-visible hasher. Repeated ``update()`` calls are equivalent to
-concatenating the chunks: ``h.update(a); h.update(b)`` is
-``h.update(a+b)``.
+``update()``, ``__init__``, and one-shot functions. Other code that can
+reach the input buffer in that window is concurrent access. A
+constructor does not publish the hasher until it returns, so only the
+buffer can race during that call; ``update()``, ``__init__``, and
+one-shot functions already have a visible hasher. Repeated ``update()``
+calls are equivalent to concatenating the chunks:
+``h.update(a); h.update(b)`` is ``h.update(a+b)``.
 
 md5 digest returns bytes, but the original xxh32 and xxh64 C APIs return integers.
 While this module is made hashlib-compliant, ``intdigest()`` is also provided to
@@ -289,17 +289,16 @@ and ``__init__``, so overlapping calls on the same object never corrupt
 state or crash. The lock serializes those methods; it does not pin the
 input buffer, and it does not cover attribute getters such as ``seed``.
 A ``bytearray`` or memoryview mutated by other code while a large
-constructor, ``update()``, or one-shot has released the GIL is still a
-data race.
+constructor, ``update()``, ``__init__``, or one-shot has released the
+GIL is still a data race.
 
 On Python 3.13+ the lock is always active. On Python 3.9-3.12 it is
-allocated on the first ``update()`` of more than 64 KiB — a large
-constructor does not create it. Operations of 64 KiB or less never
-release the GIL. Constructors (``xxh32(data)``) release the GIL for
-more than 64 KiB while the object is not yet visible. Re-calling
-``__init__`` on an existing object takes the lock and does not release
-the GIL, so a huge ``__init__`` holds up other Python threads for the
-whole hash.
+allocated on the first ``update()`` or ``__init__`` of more than 64 KiB
+— a large constructor (``xxh32(data)``) does not create it. Operations
+of 64 KiB or less never release the GIL. Constructors release the GIL
+for more than 64 KiB while the object is not yet visible. Re-calling
+``__init__`` on an existing object is reset plus optional update: same
+lock and GIL rules as ``update()``.
 
 Sharing one streaming object is still the wrong default. Concurrent
 ``update()`` calls have no defined concatenation order, so the digest is
@@ -343,7 +342,8 @@ The caller must guarantee all of the following:
 - **The input buffer must stay valid and unchanged until the call
   returns.** That is more than "do not write to it": do not resize it, do
   not ``memoryview.release()``, do not let the exporter be freed. This
-  applies to constructors, ``update()``, and one-shot functions. While
+  applies to constructors, ``update()``, ``__init__``, and one-shot
+  functions. While
   the GIL is released (or absent), any scheduled code that can reach
   that memory is a C-level data race. The default module has the same
   GIL-release caveat for large inputs; ``nolock`` does not protect the
