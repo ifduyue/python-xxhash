@@ -288,17 +288,22 @@ object**: each carries a per-object lock that serializes ``update()``,
 and ``__init__``, so overlapping calls on the same object never corrupt
 state or crash. The lock serializes those methods; it does not pin the
 input buffer, and it does not cover attribute getters such as ``seed``.
-A ``bytearray`` or memoryview mutated by other code while a large
-constructor, ``update()``, ``__init__``, or one-shot has released the
-GIL is still a data race.
+The hash itself releases the GIL only for more than 64 KiB, and an
+uncontended acquire keeps the GIL. On Python 3.9-3.12, once the lock
+exists, a contended ``PyThread_acquire_lock`` releases the GIL while
+waiting. That includes inputs of 64 KiB or less: ``update()`` and
+``__init__`` have already exported the buffer, and ``digest()``,
+``copy()``, and ``reset()`` take the same acquire. A ``bytearray`` or
+memoryview mutated in that window, or while a large constructor,
+``update()``, ``__init__``, or one-shot is hashing, is still a data
+race. Python 3.13+ ``PyMutex`` waits do not release the GIL.
 
 On Python 3.13+ the lock is always active. On Python 3.9-3.12 it is
 allocated on the first ``update()`` or ``__init__`` of more than 64 KiB
-— a large constructor (``xxh32(data)``) does not create it. Operations
-of 64 KiB or less never release the GIL. Constructors release the GIL
-for more than 64 KiB while the object is not yet visible. Re-calling
-``__init__`` on an existing object is reset plus optional update: same
-lock and GIL rules as ``update()``.
+— a large constructor (``xxh32(data)``) does not create it. Constructors
+release the GIL for more than 64 KiB while the object is not yet
+visible. Re-calling ``__init__`` on an existing object is reset plus
+optional update: same lock and GIL rules as ``update()``.
 
 Sharing one streaming object is still the wrong default. Concurrent
 ``update()`` calls have no defined concatenation order, so the digest is
