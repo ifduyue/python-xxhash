@@ -1,3 +1,3 @@
-VERSION = "3.7.2"
+VERSION = "3.7.3"
 #: Deprecated, will be removed in the next major release
-VERSION_TUPLE = (3, 7, 2)
+VERSION_TUPLE = (3, 7, 3)
