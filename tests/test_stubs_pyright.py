@@ -30,7 +30,8 @@ class TestStubsPyright(unittest.TestCase):
                 capture_output=True,
                 text=True,
                 cwd=repo_root,
-                timeout=60,
+                # The first call under QEMU s390x can take about 60 seconds.
+                timeout=120,
             )
         finally:
             Path(tmp_path).unlink(missing_ok=True)
