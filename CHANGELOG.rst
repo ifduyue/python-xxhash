@@ -37,6 +37,12 @@ v4.0.0 2026-08-12
 - CI: shard the PyPI upload into parallel groups and create the GitHub
   Release automatically
 
+v3.8.2 2026-10-18
+~~~~~~~~~~~~~~~~~
+
+- Build wheels for Python 3.15
+
+
 v3.8.1 2026-07-06
 ~~~~~~~~~~~~~~~~~
 
@@ -58,6 +64,12 @@ v3.8.0 2026-06-27
   fallback with correct reference counting.
 - Correct type stubs for ``xxh64_digest()``, ``xxh64_hexdigest()``, and
   ``xxh64_intdigest()``, they were incorrectly aliased to xxh3_64 functions.
+
+
+v3.7.3 2026-10-18
+~~~~~~~~~~~~~~~~~
+
+- Build wheels for Python 3.15
 
 
 v3.7.2 2026-07-06
