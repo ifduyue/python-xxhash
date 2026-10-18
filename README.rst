@@ -289,14 +289,16 @@ and ``__init__``, so overlapping calls on the same object never corrupt
 state or crash. The lock serializes those methods; it does not pin the
 input buffer, and it does not cover attribute getters such as ``seed``.
 The hash itself releases the GIL only for more than 64 KiB, and an
-uncontended acquire keeps the GIL. On Python 3.9-3.12, once the lock
-exists, a contended ``PyThread_acquire_lock`` releases the GIL while
-waiting. That includes inputs of 64 KiB or less: ``update()`` and
+uncontended acquire keeps the GIL. Once the lock exists, a contended
+acquire releases the GIL while waiting, including on inputs of 64 KiB
+or less. On Python 3.9-3.12 that wait is ``PyThread_acquire_lock``
+after ``NOWAIT_LOCK`` fails. On Python 3.13+ a contended ``PyMutex``
+parks the same way and also releases the GIL. ``update()`` and
 ``__init__`` have already exported the buffer, and ``digest()``,
 ``copy()``, and ``reset()`` take the same acquire. A ``bytearray`` or
 memoryview mutated in that window, or while a large constructor,
 ``update()``, ``__init__``, or one-shot is hashing, is still a data
-race. Python 3.13+ ``PyMutex`` waits do not release the GIL.
+race.
 
 On Python 3.13+ the lock is always active. On Python 3.9-3.12 it is
 allocated on the first ``update()`` or ``__init__`` of more than 64 KiB
