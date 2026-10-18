@@ -22,6 +22,7 @@ jobs:
           - "pypy3.9"
           - "pypy3.10"
           - "pypy3.11"
+          - "pypy3.12"
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
