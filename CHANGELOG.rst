@@ -1,6 +1,12 @@
 CHANGELOG
 -----------
 
+v4.0.2 2026-10-19
+~~~~~~~~~~~~~~~~~
+
+- Improve type annotation compatibility with ``hashlib``
+
+
 v4.0.1 2026-08-17
 ~~~~~~~~~~~~~~~~~
 
