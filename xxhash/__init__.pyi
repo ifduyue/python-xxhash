@@ -1,5 +1,5 @@
 from _typeshed import ReadableBuffer
-from typing import Protocol, Self, TypeAlias, final
+from typing import Self, TypeAlias, final
 
 _DataType: TypeAlias = ReadableBuffer
 
