@@ -1,2 +1,5 @@
 [build-system]
-requires = ["setuptools>=45", "wheel"]
+# setuptools 84 asserts that LDCXXSHARED is set. The PyPy 3.10 bundled
+# with cibuildwheel 2.20 does not define it, so that wheel build fails.
+requires = ["setuptools>=45,<84"]
+build-backend = "setuptools.build_meta"
