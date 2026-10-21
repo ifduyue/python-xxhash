@@ -1,2 +1,2 @@
-VERSION = "3.5.0"
-VERSION_TUPLE = (3, 5, 0)
+VERSION = "3.5.1"
+VERSION_TUPLE = (3, 5, 1)
