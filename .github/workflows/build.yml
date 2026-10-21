@@ -18,8 +18,10 @@ jobs:
             archs: "x86"
           - os: windows-2022
             archs: "ARM64"
-          - os: macos-13
-            archs: "x86_64, arm64"
+          - os: macos-15-intel
+            archs: "x86_64"
+          - os: macos-14
+            archs: "arm64"
 
     steps:
       - name: Disable git autocrlf
