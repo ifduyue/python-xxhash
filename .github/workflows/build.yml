@@ -54,15 +54,17 @@ jobs:
         env:
           CIBW_ARCHS: "${{ matrix.archs }}"
           CIBW_BUILD: "${{ matrix.build && '*-' || ''}}${{ matrix.build }}*"
+          # 3.14 is built with cibuildwheel 4.3.1 below. 3.2.0 would build it too.
+          CIBW_SKIP: "cp314*"
 
-      # cibuildwheel 4.x can build CPython 3.15, but it dropped 3.7, 3.8, and 3.13t.
-      # Keep 3.2.0 above for those interpreters and build only cp315 here.
-      - name: Build CPython 3.15 wheels
+      # cibuildwheel 4.x dropped 3.7, 3.8, and 3.13t. Keep 3.2.0 above for those.
+      # 3.14 is skipped on 3.2.0 so this step is the only build of it.
+      - name: Build CPython 3.14 and 3.15 wheels
         uses: pypa/cibuildwheel@v4.3.1
         env:
           CIBW_ARCHS: "${{ matrix.archs }}"
-          CIBW_BUILD: "cp315*${{ matrix.build && '-' || ''}}${{ matrix.build }}*"
-          # 4.x removed the cpython-freethreading enable flag. 3.15t is built by default.
+          CIBW_BUILD: "cp314*${{ matrix.build && '-' || ''}}${{ matrix.build }}* cp315*${{ matrix.build && '-' || ''}}${{ matrix.build }}*"
+          # 4.x removed the cpython-freethreading enable flag. 3.14t and 3.15t are built by default.
           CIBW_ENABLE: ""
 
       - uses: actions/upload-artifact@v4
