@@ -103,6 +103,11 @@ v3.7.0 2025-04-25
 - Build riscv64 manylinux/musllinux wheels
 - Build android and ios wheels
 
+v3.6.1 2026-10-21
+~~~~~~~~~~~~~~~~~
+
+- Build wheels for Python 3.15
+
 v3.6.0 2025-10-02
 ~~~~~~~~~~~~~~~~~
 
@@ -111,10 +116,20 @@ v3.6.0 2025-10-02
 - Typing: Use Buffer type stubs
 - Deprecate xxhash.VERSION_TUPLE, it will be removed in the next major release
 
+v3.5.1 2026-10-21
+~~~~~~~~~~~~~~~~~
+
+- Build wheels for Python 3.14 and 3.15
+
 v3.5.0 2024-08-17
 ~~~~~~~~~~~~~~~~~
 
 - Build wheels for Python 3.13
+
+v3.4.2 2026-10-21
+~~~~~~~~~~~~~~~~~
+
+- Build wheels for Python 3.13, 3.14 and 3.15
 
 v3.4.1 2023-10-05
 ~~~~~~~~~~~~~~~~~
