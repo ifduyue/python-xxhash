@@ -17,6 +17,22 @@ class TestXXH(unittest.TestCase):
         self.assertEqual(xxhash.xxh3_128_intdigest(b'a', 1), 337425133163118381928709500770786453280)
         self.assertEqual(xxhash.xxh3_128_intdigest(b'a', 2**64-1), 198297796855923085494266857744987477846)
 
+    def test_xxh3_128_long(self):
+        # Longer than 240 bytes, so this exercises the XXH3 long path.
+        cases = [
+            (b'a' * 241, 0, 83055572732911745733364072063521397040),
+            (b'a' * 241, 1, 212898653139750571665199124048622024442),
+            (b'a' * 1024, 0, 109508391914506197641422089710284077596),
+            (bytes(range(256)) * 4, 0, 174836936922913186110831535746530774306),
+            (b'\x00' * 65536, 0, 336787309845147245671426168055747992746),
+        ]
+        for data, seed, expected in cases:
+            self.assertEqual(xxhash.xxh3_128_intdigest(data, seed), expected)
+            h = xxhash.xxh3_128(seed=seed)
+            for i in range(0, len(data), 100):
+                h.update(data[i:i + 100])
+            self.assertEqual(h.intdigest(), expected)
+
     def test_xxh3_128_update(self):
         x = xxhash.xxh3_128()
         x.update(b'a')

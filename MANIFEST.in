@@ -4,6 +4,8 @@ include LICENSE
 include deps/xxhash/xxh3.h
 include deps/xxhash/xxhash.h
 include deps/xxhash/xxhash.c
+include deps/xxhash/xxh_x86dispatch.h
+include deps/xxhash/xxh_x86dispatch.c
 include deps/xxhash/LICENSE
 graft tests
 global-exclude __pycache__

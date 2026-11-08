@@ -30,6 +30,11 @@
 #include <Python.h>
 
 #include "xxhash.h"
+#ifdef XXHASH_X86_DISPATCH
+/* Redirect XXH3 one-shot and streaming update onto the runtime dispatcher.
+   reset, digest, and copyState stay on the symbols from xxhash.c. */
+#include "xxh_x86dispatch.h"
+#endif
 
 /* ------------------------------------------------------------------ */
 /*  Lock type & helpers                                               */

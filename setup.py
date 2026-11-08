@@ -1,16 +1,39 @@
 import os
+import re
+import sysconfig
 from pathlib import Path
 
 from setuptools import Extension, setup
 
+# xxh_x86dispatch.c only builds for x86, and only with baseline flags.
+# -mavx*, -march=native, or /arch:AVX* would make the wheel require that ISA.
+_X86_ARCH = re.compile(
+    r"(?:^|[^a-z0-9])(?:x86_64|amd64|i[3-6]86|x86)(?:[^a-z0-9]|$)"
+)
+
+
+def _target_is_x86():
+    plat = sysconfig.get_platform().lower()
+    # 32-bit Windows reports "win32" and does not name the arch.
+    if plat == "win32":
+        return True
+    return _X86_ARCH.search(plat) is not None
+
+
 if os.getenv("XXHASH_LINK_SO"):
+    # A system libxxhash does not export the XXH3_*_dispatch symbols.
     libraries = ["xxhash"]
     source = ["src/_xxhash.c"]
     include_dirs = []
+    define_macros = []
 else:
     libraries = []
     source = ["src/_xxhash.c", "deps/xxhash/xxhash.c"]
     include_dirs = ["deps/xxhash"]
+    define_macros = []
+    if _target_is_x86():
+        source.append("deps/xxhash/xxh_x86dispatch.c")
+        define_macros.append(("XXHASH_X86_DISPATCH", "1"))
 
 ext_modules = [
     Extension(
@@ -18,6 +41,7 @@ ext_modules = [
         source,
         include_dirs=include_dirs,
         libraries=libraries,
+        define_macros=define_macros,
     )
 ]
 
