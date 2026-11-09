@@ -21,12 +21,12 @@ jobs:
             archs: "ARM64"
           - os: macos-15-intel
             archs: "x86_64"
-          - os: macos-14
+          - os: macos-15
             archs: "arm64"
           - os: ubuntu-24.04
             archs: "arm64_v8a, x86_64"
             platform: "android"
-          - os: macos-14
+          - os: macos-15
             archs: "arm64_iphoneos,arm64_iphonesimulator"
             platform: "ios"
           - os: macos-15-intel
