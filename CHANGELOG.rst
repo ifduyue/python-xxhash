@@ -1,6 +1,17 @@
 CHANGELOG
 -----------
 
+v4.1.0 2026-11-09
+~~~~~~~~~~~~~~~~~
+
+- Dispatch XXH3 on x86 targets at runtime: link ``xxh_x86dispatch.c``
+  into vendored x86 and x86_64 builds so one baseline wheel selects
+  SSE2, AVX2, or AVX512 for ``xxh3_64`` and ``xxh3_128`` inputs
+  longer than 240 bytes, including streaming ``update()``. On AVX2
+  those inputs are about 1.5x faster.
+- Upgrade bundled xxHash from v0.8.3 to v0.8.4.
+
+
 v4.0.2 2026-10-19
 ~~~~~~~~~~~~~~~~~
 
