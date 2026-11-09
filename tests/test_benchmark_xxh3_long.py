@@ -39,6 +39,7 @@ STREAM = {
 }
 
 
+@pytest.mark.benchmark
 @pytest.mark.parametrize("size", list(SIZES))
 @pytest.mark.parametrize("algo", list(ONESHOT))
 def test_xxh3_long_oneshot(benchmark, algo, size):
@@ -47,6 +48,7 @@ def test_xxh3_long_oneshot(benchmark, algo, size):
     benchmark(func, data)
 
 
+@pytest.mark.benchmark
 @pytest.mark.parametrize("size", list(SIZES))
 @pytest.mark.parametrize("algo", list(ONESHOT))
 def test_xxh3_long_oneshot_seed(benchmark, algo, size):
@@ -55,6 +57,7 @@ def test_xxh3_long_oneshot_seed(benchmark, algo, size):
     benchmark(func, data, SEED)
 
 
+@pytest.mark.benchmark
 @pytest.mark.parametrize("algo", list(STREAM))
 def test_xxh3_long_stream_update_16mb(benchmark, algo):
     cls = STREAM[algo]
