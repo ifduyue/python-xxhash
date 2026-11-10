@@ -411,6 +411,26 @@ static PyObject *xxh64_hexdigest(PyObject *self, PyObject *const *args,
     return ret;
 }
 
+/* Seed 0 uses the default entry point. XXH3_*_withSeed() takes the seed as a
+ * runtime argument, so that translation unit cannot treat it as a constant.
+ * The default entry points are compiled with a literal 0 and are slightly
+ * faster. seed == 0 produces the same digest. */
+static inline XXH64_hash_t
+xxh3_64_oneshot(const void *data, size_t len, XXH64_hash_t seed)
+{
+    if (seed == 0)
+        return XXH3_64bits(data, len);
+    return XXH3_64bits_withSeed(data, len, seed);
+}
+
+static inline XXH128_hash_t
+xxh3_128_oneshot(const void *data, size_t len, XXH64_hash_t seed)
+{
+    if (seed == 0)
+        return XXH3_128bits(data, len);
+    return XXH3_128bits_withSeed(data, len, seed);
+}
+
 /* XXH3_64 */
 static PyObject *xxh3_64_digest(PyObject *self, PyObject *const *args,
                                Py_ssize_t nargs, PyObject *kwnames)
@@ -425,10 +445,10 @@ static PyObject *xxh3_64_digest(PyObject *self, PyObject *const *args,
     XXH64_hash_t intdigest;
     if (buf.len > XXHASH_GIL_MINSIZE) {
         Py_BEGIN_ALLOW_THREADS
-        intdigest = XXH3_64bits_withSeed(buf.buf, buf.len, seed);
+        intdigest = xxh3_64_oneshot(buf.buf, buf.len, seed);
         Py_END_ALLOW_THREADS
     } else {
-        intdigest = XXH3_64bits_withSeed(buf.buf, buf.len, seed);
+        intdigest = xxh3_64_oneshot(buf.buf, buf.len, seed);
     }
     PyBuffer_Release(&buf);
 
@@ -450,10 +470,10 @@ static PyObject *xxh3_64_intdigest(PyObject *self, PyObject *const *args,
     XXH64_hash_t intdigest;
     if (buf.len > XXHASH_GIL_MINSIZE) {
         Py_BEGIN_ALLOW_THREADS
-        intdigest = XXH3_64bits_withSeed(buf.buf, buf.len, seed);
+        intdigest = xxh3_64_oneshot(buf.buf, buf.len, seed);
         Py_END_ALLOW_THREADS
     } else {
-        intdigest = XXH3_64bits_withSeed(buf.buf, buf.len, seed);
+        intdigest = xxh3_64_oneshot(buf.buf, buf.len, seed);
     }
     PyBuffer_Release(&buf);
 
@@ -472,10 +492,10 @@ static PyObject *xxh3_64_hexdigest(PyObject *self, PyObject *const *args,
     XXH64_hash_t intdigest;
     if (buf.len > XXHASH_GIL_MINSIZE) {
         Py_BEGIN_ALLOW_THREADS
-        intdigest = XXH3_64bits_withSeed(buf.buf, buf.len, seed);
+        intdigest = xxh3_64_oneshot(buf.buf, buf.len, seed);
         Py_END_ALLOW_THREADS
     } else {
-        intdigest = XXH3_64bits_withSeed(buf.buf, buf.len, seed);
+        intdigest = xxh3_64_oneshot(buf.buf, buf.len, seed);
     }
     PyBuffer_Release(&buf);
 
@@ -511,10 +531,10 @@ static PyObject *xxh3_128_digest(PyObject *self, PyObject *const *args,
     XXH128_hash_t intdigest;
     if (buf.len > XXHASH_GIL_MINSIZE) {
         Py_BEGIN_ALLOW_THREADS
-        intdigest = XXH3_128bits_withSeed(buf.buf, buf.len, seed);
+        intdigest = xxh3_128_oneshot(buf.buf, buf.len, seed);
         Py_END_ALLOW_THREADS
     } else {
-        intdigest = XXH3_128bits_withSeed(buf.buf, buf.len, seed);
+        intdigest = xxh3_128_oneshot(buf.buf, buf.len, seed);
     }
     PyBuffer_Release(&buf);
 
@@ -536,10 +556,10 @@ static PyObject *xxh3_128_intdigest(PyObject *self, PyObject *const *args,
     XXH128_hash_t intdigest;
     if (buf.len > XXHASH_GIL_MINSIZE) {
         Py_BEGIN_ALLOW_THREADS
-        intdigest = XXH3_128bits_withSeed(buf.buf, buf.len, seed);
+        intdigest = xxh3_128_oneshot(buf.buf, buf.len, seed);
         Py_END_ALLOW_THREADS
     } else {
-        intdigest = XXH3_128bits_withSeed(buf.buf, buf.len, seed);
+        intdigest = xxh3_128_oneshot(buf.buf, buf.len, seed);
     }
     PyBuffer_Release(&buf);
 
@@ -573,10 +593,10 @@ static PyObject *xxh3_128_hexdigest(PyObject *self, PyObject *const *args,
     XXH128_hash_t intdigest;
     if (buf.len > XXHASH_GIL_MINSIZE) {
         Py_BEGIN_ALLOW_THREADS
-        intdigest = XXH3_128bits_withSeed(buf.buf, buf.len, seed);
+        intdigest = xxh3_128_oneshot(buf.buf, buf.len, seed);
         Py_END_ALLOW_THREADS
     } else {
-        intdigest = XXH3_128bits_withSeed(buf.buf, buf.len, seed);
+        intdigest = xxh3_128_oneshot(buf.buf, buf.len, seed);
     }
     PyBuffer_Release(&buf);
 
