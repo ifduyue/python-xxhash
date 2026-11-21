@@ -37,70 +37,105 @@
 #endif
 
 /* ------------------------------------------------------------------ */
-/*  Lock type & helpers                                               */
+/*  Build configuration: lock + module / type names                   */
 /* ------------------------------------------------------------------ */
-#if PY_VERSION_HEX >= 0x030d0000 /* Python 3.13+: always-on PyMutex (3.15+ style) */
-#  define XXHASH_LOCK_FIELD      PyMutex mutex;
-#  define XXHASH_LOCK_INIT(o)    ((void)((o)->mutex = (PyMutex){0}))
-#  define XXHASH_LOCK_IS_ACTIVE(o)  1
-#  define XXHASH_LOCK_MAYBE_INIT(o, len)  ((void)0)
-#  define XXHASH_LOCK_FINI(o)    ((void)0)
-#  define XXHASH_LOCK_ACQUIRE(o)          PyMutex_Lock(&(o)->mutex)
-#  define XXHASH_LOCK_ACQUIRE_BLOCKING(o) XXHASH_LOCK_ACQUIRE(o)
-#  define XXHASH_LOCK_RELEASE(o)       PyMutex_Unlock(&(o)->mutex)
-#else  /* Python 3.9-3.12: PyThread_type_lock */
-#  define XXHASH_LOCK_FIELD      PyThread_type_lock lock;
-#  define XXHASH_LOCK_INIT(o)    ((o)->lock = NULL)
-#  define XXHASH_LOCK_IS_ACTIVE(o)  ((o)->lock != NULL)
-/* Lazy allocation on first update large enough to release the GIL */
-#  define XXHASH_LOCK_MAYBE_INIT(o, len)                                 \
-    do {                                                                 \
-        if ((o)->lock == NULL && (len) > XXHASH_GIL_MINSIZE) {           \
-            (o)->lock = PyThread_allocate_lock();                        \
-            /* fail? lock stays NULL, fall back to non-threaded code. */ \
-        }                                                                \
-    } while (0)
-#  define XXHASH_LOCK_FINI(o)    do { if ((o)->lock)                 \
-                                      PyThread_free_lock((o)->lock); \
-                                  } while (0)
-/* Acquire lock when GIL is already released — simple blocking acquire.
- * Only acquires if lock has been allocated (lazy init). */
-#  define XXHASH_LOCK_ACQUIRE_BLOCKING(o)                \
-    do {                                                 \
-        if ((o)->lock) {                                 \
-            PyThread_acquire_lock((o)->lock, WAIT_LOCK); \
-        }                                                \
-    } while (0)
-
-/* Acquire lock with the GIL held — non-blocking try first, then release
- * GIL and block if contested (matches hashlib's ENTER_HASHLIB in 3.9-3.12).
- * Only acquires if lock has been allocated (lazy init). */
-#  define XXHASH_LOCK_ACQUIRE(o)                                  \
-    do {                                                          \
-        if ((o)->lock) {                                          \
-            if (!PyThread_acquire_lock((o)->lock, NOWAIT_LOCK)) { \
-                /* Lock contested – release GIL while waiting. */ \
-                Py_BEGIN_ALLOW_THREADS                            \
-                PyThread_acquire_lock((o)->lock, WAIT_LOCK);      \
-                Py_END_ALLOW_THREADS                              \
-            }                                                     \
-        }                                                         \
-    } while (0)
-
-#  define XXHASH_LOCK_RELEASE(o)              \
-    do {                                      \
-        if ((o)->lock) {                      \
-            PyThread_release_lock((o)->lock); \
-        }                                     \
-    } while (0)
+/* The same source is compiled twice:
+ *   xxhash._xxhash         — XXHASH_WITH_LOCK=1 (default)
+ *   xxhash._xxhash_nolock  — XXHASH_WITH_LOCK=0, public as xxhash.nolock
+ */
+#ifndef XXHASH_WITH_LOCK
+#  define XXHASH_WITH_LOCK 1
 #endif
+
+#ifndef XXHASH_MODULE_NAME
+#  define XXHASH_MODULE_NAME _xxhash
+#endif
+/* Display prefix for tp_name (repr / __module__).  Default: "xxhash".
+ * Nolock build: "xxhash.nolock". */
+#ifndef XXHASH_TP_NAME_PREFIX
+#  define XXHASH_TP_NAME_PREFIX xxhash
+#endif
+
+#define TOSTRING(x) #x
+#define VALUE_TO_STRING(x) TOSTRING(x)
+#define XXHASH_PASTE2(a, b) a ## b
+#define XXHASH_PASTE(a, b) XXHASH_PASTE2(a, b)
+#define XXHASH_PYINIT(name) XXHASH_PASTE(PyInit_, name)
+#define XXHASH_TP_NAME(base)  VALUE_TO_STRING(XXHASH_TP_NAME_PREFIX) "." base
+#define XXHASH_VERSION XXH_VERSION_MAJOR.XXH_VERSION_MINOR.XXH_VERSION_RELEASE
 
 /* Data size threshold for releasing the GIL during hash. */
 #define XXHASH_GIL_MINSIZE  65536
 
-#define TOSTRING(x) #x
-#define VALUE_TO_STRING(x) TOSTRING(x)
-#define XXHASH_VERSION XXH_VERSION_MAJOR.XXH_VERSION_MINOR.XXH_VERSION_RELEASE
+/* ------------------------------------------------------------------ */
+/*  Lock type & helpers                                               */
+/* ------------------------------------------------------------------ */
+#if XXHASH_WITH_LOCK
+#  if PY_VERSION_HEX >= 0x030d0000 /* Python 3.13+: always-on PyMutex (3.15+ style) */
+#    define XXHASH_LOCK_FIELD      PyMutex mutex;
+#    define XXHASH_LOCK_INIT(o)    ((void)((o)->mutex = (PyMutex){0}))
+#    define XXHASH_LOCK_IS_ACTIVE(o)  1
+#    define XXHASH_LOCK_MAYBE_INIT(o, len)  ((void)0)
+#    define XXHASH_LOCK_FINI(o)    ((void)0)
+#    define XXHASH_LOCK_ACQUIRE(o)          PyMutex_Lock(&(o)->mutex)
+#    define XXHASH_LOCK_ACQUIRE_BLOCKING(o) XXHASH_LOCK_ACQUIRE(o)
+#    define XXHASH_LOCK_RELEASE(o)       PyMutex_Unlock(&(o)->mutex)
+#  else  /* Python 3.9-3.12: PyThread_type_lock */
+#    define XXHASH_LOCK_FIELD      PyThread_type_lock lock;
+#    define XXHASH_LOCK_INIT(o)    ((o)->lock = NULL)
+#    define XXHASH_LOCK_IS_ACTIVE(o)  ((o)->lock != NULL)
+/* Lazy allocation on first update large enough to release the GIL */
+#    define XXHASH_LOCK_MAYBE_INIT(o, len)                                 \
+      do {                                                                 \
+          if ((o)->lock == NULL && (len) > XXHASH_GIL_MINSIZE) {           \
+              (o)->lock = PyThread_allocate_lock();                        \
+              /* fail? lock stays NULL, fall back to non-threaded code. */ \
+          }                                                                \
+      } while (0)
+#    define XXHASH_LOCK_FINI(o)    do { if ((o)->lock)                 \
+                                        PyThread_free_lock((o)->lock); \
+                                    } while (0)
+/* Acquire lock when GIL is already released — simple blocking acquire.
+ * Only acquires if lock has been allocated (lazy init). */
+#    define XXHASH_LOCK_ACQUIRE_BLOCKING(o)                \
+      do {                                                 \
+          if ((o)->lock) {                                 \
+              PyThread_acquire_lock((o)->lock, WAIT_LOCK); \
+          }                                                \
+      } while (0)
+
+/* Acquire lock with the GIL held — non-blocking try first, then release
+ * GIL and block if contested (matches hashlib's ENTER_HASHLIB in 3.9-3.12).
+ * Only acquires if lock has been allocated (lazy init). */
+#    define XXHASH_LOCK_ACQUIRE(o)                                  \
+      do {                                                          \
+          if ((o)->lock) {                                          \
+              if (!PyThread_acquire_lock((o)->lock, NOWAIT_LOCK)) { \
+                  /* Lock contested – release GIL while waiting. */ \
+                  Py_BEGIN_ALLOW_THREADS                            \
+                  PyThread_acquire_lock((o)->lock, WAIT_LOCK);      \
+                  Py_END_ALLOW_THREADS                              \
+              }                                                     \
+          }                                                         \
+      } while (0)
+
+#    define XXHASH_LOCK_RELEASE(o)              \
+      do {                                      \
+          if ((o)->lock) {                      \
+              PyThread_release_lock((o)->lock); \
+          }                                     \
+      } while (0)
+#  endif
+#else  /* !XXHASH_WITH_LOCK */
+#  define XXHASH_LOCK_FIELD
+#  define XXHASH_LOCK_INIT(o)             ((void)0)
+#  define XXHASH_LOCK_IS_ACTIVE(o)        0
+#  define XXHASH_LOCK_MAYBE_INIT(o, len)  ((void)0)
+#  define XXHASH_LOCK_FINI(o)             ((void)0)
+#  define XXHASH_LOCK_ACQUIRE(o)          ((void)0)
+#  define XXHASH_LOCK_ACQUIRE_BLOCKING(o) ((void)0)
+#  define XXHASH_LOCK_RELEASE(o)          ((void)0)
+#endif
 
 #define XXH32_DIGESTSIZE 4
 #define XXH32_BLOCKSIZE 16
@@ -621,33 +656,37 @@ static void PYXXH32_dealloc(PYXXH32Object *self)
     Py_DECREF(tp);
 }
 
-/* Macro to generate _do_update for each hash type.
- * Matches CPython 3.9-3.12 md5 pattern: release GIL first (for large data),
- * then acquire lock, hash, release lock, re-acquire GIL.
- * For small data, acquire lock with GIL held (try-then-block if contested). */
+/* Run STATEMENTS on a published hasher (update / __init__).
+ * Matches CPython hashlib HASHLIB_EXTERNAL_INSTRUCTIONS_LOCKED:
+ * large inputs release the GIL first, then take the lock.
+ * The unlocked build still releases the GIL; lock macros are no-ops.
+ * On the locked 3.9-3.12 lazy-lock path, GIL is only released once the
+ * lock has been allocated, so a failed allocation hashes with the GIL. */
+#define XXHASH_LOCKED_OP(self, len, STATEMENTS)                               \
+    do {                                                                      \
+        XXHASH_LOCK_MAYBE_INIT(self, len);                                    \
+        if ((len) > XXHASH_GIL_MINSIZE &&                                     \
+            (!XXHASH_WITH_LOCK || XXHASH_LOCK_IS_ACTIVE(self))) {             \
+            Py_BEGIN_ALLOW_THREADS                                            \
+            XXHASH_LOCK_ACQUIRE_BLOCKING(self);                               \
+            STATEMENTS;                                                       \
+            XXHASH_LOCK_RELEASE(self);                                        \
+            Py_END_ALLOW_THREADS                                              \
+        } else if (XXHASH_LOCK_IS_ACTIVE(self)) {                             \
+            XXHASH_LOCK_ACQUIRE(self);                                        \
+            STATEMENTS;                                                       \
+            XXHASH_LOCK_RELEASE(self);                                        \
+        } else {                                                              \
+            STATEMENTS;                                                       \
+        }                                                                     \
+    } while (0)
+
 #define XXHASH_DO_UPDATE(type, update_fn)                                     \
 static inline void                                           \
 PY##type##_do_update(PY##type##Object *self, Py_buffer *buf)                  \
 {                                                                             \
-    XXHASH_LOCK_MAYBE_INIT(self, buf->len);                                   \
-    if (XXHASH_LOCK_IS_ACTIVE(self)) {                                        \
-        if (buf->len > XXHASH_GIL_MINSIZE) {                                  \
-            /* Release GIL first, then acquire lock. */                       \
-            Py_BEGIN_ALLOW_THREADS                                            \
-            XXHASH_LOCK_ACQUIRE_BLOCKING(self);                               \
-            update_fn(self->xxhash_state, buf->buf, buf->len);                \
-            XXHASH_LOCK_RELEASE(self);                                        \
-            Py_END_ALLOW_THREADS                                              \
-        } else {                                                              \
-            /* Acquire lock with GIL held. */                                 \
-            XXHASH_LOCK_ACQUIRE(self);                                        \
-            update_fn(self->xxhash_state, buf->buf, buf->len);                \
-            XXHASH_LOCK_RELEASE(self);                                        \
-        }                                                                     \
-    } else {                                                                  \
-        /* No lock: hash directly, no GIL release. */                         \
-        update_fn(self->xxhash_state, buf->buf, buf->len);                    \
-    }                                                                         \
+    XXHASH_LOCKED_OP(self, buf->len,                                          \
+        update_fn(self->xxhash_state, buf->buf, buf->len));                   \
     PyBuffer_Release(buf);                                                    \
 }
 
@@ -662,7 +701,7 @@ PYXXH32_vectorcall(PyObject *type, PyObject *const *args,
     Py_buffer buf;
     unsigned long long raw_seed;
 
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxhash.xxh32", 0,
+    if (_parse_fastcall_args(args, nargs, kwnames, XXHASH_TP_NAME("xxh32"), 0,
                              &buf, &raw_seed) < 0)
         return NULL;
     seed = (XXH32_hash_t)raw_seed;
@@ -686,7 +725,8 @@ PYXXH32_vectorcall(PyObject *type, PyObject *const *args,
     XXH32_reset(self->xxhash_state, seed);
 
     if (buf.obj) {
-        /* Constructor: no concurrent access possible, skip locking. */
+        /* Object is not yet published; skip locking. The input buffer
+         * may still be raced while the GIL is released. */
         if (buf.len > XXHASH_GIL_MINSIZE) {
             Py_BEGIN_ALLOW_THREADS
             XXH32_update(self->xxhash_state, buf.buf, buf.len);
@@ -795,7 +835,8 @@ _parse_init_args(PyObject *args, PyObject *kwargs,
     return 0;
 }
 
-/* Macro to generate __init__ for each hash type. */
+/* Re-init of an already-published object: reset + optional update
+ * in one locked section (same GIL protocol as update()). */
 #define XXHASH_INIT(type, name, reset_fn, update_fn, seed_cast)               \
 static int PY##type##_init(PY##type##Object *self, PyObject *args,            \
                            PyObject *kwargs)                                  \
@@ -813,19 +854,17 @@ static int PY##type##_init(PY##type##Object *self, PyObject *args,            \
             return -1;                                                        \
     }                                                                         \
                                                                               \
-    XXHASH_LOCK_ACQUIRE(self);                                                \
-    self->seed = (seed_cast)seed_val;                                         \
-    reset_fn(self->xxhash_state, self->seed);                                 \
-                                                                              \
-    if (buf.obj) {                                                            \
-        update_fn(self->xxhash_state, buf.buf, buf.len);                      \
+    XXHASH_LOCKED_OP(self, buf.obj ? buf.len : 0,                             \
+        self->seed = (seed_cast)seed_val;                                     \
+        reset_fn(self->xxhash_state, self->seed);                             \
+        if (buf.obj)                                                          \
+            update_fn(self->xxhash_state, buf.buf, buf.len));                 \
+    if (buf.obj)                                                              \
         PyBuffer_Release(&buf);                                               \
-    }                                                                         \
-    XXHASH_LOCK_RELEASE(self);                                                \
     return 0;                                                                 \
 }
 
-XXHASH_INIT(XXH32, "xxhash.xxh32", XXH32_reset, XXH32_update, XXH32_hash_t)
+XXHASH_INIT(XXH32, XXHASH_TP_NAME("xxh32"), XXH32_reset, XXH32_update, XXH32_hash_t)
 
 PyDoc_STRVAR(
     PYXXH32_update_doc,
@@ -948,7 +987,7 @@ static PyObject *PYXXH32_intdigest(PYXXH32Object *self)
 PyDoc_STRVAR(
     PYXXH32_copy_doc,
     "copy() -> xxh32 object\n\n"
-    "Return a copy of the xxh32 object.");
+    "Return a copy (clone) of the xxh32 object.");
 
 static PyObject *PYXXH32_copy(PYXXH32Object *self)
 {
@@ -1065,7 +1104,8 @@ PyDoc_STRVAR(
     "digest() -- return the current digest value\n"
     "hexdigest() -- return the current digest as a string of hexadecimal digits\n"
     "intdigest() -- return the current digest as an integer\n"
-    "copy() -- return a copy of the current xxh32 object");
+    "copy() -- return a copy (clone) of the current xxh32 object\n"
+    "reset() -- reset state");
 
 static PyType_Slot XXH32Type_slots[] = {
     {Py_tp_dealloc, PYXXH32_dealloc},
@@ -1078,7 +1118,7 @@ static PyType_Slot XXH32Type_slots[] = {
 };
 
 static PyType_Spec XXH32Type_spec = {
-    .name = "xxhash.xxh32",
+    .name = XXHASH_TP_NAME("xxh32"),
     .basicsize = sizeof(PYXXH32Object),
     .flags = Py_TPFLAGS_DEFAULT
 #if PY_VERSION_HEX >= 0x030c0000
@@ -1118,7 +1158,7 @@ PYXXH64_vectorcall(PyObject *type, PyObject *const *args,
     Py_buffer buf;
     unsigned long long raw_seed;
 
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxhash.xxh64", 0,
+    if (_parse_fastcall_args(args, nargs, kwnames, XXHASH_TP_NAME("xxh64"), 0,
                              &buf, &raw_seed) < 0)
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
@@ -1142,7 +1182,8 @@ PYXXH64_vectorcall(PyObject *type, PyObject *const *args,
     XXH64_reset(self->xxhash_state, seed);
 
     if (buf.obj) {
-        /* Constructor: no concurrent access possible, skip locking. */
+        /* Object is not yet published; skip locking. The input buffer
+         * may still be raced while the GIL is released. */
         if (buf.len > XXHASH_GIL_MINSIZE) {
             Py_BEGIN_ALLOW_THREADS
             XXH64_update(self->xxhash_state, buf.buf, buf.len);
@@ -1176,7 +1217,7 @@ static PyObject *PYXXH64_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
     return (PyObject *)self;
 }
 
-XXHASH_INIT(XXH64, "xxhash.xxh64", XXH64_reset, XXH64_update, XXH64_hash_t)
+XXHASH_INIT(XXH64, XXHASH_TP_NAME("xxh64"), XXH64_reset, XXH64_update, XXH64_hash_t)
 
 PyDoc_STRVAR(
     PYXXH64_update_doc,
@@ -1299,7 +1340,7 @@ static PyObject *PYXXH64_intdigest(PYXXH64Object *self)
 PyDoc_STRVAR(
     PYXXH64_copy_doc,
     "copy() -> xxh64 object\n\n"
-    "Return a copy of the xxh64 object.");
+    "Return a copy (clone) of the xxh64 object.");
 
 static PyObject *PYXXH64_copy(PYXXH64Object *self)
 {
@@ -1416,7 +1457,8 @@ PyDoc_STRVAR(
     "digest() -- return the current digest value\n"
     "hexdigest() -- return the current digest as a string of hexadecimal digits\n"
     "intdigest() -- return the current digest as an integer\n"
-    "copy() -- return a copy of the current xxh64 object");
+    "copy() -- return a copy (clone) of the current xxh64 object\n"
+    "reset() -- reset state");
 
 static PyType_Slot XXH64Type_slots[] = {
     {Py_tp_dealloc, PYXXH64_dealloc},
@@ -1429,7 +1471,7 @@ static PyType_Slot XXH64Type_slots[] = {
 };
 
 static PyType_Spec XXH64Type_spec = {
-    .name = "xxhash.xxh64",
+    .name = XXHASH_TP_NAME("xxh64"),
     .basicsize = sizeof(PYXXH64Object),
     .flags = Py_TPFLAGS_DEFAULT
 #if PY_VERSION_HEX >= 0x030c0000
@@ -1469,7 +1511,7 @@ PYXXH3_64_vectorcall(PyObject *type, PyObject *const *args,
     Py_buffer buf;
     unsigned long long raw_seed;
 
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxhash.xxh3_64", 0,
+    if (_parse_fastcall_args(args, nargs, kwnames, XXHASH_TP_NAME("xxh3_64"), 0,
                              &buf, &raw_seed) < 0)
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
@@ -1493,7 +1535,8 @@ PYXXH3_64_vectorcall(PyObject *type, PyObject *const *args,
     XXH3_64bits_reset_withSeed(self->xxhash_state, seed);
 
     if (buf.obj) {
-        /* Constructor: no concurrent access possible, skip locking. */
+        /* Object is not yet published; skip locking. The input buffer
+         * may still be raced while the GIL is released. */
         if (buf.len > XXHASH_GIL_MINSIZE) {
             Py_BEGIN_ALLOW_THREADS
             XXH3_64bits_update(self->xxhash_state, buf.buf, buf.len);
@@ -1527,7 +1570,7 @@ static PyObject *PYXXH3_64_new(PyTypeObject *type, PyObject *args, PyObject *kwa
     return (PyObject *)self;
 }
 
-XXHASH_INIT(XXH3_64, "xxhash.xxh3_64", XXH3_64bits_reset_withSeed, XXH3_64bits_update, XXH64_hash_t)
+XXHASH_INIT(XXH3_64, XXHASH_TP_NAME("xxh3_64"), XXH3_64bits_reset_withSeed, XXH3_64bits_update, XXH64_hash_t)
 
 PyDoc_STRVAR(
     PYXXH3_64_update_doc,
@@ -1650,7 +1693,7 @@ static PyObject *PYXXH3_64_intdigest(PYXXH3_64Object *self)
 PyDoc_STRVAR(
     PYXXH3_64_copy_doc,
     "copy() -> xxh3_64 object\n\n"
-    "Return a copy of the xxh3_64 object.");
+    "Return a copy (clone) of the xxh3_64 object.");
 
 static PyObject *PYXXH3_64_copy(PYXXH3_64Object *self)
 {
@@ -1774,7 +1817,8 @@ PyDoc_STRVAR(
     "digest() -- return the current digest value\n"
     "hexdigest() -- return the current digest as a string of hexadecimal digits\n"
     "intdigest() -- return the current digest as an integer\n"
-    "copy() -- return a copy of the current xxh3_64 object");
+    "copy() -- return a copy (clone) of the current xxh3_64 object\n"
+    "reset() -- reset state");
 
 static PyType_Slot XXH3_64Type_slots[] = {
     {Py_tp_dealloc, PYXXH3_64_dealloc},
@@ -1787,7 +1831,7 @@ static PyType_Slot XXH3_64Type_slots[] = {
 };
 
 static PyType_Spec XXH3_64Type_spec = {
-    .name = "xxhash.xxh3_64",
+    .name = XXHASH_TP_NAME("xxh3_64"),
     .basicsize = sizeof(PYXXH3_64Object),
     .flags = Py_TPFLAGS_DEFAULT
 #if PY_VERSION_HEX >= 0x030c0000
@@ -1827,7 +1871,7 @@ PYXXH3_128_vectorcall(PyObject *type, PyObject *const *args,
     Py_buffer buf;
     unsigned long long raw_seed;
 
-    if (_parse_fastcall_args(args, nargs, kwnames, "xxhash.xxh3_128", 0,
+    if (_parse_fastcall_args(args, nargs, kwnames, XXHASH_TP_NAME("xxh3_128"), 0,
                              &buf, &raw_seed) < 0)
         return NULL;
     seed = (XXH64_hash_t)raw_seed;
@@ -1851,7 +1895,8 @@ PYXXH3_128_vectorcall(PyObject *type, PyObject *const *args,
     XXH3_128bits_reset_withSeed(self->xxhash_state, seed);
 
     if (buf.obj) {
-        /* Constructor: no concurrent access possible, skip locking. */
+        /* Object is not yet published; skip locking. The input buffer
+         * may still be raced while the GIL is released. */
         if (buf.len > XXHASH_GIL_MINSIZE) {
             Py_BEGIN_ALLOW_THREADS
             XXH3_128bits_update(self->xxhash_state, buf.buf, buf.len);
@@ -1885,7 +1930,7 @@ static PyObject *PYXXH3_128_new(PyTypeObject *type, PyObject *args, PyObject *kw
     return (PyObject *)self;
 }
 
-XXHASH_INIT(XXH3_128, "xxhash.xxh3_128", XXH3_128bits_reset_withSeed, XXH3_128bits_update, XXH64_hash_t)
+XXHASH_INIT(XXH3_128, XXHASH_TP_NAME("xxh3_128"), XXH3_128bits_reset_withSeed, XXH3_128bits_update, XXH64_hash_t)
 
 PyDoc_STRVAR(
     PYXXH3_128_update_doc,
@@ -2027,7 +2072,7 @@ static PyObject *PYXXH3_128_intdigest(PYXXH3_128Object *self)
 PyDoc_STRVAR(
     PYXXH3_128_copy_doc,
     "copy() -> xxh3_128 object\n\n"
-    "Return a copy of the xxh3_128 object.");
+    "Return a copy (clone) of the xxh3_128 object.");
 
 static PyObject *PYXXH3_128_copy(PYXXH3_128Object *self)
 {
@@ -2151,7 +2196,8 @@ PyDoc_STRVAR(
     "digest() -- return the current digest value\n"
     "hexdigest() -- return the current digest as a string of hexadecimal digits\n"
     "intdigest() -- return the current digest as an integer\n"
-    "copy() -- return a copy of the current xxh3_128 object");
+    "copy() -- return a copy (clone) of the current xxh3_128 object\n"
+    "reset() -- reset state");
 
 static PyType_Slot XXH3_128Type_slots[] = {
     {Py_tp_dealloc, PYXXH3_128_dealloc},
@@ -2164,7 +2210,7 @@ static PyType_Slot XXH3_128Type_slots[] = {
 };
 
 static PyType_Spec XXH3_128Type_spec = {
-    .name = "xxhash.xxh3_128",
+    .name = XXHASH_TP_NAME("xxh3_128"),
     .basicsize = sizeof(PYXXH3_128Object),
     .flags = Py_TPFLAGS_DEFAULT
 #if PY_VERSION_HEX >= 0x030c0000
@@ -2228,7 +2274,9 @@ static PyModuleDef_Slot slots[] = {
     {Py_mod_multiple_interpreters, Py_MOD_PER_INTERPRETER_GIL_SUPPORTED},
 #endif
 #if PY_VERSION_HEX >= 0x030d0000
-    /* Python 3.13+: module is thread-safe with per-object lock */
+    /* Do not re-enable the GIL on free-threaded builds. Module init and
+     * one-shot functions do not need it. Streaming objects are locked in
+     * the default build and caller-exclusive in the nolock build. */
     {Py_mod_gil, Py_MOD_GIL_NOT_USED},
 #endif
     {0, NULL}
@@ -2252,7 +2300,7 @@ static PyMethodDef methods[] = {
 
 static struct PyModuleDef moduledef = {
     PyModuleDef_HEAD_INIT,
-    "_xxhash",
+    VALUE_TO_STRING(XXHASH_MODULE_NAME),
     "Low-level C extension for the xxhash package.\n"
     "\n"
     "Provides the XXH32, XXH64, XXH3_64, and XXH3_128 hash types plus\n"
@@ -2266,7 +2314,7 @@ static struct PyModuleDef moduledef = {
 };
 
 PyMODINIT_FUNC
-PyInit__xxhash(void)
+XXHASH_PYINIT(XXHASH_MODULE_NAME)(void)
 {
     return PyModuleDef_Init(&moduledef);
 }
