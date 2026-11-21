@@ -6,6 +6,7 @@ Verifies that:
   * all 4 hash types (xxh32, xxh64, xxh3_64, xxh128/xxh3_128) work
   * streaming methods (update, digest, hexdigest, intdigest, copy, reset) work
   * results match the default ``xxhash`` module exactly
+  * XXH3 inputs longer than 240 bytes match the known long-path vectors
   * ``repr()`` and ``type.__module__`` reflect the public module name
   * nolock types are distinct from the default (locked) types
 """
@@ -147,6 +148,46 @@ class TestNolockStreaming(unittest.TestCase):
                 self.assertIsInstance(h.digest(), bytes)
                 self.assertIsInstance(h.hexdigest(), str)
                 self.assertIsInstance(h.intdigest(), int)
+
+
+class TestNolockXXH3Long(unittest.TestCase):
+    """Inputs longer than 240 bytes exercise the XXH3 long path.
+
+    Vectors match ``tests/test_xxh3_64.py`` and ``tests/test_xxh3_128.py``.
+    ``xxhash.nolock`` is a second build of the same C file.
+    """
+
+    def test_xxh3_64_long(self):
+        cases = [
+            (b'a' * 241, 0, 17784696633448601904),
+            (b'a' * 241, 1, 10343239347255277306),
+            (b'a' * 1024, 0, 5358556820880783900),
+            (bytes(range(256)) * 4, 0, 12137474952470826274),
+            (b'\x00' * 65536, 0, 3725042947095682218),
+        ]
+        for data, seed, expected in cases:
+            with self.subTest(length=len(data), seed=seed):
+                self.assertEqual(nolock.xxh3_64_intdigest(data, seed), expected)
+                h = nolock.xxh3_64(seed=seed)
+                for i in range(0, len(data), 100):
+                    h.update(data[i:i + 100])
+                self.assertEqual(h.intdigest(), expected)
+
+    def test_xxh3_128_long(self):
+        cases = [
+            (b'a' * 241, 0, 83055572732911745733364072063521397040),
+            (b'a' * 241, 1, 212898653139750571665199124048622024442),
+            (b'a' * 1024, 0, 109508391914506197641422089710284077596),
+            (bytes(range(256)) * 4, 0, 174836936922913186110831535746530774306),
+            (b'\x00' * 65536, 0, 336787309845147245671426168055747992746),
+        ]
+        for data, seed, expected in cases:
+            with self.subTest(length=len(data), seed=seed):
+                self.assertEqual(nolock.xxh3_128_intdigest(data, seed), expected)
+                h = nolock.xxh3_128(seed=seed)
+                for i in range(0, len(data), 100):
+                    h.update(data[i:i + 100])
+                self.assertEqual(h.intdigest(), expected)
 
 
 class TestNolockTopLevelFunctions(unittest.TestCase):
